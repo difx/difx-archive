@@ -1,4 +1,4 @@
-/***************************************************************************
+f/***************************************************************************
  *   Copyright (C) 2006 by Adam Deller                                     *
  *                                                                         *
  *   This program is free for non-commercial use: see the license file     *
@@ -720,6 +720,7 @@ void DataStream::loopfileread()
     }
     diskToMemory(numread++);
     diskToMemory(numread++);
+    lastvalidsegment = numread;
     //cdebug << startl << "READTHREAD: loopfileread: Try lock buffer " << numread << endl;
     perr = pthread_mutex_lock(&(bufferlock[numread]));
     if(perr != 0)
@@ -738,7 +739,7 @@ void DataStream::loopfileread()
   if(keepreading)
     diskToMemory(numread++);
 
-  lastvalidsegment = (numread-1)%numdatasegments;
+  
   while(keepreading && (bufferinfo[lastvalidsegment].configindex < 0 || filesread[bufferinfo[lastvalidsegment].configindex] <= confignumfiles[bufferinfo[lastvalidsegment].configindex]))
   {
     while(dataremaining && keepreading)
