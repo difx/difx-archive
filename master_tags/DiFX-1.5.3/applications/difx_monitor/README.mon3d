@@ -1,9 +1,0 @@
-mon3d is a simple difx_monitor client which receives a monitor stream from a single product and
-runs a 2D FFT on the data and plots the result in 3D, in realtime. This give a visually interesting view of the data currently being correlated and can be useful when given a demonstration of DiFX.
-
-mon3d uses the S2PLOT 3D library from Swinburne University of Technology, which is not include wit DiFX. By default mon3d is *not* compiled or installed. If you wish to use it you need to install the S2PLOT libraries. You *will* need to update the compile and link options and S2PLOT requires a lot of passed arguments. Look at the cbuild.csh script which comes with S2PLOT (maybe run it on the example S2PLOT programs) and copy the relevant lines to the difx_monitor Makefile.
-
-
-S2PLOT can be downloaded from:
-
-       http://astronomy.swin.edu.au/s2plot/index.php?title=S2PLOT
