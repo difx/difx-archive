@@ -47,8 +47,6 @@
 #
 #
 
-from __future__ import absolute_import
-from __future__ import print_function
 __version__ = "1.7.9"
 date = 'Sep 28 2020'     
 
@@ -66,13 +64,13 @@ try:
 # sys.path.append(mypath)
  import _PolConvert as PC
  goodclib = True
- print('\nC++ shared library loaded successfully\n')
+ print '\nC++ shared library loaded successfully\n'
 except:
  goodclib=False
- print('\n There has been an error related to the numpy') 
- print(' API version used by CASA. This is related to PolConvert')
- print(' (which uses the API version of your system) and should') 
- print(' be *harmless*.\n')
+ print '\n There has been an error related to the numpy' 
+ print ' API version used by CASA. This is related to PolConvert'
+ print ' (which uses the API version of your system) and should' 
+ print ' be *harmless*.\n'
 
 #mypath = os.path.dirname(os.path.realpath('__file__'))
 #print mypath
@@ -83,7 +81,7 @@ if not goodclib:
 #   sys.path.append(mypath)
    import _PolConvert as PC
    goodclib = True
-   print('\nC++ shared library loaded successfully\n')
+   print '\nC++ shared library loaded successfully\n'
   except:
    goodclib=False
 #############
@@ -184,10 +182,10 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx, Range, ALMA
 
 # Auxiliary function: print error and raise exception:
   def printError(msg):
-    print(msg,'\n') 
+    print msg,'\n' 
     casalog.post('PolConvert: '+msg+'\n')
     lfile = open("PolConvert.log","a")
-    print('\n'+msg+'\n', file=lfile)
+    print >> lfile,'\n'+msg+'\n'
     lfile.close()
     raise Exception(msg)
 
@@ -197,11 +195,11 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx, Range, ALMA
 # Auxiliary function: print message (terminal and log):
   def printMsg(msg, doterm=True, dolog=True):
     if doterm:
-      print(msg)
+      print msg
     if dolog:
       casalog.post('PolConvert: '+msg)
       lfile = open("PolConvert.log","a")
-      print('\n'+msg+'\n', file=lfile)
+      print >> lfile,'\n'+msg+'\n'
       lfile.close()
 
 
@@ -305,7 +303,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx, Range, ALMA
   # Update the table:
     tb.putcol('CPARAM',Ggains) 
     tb.close()         
-    print('\nDONE!\n\n') 
+    print '\nDONE!\n\n' 
 
 
 
@@ -537,7 +535,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx, Range, ALMA
     if len(time0)==0:
       printMsg('WARNING! NO APPCAL DATA FOR %s\n'%asd)
     else:
-      print('\n\nMEAS SET %s:'%asd)
+      print '\n\nMEAS SET %s:'%asd
       tmin = np.min(time0)/86400.
       tmax = np.max(time1)/86400.
     mstmin = np.min(mstime)/86400.
@@ -982,7 +980,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx, Range, ALMA
   elif os.path.isfile(IDI):
     isSWIN = False
     printMsg('\n\nYou have asked to convert a FITS-IDI file.')
-    print('Reading array geometry...')
+    print 'Reading array geometry...'
     try:
       import pyfits as pf
       ffile = pf.open(IDI)
@@ -1128,7 +1126,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx, Range, ALMA
   FlagBas1 = []
   FlagBas2 = []
   for fbi in excludeBaselines:
-    print(fbi, antcodes)
+    print fbi, antcodes
     if fbi[0] in antcodes and fbi[1] in antcodes:
       FlagBas1.append(antcodes.index(fbi[0])+1) ### = np.array([int(i[0]+1) for i in excludeBaselines])
       FlagBas2.append(antcodes.index(fbi[1])+1) ### = np.array([int(i[1]+1) for i in excludeBaselines])
@@ -1205,12 +1203,12 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx, Range, ALMA
         nu0 = FrInfo['FREQ (MHZ)'][nu-1]
         nu1 = FrInfo['FREQ (MHZ)'][nu-1] + FrInfo['BW (MHZ)'][nu-1]*FrInfo['SIGN'][nu-1]
         nus = [np.min([nu0,nu1]),np.max([nu0,nu1])]
-        print(nu, ':', nurange[spwi][0], '<', nus[0], nus[1], '<', nurange[spwi][1], end=' ')
+        print nu, ':', nurange[spwi][0], '<', nus[0], nus[1], '<', nurange[spwi][1],
         if (nurange[spwi][0] - slop) < nus[0] and nus[1] < (nurange[spwi][1] + slop):
           spwsel[nui] = spwi
-          print(' pass')
+          print ' pass'
         else:
-          print(' fail')
+          print ' fail'
        except:
         printMsg("WARNING! spw %i is NOT in SWIN file! Will skip it!"%nu)
         spwsel[nui] = -2
@@ -1609,7 +1607,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx, Range, ALMA
     success = tb.open(os.path.join(dterms[i],'ANTENNA'))
     tabants = tb.getcol('NAME')
     tb.close()
-    print('Reading ',dterms[i])
+    print 'Reading ',dterms[i]
     tb.open(dterms[i])
     spmask = tb.getcol('SPECTRAL_WINDOW_ID')==int(spw)
     data = []
@@ -1670,7 +1668,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx, Range, ALMA
   
    for j,gain in enumerate(gains[i]):
      gaindata[-1].append([])
-     print('Reading ',gain)
+     print 'Reading ',gain
      isLinear[-1][j] = interpolation[i][j]=='linear'
      if gain=="NONE":
       nchan = 1
@@ -1882,12 +1880,12 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx, Range, ALMA
         Tsys[itime,ii+1] = datum[1]*DPFU
 
      outf = open("POLCONVERT_STATION_%s.ANTAB"%jnam,"w")
-     print("GAIN AA  ELEV DPFU=%.3f   FREQ=10,100000"%DPFU, file=outf)
-     print("POLY=1.0000E+00", file=outf)
-     print("/", file=outf)
-     print("TSYS AA  FT=1.0  TIMEOFF=0", file=outf)
-     print("INDEX= "+', '.join(['\'L%i|R%i\''%(i+1,i+1) for i in range(len(doIF))]), file=outf)
-     print("/", file=outf)
+     print >> outf,"GAIN AA  ELEV DPFU=%.3f   FREQ=10,100000"%DPFU
+     print >> outf,"POLY=1.0000E+00"
+     print >> outf,"/"
+     print >> outf,"TSYS AA  FT=1.0  TIMEOFF=0"
+     print >> outf,"INDEX= "+', '.join(['\'L%i|R%i\''%(i+1,i+1) for i in range(len(doIF))])
+     print >> outf,"/"
      fmt0 = "%i %i:%2.4f  "
      # boost field width to retain significant figures
      fmt1 = "%10.4f  "*len(doIF)
@@ -1901,8 +1899,8 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx, Range, ALMA
        currT = fmt0%(tobs,hour,minute)
        if currT != prevT:  # Limited time resolution in ANTAB
          prevT = currT
-         print(currT + fmt1%tuple(entry[1:]), file=outf)
-     print("/", file=outf)
+         print >> outf, currT + fmt1%tuple(entry[1:])
+     print >> outf, "/"
      outf.close()
 
 
@@ -1976,13 +1974,13 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx, Range, ALMA
    try: 
      import _PolGainSolve as PS
      goodclib = True
-     print('\nC++ shared library loaded successfully\n')
+     print '\nC++ shared library loaded successfully\n'
    except:
      goodclib=False
-     print('\n There has been an error related to the numpy') 
-     print(' API version used by CASA. This is related to PolConvert')
-     print(' (which uses the API version of your system) and should') 
-     print(' be *harmless*.\n')
+     print '\n There has been an error related to the numpy' 
+     print ' API version used by CASA. This is related to PolConvert'
+     print ' (which uses the API version of your system) and should' 
+     print ' be *harmless*.\n'
 
 
 
@@ -1990,7 +1988,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx, Range, ALMA
      try: 
        import _PolGainSolve as PS
        goodclib = True
-       print('\nC++ shared library loaded successfully\n')
+       print '\nC++ shared library loaded successfully\n'
      except:
        goodclib=False
 
@@ -2144,7 +2142,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx, Range, ALMA
     MySolve = PS.PolGainSolve(doSolveD,solint,selAnts,lAnts,FlagBas1,FlagBas2)
 
     AllFreqs = []
-    print('\n\n')
+    print '\n\n'
     for pli in doIF:
       printMsg("Reading back IF #%i"%pli)
       file1 = "POLCONVERT.FRINGE/OTHERS.FRINGE_%i"%pli
@@ -2378,7 +2376,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx, Range, ALMA
 
    for pli in GoodIFs:
 
-    print('\n\n')
+    print '\n\n'
     printMsg("Plotting selected fringe for IF #%i"%pli)
 
     frfile = open("POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i"%pli,"rb")

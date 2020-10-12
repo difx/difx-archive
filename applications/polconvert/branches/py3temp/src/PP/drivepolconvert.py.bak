@@ -21,10 +21,6 @@ import stat
 import sys
 import threading
 import time
-# not needed:
-# from six.moves import map
-# from six.moves import range
-# from six.moves import zip
 
 def parseOptions():
     '''
@@ -55,7 +51,7 @@ def parseOptions():
     epi += 'of problematic jobs, remove them from your list and deal with '
     epi += 'them individually.'
     use = '%(prog)s [options] [input_file [...]]\n  Version'
-    use += '$Id$'
+    use += '$Id: drivepolconvert.py 9747 2020-09-28 13:43:51Z GeoffreyCrew $'
     parser = argparse.ArgumentParser(epilog=epi, description=des, usage=use)
     # essential options
     parser.add_argument('-v', '--verbose', dest='verb',
@@ -222,7 +218,6 @@ def calibrationChecks(o):
     if len(o.qal) < 7:
         raise Exception('at least 7 QA2 tables are required, see --qa2 option')
     keys = ['a', 'c', 'd', 'b', 'g', 'p', 'x', 'y']
-    # o.qa2_dict = dict(list(zip(keys,o.qal)))
     o.qa2_dict = dict(zip(keys,o.qal))
     if o.nodt:
         print('nodt option is', o.nodt)
@@ -621,7 +616,6 @@ def createCasaCommand(o, job, workdir):
     basecmd = o.exp + '.' + job + '.pc-casa-command'
     cmdfile = workdir + '/' + basecmd
     os.mkdir(workdir + '/casa-logs')
-    # cmd = list(map(str,list(range(14))))
     cmd = list(map(str,range(14)))
     cmd[0]  = '#!/bin/sh'
     cmd[1]  = '[ -f killcasa ] && exit 0'

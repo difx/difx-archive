@@ -21,7 +21,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 
 
 #include <Python.h>
+
+// compiler warning that we use a deprecated NumPy API
+// #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+#define NO_IMPORT_ARRAY
+#include <numpy/npy_common.h>
 #include <numpy/arrayobject.h>
+
 #include <sys/types.h>
 #include <iostream> 
 #include <fstream>
@@ -33,6 +39,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 #include <fftw3.h>
 #include <gsl/gsl_linalg.h>
 
+// cribbed from SWIG machinery
+#if PY_MAJOR_VERSION >= 3
+#define PyClass_Check(obj) PyObject_IsInstance(obj, (PyObject *)&PyType_Type)
+#define PyInt_Check(x) PyLong_Check(x)
+#define PyInt_AsLong(x) PyLong_AsLong(x)
+#define PyInt_FromLong(x) PyLong_FromLong(x)
+#define PyInt_FromSize_t(x) PyLong_FromSize_t(x)
+#define PyString_Check(name) PyBytes_Check(name)
+#define PyString_FromString(x) PyUnicode_FromString(x)
+#define PyString_Format(fmt, args)  PyUnicode_Format(fmt, args)
+#define PyString_AsString(str) PyBytes_AsString(str)
+#define PyString_Size(str) PyBytes_Size(str)
+#define PyString_InternFromString(key) PyUnicode_InternFromString(key)
+#define Py_TPFLAGS_HAVE_CLASS Py_TPFLAGS_BASETYPE
+#define PyString_AS_STRING(x) PyUnicode_AS_STRING(x)
+#define _PyLong_FromSsize_t(x) PyLong_FromSsize_t(x)
+#endif
 
 
 typedef std::complex<double> cplx64f;
@@ -84,19 +107,33 @@ static PyMethodDef module_methods[] = {
     {"GetNScan",GetNScan, METH_VARARGS, GetNScan_docstring},
     {"FreeData", FreeData, METH_VARARGS, FreeData_docstring},
     {"SetFit", SetFit, METH_VARARGS, SetFit_docstring},
-
-    {NULL, NULL, 0, NULL}
+    {NULL, NULL, 0, NULL}   /* terminated by list of NULLs, apparently */
 };
 
 
 /* Initialize the module */
+#if PY_MAJOR_VERSION >= 3
+static struct PyModuleDef pc_module_def = {
+    PyModuleDef_HEAD_INIT,
+    "_PolGainSolve",         /* m_name */
+    module_docstring,       /* m_doc */
+    -1,                     /* m_size */
+    module_methods,         /* m_methods */
+    NULL,NULL,NULL,NULL     /* m_reload, m_traverse, m_clear, m_free */
+};
+PyMODINIT_FUNC PyInit_PolConvert(void)
+{
+    PyObject *m = PyModule_Create(&pc_module_def);
+    return(m);
+}
+#else
 PyMODINIT_FUNC init_PolGainSolve(void)
 {
     PyObject *m = Py_InitModule3("_PolGainSolve", module_methods, module_docstring);import_array();
     if (m == NULL)
         return;
-
 }
+#endif
 
 ///////////////////////
 
@@ -189,7 +226,8 @@ static PyObject *PolGainSolve(PyObject *self, PyObject *args){
 
   
 // Assign dummy sizes to all variables:  
-gsl_error_handler_t *ERRH = gsl_set_error_handler_off ();
+// unused:
+// gsl_error_handler_t *ERRH = gsl_set_error_handler_off ();
 NIF = 0;
 Npar=0;
 DStokes = new double*[1];
@@ -1818,7 +1856,8 @@ perm = gsl_permutation_alloc (Npar);
 
 //////////////////////
 // if calstokes[0]<0, it means we are SOLVING for Stokes!
-double tempD = (double) PyFloat_AsDouble(PyList_GetItem(calstokes,0));
+// unused:
+// double tempD = (double) PyFloat_AsDouble(PyList_GetItem(calstokes,0));
 StokesSolve = solveQU;
 //if(!StokesSolve){
   for (i=0; i<4; i++){
@@ -1871,7 +1910,9 @@ static PyObject *GetChi2(PyObject *self, PyObject *args) {
 
 //int NIFComp;
 int Ch0, Ch1;
-int i,j,k,l, end;
+// int i,j,k,l, end;    // original code
+int i,k,l, end;
+int j = -1;          // used in sprintf below, but never assigned.
 double *CrossG;
 //int *doIF;
 
@@ -1889,8 +1930,10 @@ double *DerAux1, *DerAux2;
 DerAux1 = new double[2];
 DerAux2 = new double[2];
 
-bool CohAvg = true; // Coherent summ for Chi2  ??
-bool FlipIt = false; // Flip 180 degrees the gains (in case R <-> L at all antennas).
+// unused:
+// bool CohAvg = true; // Coherent summ for Chi2  ??
+// unused:
+// bool FlipIt = false; // Flip 180 degrees the gains (in case R <-> L at all antennas).
 
 PyObject *pars, *ret,*LPy;
 
@@ -2385,7 +2428,8 @@ if(StokesSolve){
 
 
 //  cplx64f CrossMod = cplx64f(Stokes[1],Stokes[2]);
-  double ParMod = (Stokes[0]+Stokes[3])/(Stokes[0]-Stokes[3]);
+//  unused:
+//  double ParMod = (Stokes[0]+Stokes[3])/(Stokes[0]-Stokes[3]);
   cplx64f TempC;
 
 

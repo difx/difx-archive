@@ -20,7 +20,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 
 
 #include <Python.h>
+
+// compiler warning that we use a deprecated NumPy API
+// #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+#define NO_IMPORT_ARRAY
+#include <numpy/npy_common.h>
 #include <numpy/arrayobject.h>
+
 #include <sys/types.h>
 #include <iostream> 
 #include <fstream>
@@ -30,6 +36,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 #include <math.h>
 
 
+// cribbed from SWIG machinery
+#if PY_MAJOR_VERSION >= 3
+#define PyClass_Check(obj) PyObject_IsInstance(obj, (PyObject *)&PyType_Type)
+#define PyInt_Check(x) PyLong_Check(x)
+#define PyInt_AsLong(x) PyLong_AsLong(x)
+#define PyInt_FromLong(x) PyLong_FromLong(x)
+#define PyInt_FromSize_t(x) PyLong_FromSize_t(x)
+#define PyString_Check(name) PyBytes_Check(name)
+#define PyString_FromString(x) PyUnicode_FromString(x)
+#define PyString_Format(fmt, args)  PyUnicode_Format(fmt, args)
+#define PyString_AsString(str) PyBytes_AsString(str)
+#define PyString_Size(str) PyBytes_Size(str)
+#define PyString_InternFromString(key) PyUnicode_InternFromString(key)
+#define Py_TPFLAGS_HAVE_CLASS Py_TPFLAGS_BASETYPE
+#define PyString_AS_STRING(x) PyUnicode_AS_STRING(x)
+#define _PyLong_FromSsize_t(x) PyLong_FromSsize_t(x)
+#endif
 
 
 /* Docstrings */
@@ -51,18 +74,33 @@ static PyObject *getMounts(PyObject *self, PyObject *args);
 static PyMethodDef module_methods[] = {
     {"getAntInfo", getAntInfo, METH_VARARGS, getAntInfo_docstring},
     {"getCoords", getCoords, METH_VARARGS, getCoords_docstring},
-    {"getMounts", getMounts, METH_VARARGS, getMounts_docstring}
+    {"getMounts", getMounts, METH_VARARGS, getMounts_docstring},
+    {NULL, NULL, 0, NULL}   /* terminated by list of NULLs, apparently */
 };
 
-
 /* Initialize the module */
+#if PY_MAJOR_VERSION >= 3
+static struct PyModuleDef pc_module_def = {
+    PyModuleDef_HEAD_INIT,
+    "_getAntInfo",          /* m_name */
+    module_docstring,       /* m_doc */
+    -1,                     /* m_size */
+    module_methods,         /* m_methods */
+    NULL,NULL,NULL,NULL     /* m_reload, m_traverse, m_clear, m_free */
+};
+PyMODINIT_FUNC PyInit_PolConvert(void)
+{
+    PyObject *m = PyModule_Create(&pc_module_def);
+    return(m);
+}
+#else
 PyMODINIT_FUNC init_getAntInfo(void)
 {
     PyObject *m = Py_InitModule3("_getAntInfo", module_methods, module_docstring);import_array();
     if (m == NULL)
         return;
-
 }
+#endif
 
 ///////////////////////
 
@@ -186,8 +224,9 @@ static PyObject *getCoords(PyObject *self, PyObject *args){
 PyObject *CoordArr;
 long CD[2] = {Nants,3};
 
-Py_INCREF(CoordArr);
+//Py_INCREF(CoordArr); -- original code
 CoordArr = PyArray_SimpleNewFromData(2, &CD[0], NPY_DOUBLE, (void*) Coords);
+//Py_INCREF(CoordArr); -- needed only if we retain it and use it
 
 return CoordArr;
 
@@ -201,8 +240,9 @@ PyObject *MountArr;
 
 long MD[1] = {Nants};
 
-Py_INCREF(MountArr);
+//Py_INCREF(MountArr); -- original code
 MountArr = PyArray_SimpleNewFromData(1, &MD[0], NPY_INT, (void*) Mounts);
+//Py_INCREF(MountArr); -- needed only if we retain it and use it
 
 return MountArr;
 

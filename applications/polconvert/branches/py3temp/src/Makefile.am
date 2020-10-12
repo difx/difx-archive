@@ -10,10 +10,8 @@ PolConvertSources = \
 	DataIOFITS.cpp DataIOFITS.h \
 	DataIOSWIN.cpp DataIOSWIN.h \
 	Weighter.cpp Weighter.h \
-	_PolConvert.cpp polconvert.xml \
-	_getAntInfo.cpp _PolGainSolve.cpp \
-	_XPCal.cpp \
-	setup.py task_polconvert.py
+	_PolConvert.cpp _getAntInfo.cpp _PolGainSolve.cpp _XPCal.cpp \
+	polconvert.xml setup.py task_polconvert.py
 PostPolScripts = PP/runpolconvert.py PP/README.POLCONVERT \
 	PP/Estimate_DPFU.py PP/DPFU_scanner.py
 ScriptCopies = runpolconvert.py README.POLCONVERT \
@@ -24,8 +22,7 @@ BuiltSources = $(PolConvertSources) $(PostPolScripts)
 
 bin_SCRIPTS = PP/prepolconvert.py PP/drivepolconvert.py \
 	PP/checkpolconvert.py PP/comparepolconvert.py
-pkgdata_DATA = _PolConvert.so \
-	_getAntInfo.so _PolGainSolve.so _XPCal.so \
+pkgdata_DATA = _PolConvert.so _getAntInfo.so _PolGainSolve.so _XPCal.so \
 	PP/runpolconvert.py task_polconvert.py polconvert.xml \
 	PP/README.POLCONVERT PP/Estimate_DPFU.py PP/DPFU_scanner.py
 
@@ -59,11 +56,22 @@ $(BuiltSources): copy.them
 
 # python does an inplace build in the directory
 # note that all .so files are build with this
-_PolConvert.so: copy.them
+build.sos: copy.them
 	export PATH=@DIFXCASAPATH@${PATH_SEPARATOR}${PATH} ;\
 	export LD_LIBRARY_PATH=@DIFXCASALIBPATH@${PATH_SEPARATOR}${LD_LIBRARY_PATH} ;\
 	[ -n "${DIFXCASAVENV}" ] && source ${DIFXCASAVENV} ;\
-	@DIFXCASAPATH@/python setup.py build_ext --inplace
+	@CASAPYTHON@ setup.py build_ext --inplace
+	ls _*.so > build.sos
+
+# Py3 generates complex .so names that we perhaps do not need to follow.
+_PolConvert.so: build.sos
+	pcso=`grep _PolConvert $<` ; cp -p $$pcso $@
+_XPCal.so: build.sos
+	pcso=`grep _XPCal $<` ; cp -p $$pcso $@
+_PolGainSolve.so: build.sos
+	pcso=`grep _PolGainSolve $<` ; cp -p $$pcso $@
+_getAntInfo.so: build.sos
+	pcso=`grep _getAntInfo $<` ; cp -p $$pcso $@
 
 # use copy.them to distinguish build and source dirs
 clean-local:
@@ -71,6 +79,7 @@ clean-local:
 	rm -rf polconvert.py polconvert_cli.py mytasks.py
 	rm -f $(ScriptCopies)
 	-[ -f copy.them ] && rm -f $(PolConvertSources) && rm -f copy.them
+	rm -f build.sos
 endif
 #
 # eof

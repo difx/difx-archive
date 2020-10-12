@@ -432,7 +432,7 @@ void DataIOSWIN::readHeader(bool doTest, int saveSource) {
   sprintf(message,"\n\n Searching for visibilities with mixed (or linear) polarization.\n\n");
   fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
 
-  long bperp, cp;
+  long bperp;
 
 
   long RecordSize = 5*sizeof(int) + sizeof(double) + 2*sizeof(char) + endhead;
@@ -448,7 +448,7 @@ void DataIOSWIN::readHeader(bool doTest, int saveSource) {
   sprintf(message,"\n\nReading file %i of %i (size %li MB)\n",auxI+1,nfiles,filesizes[auxI]/(1024*1024));
   fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
 
-  cp = 0;
+//  long cp = 0;
 
   while(!newdifx[auxI].eof()) {
 

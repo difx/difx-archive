@@ -16,8 +16,6 @@ import math
 import os
 import re
 import sys
-# not necessary:
-# from six.moves import zip
 
 def parseOptions():
     '''
