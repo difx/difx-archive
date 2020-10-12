@@ -30,12 +30,13 @@ pkgdata_DATA = _PolConvert.so _getAntInfo.so _PolGainSolve.so _XPCal.so \
 install-data-am: install-pkgdataDATA install-data-local
 
 # runs the CASA local build in the install directory
-# buildmytasks is a PERL(!) script living in $DIFXCASAPATH
+# buildmytasks is a PERL(!) script living in $DIFXCASAPATH through 5.x
+# converted to Python3 for 6.x series
 install-data-local: install-pkgdataDATA
 	cd $(pkgdatadir) ;\
 	export PATH=@DIFXCASAPATH@${PATH_SEPARATOR}${PATH} ;\
 	export CASALD_LIBRARY_PATH=@DIFXCASALIBPATH@${PATH_SEPARATOR}${LD_LIBRARY_PATH} ;\
-	buildmytasks
+	@BUILDMYTASKS@ @BMTASKARG@
 
 # things created in pkgdata by buildmytasks
 bmt = polconvert.py polconvert_cli.py mytasks.py *.pyc
