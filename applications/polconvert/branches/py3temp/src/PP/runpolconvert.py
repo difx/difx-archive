@@ -20,7 +20,8 @@ pcvers='1.7.9'
 # Between v3 and v4 concatenated -> concatenated | calibrated
 # if concatenated.ms is already in label, we'll assume v3 or earlier
 # else use newer names here.
-print('\nRunning PolConvert Wrapper with label ' + label + ' in ' + DiFXout)
+print('\nRunning PolConvert (v%s) Wrapper with label %s in %s' % (
+    pcvers, label, DiFXout))
 v4tables = None
 lm = re.match('(.*)\.concatenated.ms', label)
 if lm:
@@ -153,12 +154,17 @@ except Exception as ex:
     raise ex
 
 # Things defined in, e.g. drivepolconvert.py
+# plotIF may be any of these: -1 [] or [list of IFs to plot]
 try:
     print("Experiment %s with linear pol antenna index %s\non IFs %s" % (
         expName, str(linAnt), str(doIF)))
-    if plotIF > 0:
+    if ((type(plotIF) == int and plotIF > 0) or
+        (type(plotIF) == list and len(plotIF) > 0)):
         print("Plotting IF %s on days %d .. %d" % (
             str(plotIF), timeRange[0], timeRange[4]))
+    elif type(plotIF) == list and len(plotIF) == 0:
+        print("Plotting all IFs on days %d .. %d" % (
+            timeRange[0], timeRange[4]))
 except Exception as ex:
     raise ex
 

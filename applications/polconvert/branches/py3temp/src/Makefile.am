@@ -31,12 +31,17 @@ install-data-am: install-pkgdataDATA install-data-local
 
 # runs the CASA local build in the install directory
 # buildmytasks is a PERL(!) script living in $DIFXCASAPATH through 5.x
-# converted to Python3 for 6.x series
+# converted to Python3 for 6.x series which requires an upgrade step
+# in order to share the same 5.x series xml file.
 install-data-local: install-pkgdataDATA
 	cd $(pkgdatadir) ;\
 	export PATH=@DIFXCASAPATH@${PATH_SEPARATOR}${PATH} ;\
 	export CASALD_LIBRARY_PATH=@DIFXCASALIBPATH@${PATH_SEPARATOR}${LD_LIBRARY_PATH} ;\
-	@BUILDMYTASKS@ @BMTASKARG@
+	@BUILDMYTASKS@ @BMTASKARG@ && @BUILDMYTASKS@ @BMTASKXML@
+
+# brutal, but hey..
+uninstall-hook:
+	rm -rf $(pkgdatadir)
 
 # things created in pkgdata by buildmytasks
 bmt = polconvert.py polconvert_cli.py mytasks.py *.pyc

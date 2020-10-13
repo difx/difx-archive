@@ -490,7 +490,7 @@ def plotPrep(o):
         o.doPlot = ['','#','#','']
         o.flist = '0'
         for ii in range(1,o.fringe):
-            o.flist += ',(%d*len(doIF)/%d)' % (ii, o.fringe)
+            o.flist += ',(%d*len(doIF)//%d)' % (ii, o.fringe)
     if o.remote == o.ant:
         o.remote = o.ant + 1
         print('Shifting baseline from %d-%d to %d-%d' % (
@@ -507,6 +507,7 @@ def getInputTemplate():
     # are having trouble or wish to see some of the plots).
     #
     import os
+    import sys
     %simport pylab as pl
     %spl.ioff()
     #
@@ -514,16 +515,17 @@ def getInputTemplate():
     #
     DiFXout = '%s'
     label = '%s'
+    print('label is ', label)
     expName = '%s'
     linAnt = [%s]
     rpcpath = os.environ['DIFXROOT'] + '/share/polconvert/runpolconvert.py'
     zfirst=%d
     zfinal=%d
-    doIF = range(zfirst+1, zfinal+2)
+    doIF = list(range(zfirst+1, zfinal+2))
     %splotIF = -1                       # plot no channels
-    %splotIF = doIF[len(doIF)/2]        # plot the middle channel
+    %splotIF = doIF[int(len(doIF)/2)]   # plot the middle channel
     %splotIF = [doIF[i] for i in [%s]]  # plot a set of channels
-    print 'using doIF value: ' + str(doIF)
+    print('using doIF value: ' + str(doIF))
     #
     # calibration tables
     #
@@ -552,21 +554,24 @@ def getInputTemplate():
     XYadd = {}
     constXYadd = %s
     %sXYadd = {%s}
-    print 'using XYadd   %%s' %% (str(XYadd))
+    print('using XYadd   %%s' %% (str(XYadd)))
     # default is empty dictionary, equivalent to 'Aa':1.0
     XYratio = {}
-    print 'using XYratio %%s' %% (str(XYratio))
+    print('using XYratio %%s' %% (str(XYratio)))
     #
     djobs = %s
-    print 'djobs contains these jobs: ' + str(djobs)
+    print('djobs contains these jobs: ' + str(djobs))
     #
     workdir = '%s'
     # actually do the work:
-    print 'executing "execfile(rpcpath)" with rcpath and working directory'
-    print rpcpath
-    print workdir
-    print os.getcwd()
-    execfile(rpcpath)
+    print('executing "execfile(rpcpath)" with rcpath and working directory')
+    print(rpcpath)
+    print(workdir)
+    print(os.getcwd())
+    if sys.version_info.major < 3:
+        execfile(rpcpath)               # Py2 form
+    else:
+        execfile(rpcpath, globals())    # Py3 form
     quit()
     '''
     return template
@@ -585,6 +590,7 @@ def createCasaInput(o, joblist, caldir, workdir):
     else:        dotest = 'False'
 
     template = getInputTemplate()
+    # o.doPlot is set in plotPrep()
     script = template % (o.doPlot[0], o.doPlot[0],
         caldir, o.label, o.exp, o.ant, o.zfirst, o.zfinal,
         o.doPlot[1], o.doPlot[2], o.doPlot[3], o.flist,
