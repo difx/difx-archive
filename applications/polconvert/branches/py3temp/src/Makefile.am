@@ -38,6 +38,10 @@ install-data-local: install-pkgdataDATA
 	export PATH=@DIFXCASAPATH@${PATH_SEPARATOR}${PATH} ;\
 	export CASALD_LIBRARY_PATH=@DIFXCASALIBPATH@${PATH_SEPARATOR}${LD_LIBRARY_PATH} ;\
 	@BUILDMYTASKS@ @BMTASKARG@ && @BUILDMYTASKS@ @BMTASKXML@
+	-cd $(pkgdatadir) && [ -f polconvert.xml.bak ] && \
+		mv polconvert.py polconvert.bak && \
+		sed '/from..private.task/s/.private.//' polconvert.bak \
+			> polconvert.py
 
 # brutal, but hey..
 uninstall-hook:

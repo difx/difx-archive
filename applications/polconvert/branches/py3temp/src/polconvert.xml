@@ -138,7 +138,7 @@ file:///opt/casa/code/xmlcasa/xml/casa.xsd">
       <value>[False]</value>
     </param>
 
-    <param type="any" name="swapRL" mustexist="false">
+    <param type="bool" name="swapRL" mustexist="false">
       <description>Swap R-L of the OTHER antenna(s) when plotting the fringes.</description>
       <value>False</value>
     </param>
@@ -182,7 +182,7 @@ file:///opt/casa/code/xmlcasa/xml/casa.xsd">
 
 
 
-    <param type="any" name="doSolve" mustexist="false">
+    <param type="float" name="doSolve" mustexist="false">
       <description>If negative, do not estimate the cross-polarization gains. If positive or zero, estimate the gains using a Global Cross-Pol Fringe Fitting (GCPFF). The gains are fitted with an error function (Chi Square) defined as:\n\n sum( doSolve*(RR/LL-1)^2 + (RL^2 + LR^2) ),\n\n so that doSolve=0 minimizes the cross-hand polarizations (so it assumes a small linear polarization of the source), whereas doSolve>>1 assumes a negligible Stokes V.</description>
       <value>-1</value>
     </param>

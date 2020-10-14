@@ -87,12 +87,17 @@
 #define PyString_Check(name) PyBytes_Check(name)
 #define PyString_FromString(x) PyUnicode_FromString(x)
 #define PyString_Format(fmt, args)  PyUnicode_Format(fmt, args)
-#define PyString_AsString(str) PyBytes_AsString(str)
+//#define PyString_AsString(str) PyBytes_AsString(str)
 #define PyString_Size(str) PyBytes_Size(str)
 #define PyString_InternFromString(key) PyUnicode_InternFromString(key)
 #define Py_TPFLAGS_HAVE_CLASS Py_TPFLAGS_BASETYPE
 #define PyString_AS_STRING(x) PyUnicode_AS_STRING(x)
 #define _PyLong_FromSsize_t(x) PyLong_FromSsize_t(x)
+#endif
+
+// and after some hacking
+#if PY_MAJOR_VERSION >= 3
+#define PyString_AsString(obj) PyUnicode_AsUTF8(obj)
 #endif
 
 /* Docstrings */
@@ -122,7 +127,7 @@ static struct PyModuleDef pc_module_def = {
     module_methods,         /* m_methods */
     NULL,NULL,NULL,NULL     /* m_reload, m_traverse, m_clear, m_free */
 };
-PyMODINIT_FUNC PyInit_PolConvert(void)
+PyMODINIT_FUNC PyInit__PolConvert(void)
 {
     PyObject *m = PyModule_Create(&pc_module_def);
     return(m);
@@ -154,6 +159,7 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
     PyObject *ngain, *nsum, *gains, *ikind, *dterms, *plotRange, *IDI, *antnum, *tempPy, *ret; 
     PyObject *allphants, *nphtimes, *phanttimes, *Range, *SWAP, *doIF, *metadata, *refAnts, *ACorrPy;
     PyObject *asdmTimes, *plIF, *isLinearObj, *XYaddObj, *antcoordObj, *soucoordObj, *antmountObj, *timeranges; 
+ // PyObject *wtf;
     int nALMA, plAnt, nPhase, doTest, doConj, doNorm, calField, verbose;
     double doSolve;
  //   double XYadd;
@@ -164,6 +170,9 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
 
    char message[512];
     
+
+// return value if there is an error:
+   ret = Py_BuildValue("i",1);
 
 
 
@@ -196,6 +205,8 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
 // (if the length of the metadata list is zero, this is a FITS-IDI file)
     int SWINnIF = (int) PyList_Size(metadata)-1 ;
     isSWIN = SWINnIF > 0;
+    sprintf(message,"\nisSwin is %s\n", isSWIN ? "True" : "False");
+    fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
 
     int nSWINFiles = 0; // compiler warning
     std::string* SWINFiles, outputfits;
@@ -204,12 +215,15 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
        nSWINFiles = (int) PyList_Size(IDI) ;
        SWINFiles = new std::string[nSWINFiles];
        for (ii=0; ii<nSWINFiles; ii++){
+         // or this:
+         // wtf = PyList_GetItem(IDI,ii);
+         // SWINFiles[ii] = PyUnicode_AsUTF8(wtf);
          SWINFiles[ii] = PyString_AsString(PyList_GetItem(IDI,ii));
+         sprintf(message,"file[%i] %s\n\n",ii,SWINFiles[ii].c_str());
+         fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
        }; 
        sprintf(message,"\nCONVERTING %i SWIN (DiFX) FILES\n\n",nSWINFiles);
        fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
-
-       fflush(logFile);
     } else {
       SWINFiles = new std::string[nSWINFiles];  // compiler warning
       outputfits = PyString_AsString(IDI);
@@ -250,7 +264,7 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
 
 
 // return value if there is an error:
-    ret = Py_BuildValue("i",1);
+// ret = Py_BuildValue("i",1);
 
 
 // Times to analyse:
@@ -743,7 +757,10 @@ for (currAntIdx=0; currAntIdx<nALMA; currAntIdx++) {
 ///////////////////////////////////
 // MAIN LOOP FOR CORRECTION (LOOP OVER IFs):
 
-//  for (ii=0; ii<nnu; ii++){
+////////////////////////////////////
+// Start of iteration over IFs
+////////////////////////////////////
+//  for (ii=0; ii<nnu; ii++) brace
   for (im=0; im<nIFconv; im++) {
 
     ii = IFs2Conv[im] - 1;
@@ -769,12 +786,12 @@ for (currAntIdx=0; currAntIdx<nALMA; currAntIdx++) {
 
 
 // Only proceed if IF is OK:
-    if(!DifXData->setCurrentIF(ii)){             //return ret;};
+    if(!DifXData->setCurrentIF(ii)){             //return ret; end-brace;
 
       sprintf(message,"WARNING! DATA DO NOT HAVE SUCH AN IF!! WILL SKIP CONVERSION\n");  
       fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
 
-    } else {
+    } else {    // IF is OK
 
 
 // Get the frequencies of the current IF:
@@ -1169,25 +1186,32 @@ for (currAntIdx=0; currAntIdx<nALMA; currAntIdx++) {
   }; // Comes from the check of IF.
 
 
-  }; ///////////////////////////////
+  };
+////////////////////////////////////
 // End of iteration over IFs
 ////////////////////////////////////
+  sprintf(message,"\nDONE WITH ITERATION over IFs!\n");
+  fprintf(logFile,"%s",message); std::cout << message; fflush(logFile);
 
 
-   for (ij=0;ij<nIFplot;ij++){fclose(plotFile[ij]);};
-   if(doNorm){fclose(gainsFile);};
+  for (ij=0;ij<nIFplot;ij++){fclose(plotFile[ij]);};
+  if(doNorm){fclose(gainsFile);};
+  sprintf(message,"\nDONE WITH plot and gain files!\n");
+  fprintf(logFile,"%s",message); std::cout << message; fflush(logFile);
 
 // Close data file(s):
-   DifXData->finish();
+  DifXData->finish();
+  sprintf(message,"\nFinishing DifXData!\n");
+  fprintf(logFile,"%s",message); std::cout << message; fflush(logFile);
 
-// END OF PROGRAM.
+// (almost) END OF PROGRAM.
   std::cout << "\n";
   sprintf(message,"\nDONE WITH POLCONVERT!\n");
   fprintf(logFile,"%s",message); std::cout << message; fflush(logFile);
 
 
 // finished with no errors:
-  ret = Py_BuildValue("i",0);
+// ret = Py_BuildValue("i",0);
 
 
 
@@ -1224,9 +1248,9 @@ for (currAntIdx=0; currAntIdx<nALMA; currAntIdx++) {
 
    };
 
-    for (i=0;i<nALMA;i++){
-     for (j=0;j<nsumArr[i];j++){delete[] dttimesArr[i][j];};
-     for (j=0; j<ngainTabs[i]; j++){
+   for (i=0;i<nALMA;i++){
+    for (j=0;j<nsumArr[i];j++){delete[] dttimesArr[i][j];};
+    for (j=0; j<ngainTabs[i]; j++){
       delete[] ntimeArr[i][j];
       delete[] timesArr[i][j];
       delete[] gainsArrR1[i][j];
@@ -1296,8 +1320,18 @@ for (currAntIdx=0; currAntIdx<nALMA; currAntIdx++) {
 
 /////////////////////////////////////////////////////
 
+  sprintf(message,"\nfinished POLCONVERT cleanup!\n");
+  fprintf(logFile,"%s",message); std::cout << message; fflush(logFile);
+  //finished with no errors:
+  //ret = Py_BuildValue("i",0);
+  //ret = Py_BuildValue("l",0L);
+  ret = PyLong_FromLong(0L);
 
-    return ret;
+  // avoid some lower-level exception that is still set?
+  PyErr_PrintEx(0);
+  PyErr_Clear();
+
+  return ret;
 
 }
 

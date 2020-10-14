@@ -234,24 +234,24 @@ def runPolConvert(label, spw=-1, DiFXinput='',
             doIF=doIF,
             linAntIdx=linAnt, Range=Range, ALMAant=aantpath,
             spw=spw, calAPP=calapphs, calAPPTime=calAPPTime,
-            #APPrefant,
+            APPrefant='',
             gains=[gains], interpolation=[interpolation],
             gainmode=[gaintype], XYavgTime=XYavgTime,
             dterms=[dterm], amp_norm=amp_norm,
             XYadd=XYadd,
-            #XYdel,
+            XYdel={},
             XYratio=XYratio, swapXY=[False],
-            #swapRL, feedRotation,
+            swapRL=False, feedRotation=[],
             IDI_conjugated=True,
             plotIF=plotIF, plotRange=timeRange,
             plotAnt=plotAnt,
-            #excludedAnts, doSolve, solint,
+            excludeAnts=[], doSolve=-1, solint=[1,1],
             doTest=doTest, npix=npix,
-            solveAmp=False
-            #, solveMethod=gradient, calstokes, calfield
+            solveAmp=False,
+            solveMethod='gradient', calstokes=[1.,0.,0.,0.], calfield=-1
             )
     except Exception as ex:
-        print('Polconvert Exception')
+        print('Polconvert Exception -- Restoring Saved DiFXoutput Dir')
         if (os.path.exists(DiFXoutput)):
             shutil.rmtree(DiFXoutput)
         os.rename(DiFXsave, DiFXoutput)
