@@ -46,13 +46,16 @@ if [test $have_casa = true] ; then
     # Version 5.x casa-release5/bin/python -> casa
     AC_PATH_PROG([casapy3], [python3], [/bin/false], [$DIFXCASAPATH])
     AC_PATH_PROG([casapy2], [python], [/bin/false], [$DIFXCASAPATH])
-    # we presume only one will be defined.
+    # we presume only one will be defined.  See the Makefile.am
+    # to understand what is going on with BMT*
     if [test $casapy3 = $DIFXCASAPATH/python3] ; then
-        BMTASKARG='--upgrade polconvert.xml && rm polconvert.xml.bak'
+        BMTASKARG='--upgrade polconvert.xml'
+        BMTASKXML='polconvert.xml'
         CASAPYTHON=$casapy3
         AC_MSG_NOTICE([Invoking CASAPYTHON as $CASAPYTHON])
     elif [test $casapy = $DIFXCASAPATH/python] ; then
-        BMTASKARG=''
+        BMTASKARG='&& false'
+        BMTASKXML='&& false'
         CASAPYTHON=$casapy2
         AC_MSG_NOTICE([Invoking CASAPYTHON as $CASAPYTHON])
     else
@@ -62,6 +65,7 @@ if [test $have_casa = true] ; then
 fi
 # try to use whatever is in CASA
 DIFXCASALIBPATH=$DIFXCASAPATH/../lib
+AC_SUBST(BMTASKXML)
 AC_SUBST(BMTASKARG)
 AC_SUBST(CASAPYTHON)
 AC_SUBST(DIFXCASAPATH)
