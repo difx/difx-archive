@@ -1,7 +1,8 @@
 /* getAntInfo -
-             Copyright (C) 2017  Ivan Marti-Vidal
+             Copyright (C) 2017-2020  Ivan Marti-Vidal
              Nordic Node of EU ALMA Regional Center (Onsala, Sweden)
              Max-Planck-Institut fuer Radioastronomie (Bonn, Germany)
+             Observatori Astronòmic, Universitat de València
   
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -23,7 +24,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 
 // compiler warning that we use a deprecated NumPy API
 // #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-#define NO_IMPORT_ARRAY
+// #define NO_IMPORT_ARRAY
+#define NPY_NO_DEPRECATED_API 0x0
 #include <numpy/npy_common.h>
 #include <numpy/arrayobject.h>
 
@@ -46,7 +48,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 #define PyString_Check(name) PyBytes_Check(name)
 #define PyString_FromString(x) PyUnicode_FromString(x)
 #define PyString_Format(fmt, args)  PyUnicode_Format(fmt, args)
-#define PyString_AsString(str) PyBytes_AsString(str)
+//#define PyString_AsString(str) PyBytes_AsString(str)
 #define PyString_Size(str) PyBytes_Size(str)
 #define PyString_InternFromString(key) PyUnicode_InternFromString(key)
 #define Py_TPFLAGS_HAVE_CLASS Py_TPFLAGS_BASETYPE
@@ -54,6 +56,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 #define _PyLong_FromSsize_t(x) PyLong_FromSsize_t(x)
 #endif
 
+// and after some hacking
+#if PY_MAJOR_VERSION >= 3
+#define PyString_AsString(obj) PyUnicode_AsUTF8(obj)
+#endif
 
 /* Docstrings */
 static char module_docstring[] =
@@ -88,9 +94,10 @@ static struct PyModuleDef pc_module_def = {
     module_methods,         /* m_methods */
     NULL,NULL,NULL,NULL     /* m_reload, m_traverse, m_clear, m_free */
 };
-PyMODINIT_FUNC PyInit_PolConvert(void)
+PyMODINIT_FUNC PyInit__getAntInfo(void)
 {
     PyObject *m = PyModule_Create(&pc_module_def);
+    import_array();
     return(m);
 }
 #else

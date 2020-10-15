@@ -1,3 +1,6 @@
+v1.8.0
+- first cut at portage to Python 3
+
 v1.7.9
 - added checkpolconvert.py
 - prepolconvert.py and drivepolconvert.py execute in py3 environment

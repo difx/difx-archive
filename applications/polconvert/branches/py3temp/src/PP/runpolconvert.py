@@ -223,10 +223,17 @@ def runPolConvert(label, spw=-1, DiFXinput='',
     os.rename(DiFXoutput, DiFXsave)
 
     # Now we actual run PolConvert setting (almost) everything.
-    # Commented arguments are not needed for DiFX, but are
-    # mentioned here as comments for clarity and coordination
-    # with task_polconvert.py:^def polconvert(...)
-    # CASA supplies defaults from the task xml file.
+    if 'POLCONVERTDEBUG' in os.environ:
+        if os.environ['POLCONVERTDEBUG'] == 'True':
+            print('PolConvert internal verbosity is enabled')
+        else:
+            print('PolConvert internal verbosity is disabled')
+    else:
+        print("PolConvert internal verbosity at default setting")
+    # argument list should exactly match what you see with
+    #   task_polconvert.py:^def polconvert(...)
+    # in theory CASA supplies defaults from the task xml file,
+    #   but we choose not to trust in CASA here.
     try:
         print('Calling PolConvert from runpolconvert')
         polconvert(IDI=DiFXsave, OUTPUTIDI=DiFXoutput,
@@ -256,9 +263,11 @@ def runPolConvert(label, spw=-1, DiFXinput='',
             shutil.rmtree(DiFXoutput)
         os.rename(DiFXsave, DiFXoutput)
         raise ex
+    print('Finished with polconvert(...) invocation')
 
     try:
-        makeHistory(label, DiFXoutput, doIF=doIF, linAntIdx=linAntIdx,
+        print('Making the history file')
+        makeHistory(label, DiFXoutput, doIF=doIF, linAntIdx=linAnt,
             spw=spw, calAPPTime=calAPPTime, interpolation=[interpolation],
             gainmode=[gaintype], XYavgTime=XYavgTime, amp_norm=amp_norm,
             XYadd=XYadd, XYratio=XYratio, swapXY=[False])
@@ -272,6 +281,7 @@ def runPolConvert(label, spw=-1, DiFXinput='',
                 'POLCONVERT_STATION1.ANTAB', 'CONVERSION.MATRIX',
                 'FRINGE.PEAKS', 'FRINGE.PLOTS' ]
     # this is used only in non-parallel execution
+    # in parallel execution, we are already in the savename directory
     if savename != '':
         now = datetime.datetime.now()
         outdir = now.strftime(savename + '.polconvert-%Y-%m-%dT%H.%M.%S')
@@ -338,8 +348,9 @@ for job in djobs:
     print('\nFinished with job ' + job + '\n')
 
 # make sure the last of the log gets written out so we are sure we are done
-print('Finished with runpolconvert tasks')
+print('Finished with runpolconvert tasks\n')
 sys.stdout.flush()
+sys.stderr.flush()
 
 #
 # eof
