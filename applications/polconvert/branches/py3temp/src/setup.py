@@ -43,6 +43,7 @@ sourcefiles3 = ['_getAntInfo.cpp']
 sourcefiles4 = ['_XPCal.cpp']
 
 c_ext1 = Extension("_PolConvert", sources=sourcefiles1,
+                  language='c++',
                   extra_compile_args=["-Wno-deprecated","-O3"],
                   library_dirs=libdirs,
                   libraries=['cfitsio'],
@@ -50,6 +51,7 @@ c_ext1 = Extension("_PolConvert", sources=sourcefiles1,
                   extra_link_args=["-Xlinker", "-export-dynamic"])
 
 c_ext3 = Extension("_getAntInfo", sources=sourcefiles3,
+                  language='c++',
                   extra_compile_args=["-Wno-deprecated","-O3"],
                   library_dirs=libdirs,
                   libraries=['cfitsio'],
@@ -57,6 +59,7 @@ c_ext3 = Extension("_getAntInfo", sources=sourcefiles3,
                   extra_link_args=["-Xlinker", "-export-dynamic"])
 
 c_ext4 = Extension("_XPCal",sources=sourcefiles4,
+                  language='c++',
                   extra_compile_args=["-Wno-deprecated","-O3"],
                   include_dirs=[np.get_include()],
                   extra_link_args=["-Xlinker","-export-dynamic"])
