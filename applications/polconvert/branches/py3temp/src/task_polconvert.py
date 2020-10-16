@@ -2460,7 +2460,6 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 
 # start of GoodIFs pli loop
    for pli in GoodIFs:
-
     print('\n\n')
     printMsg("Plotting selected fringe for IF #%i"%pli)
 
@@ -2477,12 +2476,15 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 # an "integer is required" error in the first try to read:
     try:
       fringe = np.fromfile(frfile,dtype=dtype)
+      printMsg("Read fringe data from file POLCONVERT.FRINGE_%i"%pli)
     except:
       fringe = np.fromfile(frfile,dtype=dtype)
-    printMsg("Read fringe data from file POLCONVERT.FRINGE_%i"%pli)
+      printMsg("Exceptional Read of fringe data POLCONVERT.FRINGE_%i"%pli)
+      printMsg("len(fringe) = %d" % len(fringe))
     frfile.close()
 
 
+    # start of for ant1 in linAntIdx
     for ant1 in linAntIdxTrue:
 
      if pli == GoodIFs[0]:
@@ -2491,7 +2493,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
       fringeAmpsMix[ant1] = []
       ResidGains[ant1] = []
 
-# start of fringe loop on ant1-ant2 baseline
+     # start of fringe loop on ant1-ant2 baseline
      for ant2 in [plotAnt]:
 
       AntEntry1 = np.logical_and(
@@ -2499,13 +2501,17 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
       AntEntry2 = np.logical_and(
         fringe[:]["ANT2"] == ant1,fringe[:]["ANT1"] == ant2)
       AntEntry = np.logical_or(AntEntry1,AntEntry2)
+      printMsg("np.sum(AntEntry) > 0: '" + str(np.sum(AntEntry)) + "'")
 
+      # start of np.sum(AntEntry)
       if np.sum(AntEntry)>0:
+       printMsg("Something to plot, apparently")
 
        if pli == GoodIFs[0]:
         MixedCalib[ant1][ant2] = []
 
 # This is to store all fringes with linear-feeds involved:
+       # if len(fringe)>0
        if nchPlot > 0 and len(fringe)>0:
          uncal = [(fringe[AntEntry]["MATRICES"])[:,i::12] for i in range(4)]
          cal = [(fringe[AntEntry]["MATRICES"])[:,i::12] for i in range(4,8)]
@@ -2556,13 +2562,21 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
          LL = np.abs(LLVis) 
 
 # Peaks of converted fringes:
+         if DEBUG: print("fringe maximum debugging:")
          RMAX = np.unravel_index(np.argmax(RR+LL),np.shape(RRVis))
+         if DEBUG: print(' unravel_index:',RMAX)
          MAXVis = [RRVis[RMAX],RLVis[RMAX],LRVis[RMAX],LLVis[RMAX]]
-         MixedCalib[ant1][ant2].append([np.array(MM) for MM in MAXVis])
+         if DEBUG: print(' MAXVis:',MAXVis)
+         try:
+             MixedCalib[ant1][ant2].append([np.array(MM) for MM in MAXVis])
+         except Exception as ex:
+            print('  MixedCalib np exception',str(ex))
          MAXl = [RR[RMAX],RL[RMAX],LR[RMAX],LL[RMAX]]
+         if DEBUG: print(' MAXl:',MAXl)
          MAX = max(MAXl)
+         if DEBUG: print(' Final MAX',MAX,'done')
 
-       #  raw_input('HOLD')
+         #  raw_input('HOLD')
 
 # Plot fringes:
          if ant2==plotAnt or ant1==plotAnt:
@@ -2789,7 +2803,16 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
           pfile.write(pmsg)
           printMsg("wrote FRINGE.PEAKS%i-ANT%i.dat"%(pli,ant1))
          # end of if for this baseline to be plotted
-# end of fringe loop on ant1-ant2 baseline
+       # end of if len(fringe)>0
+       else:
+          printMsg("Fringe length was zero")
+
+      # end of np.sum(AntEntry)
+      else:
+       printMsg("Nothing to plot, apparently")
+    # start of for ant1 in linAntIdx
+
+     # end of fringe loop on ant1-ant2 baseline
 
     try:
       del uncal[3],uncal[2],uncal[1],uncal[0],uncal
@@ -2810,7 +2833,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
     except:
       pass
     gc.collect()
-# end of GoodIFs pli loop
+    # end of if ant1 in linAntIdx
 
 
  #  try:
@@ -2869,7 +2892,12 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
      pl.xlabel('IF NUMBER')
      pl.ylabel('(RR/LL)/(LR/RL)')
      pl.xlim((min(CONVAMP[:,0])-1,max(CONVAMP[:,0])+1))
-     pl.ylim((0.,np.max(CONVAMP[:,-1])*1.05))
+     uylim = np.max(CONVAMP[:,-1])
+     if np.isfinite(uylim):
+        pl.ylim((0,uylim))
+     else:
+        pl.ylim((0,2))
+     # pl.ylim((0.,np.max(CONVAMP[:,-1])*1.05))
 
      fig3.suptitle(jobLabel(DiFXinput)+' ANT: %i v %i'%(thisAnt,plotAnt))
      fig3.savefig('FRINGE.PLOTS/RL_LR_RATIOS_ANT_%i_%i.png'%(thisAnt,plotAnt))
