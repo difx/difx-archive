@@ -12,7 +12,7 @@ import shutil
 import re
 import sys
 
-pcvers='1.7.9'
+pcvers='1.8.0'
 
 # Begin by verifying everthing that should be defined at this point.
 # If we can't print something, that's probably enough for a test.
@@ -247,12 +247,14 @@ def runPolConvert(label, spw=-1, DiFXinput='',
             dterms=[dterm], amp_norm=amp_norm,
             XYadd=XYadd,
             XYdel={},
-            XYratio=XYratio, swapXY=[False],
+            XYratio=XYratio, usePcal=[], swapXY=[False],
             swapRL=False, feedRotation=[],
             IDI_conjugated=True,
             plotIF=plotIF, plotRange=timeRange,
             plotAnt=plotAnt,
-            excludeAnts=[], doSolve=-1, solint=[1,1],
+            excludeAnts=[], excludeBaselines=[],
+            doSolve=-1.0,
+            solint=[1,1],
             doTest=doTest, npix=npix,
             solveAmp=False,
             solveMethod='gradient', calstokes=[1.,0.,0.,0.], calfield=-1

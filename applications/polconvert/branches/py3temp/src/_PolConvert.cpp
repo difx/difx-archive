@@ -2,7 +2,7 @@
 
 # Copyright (c) Ivan Marti-Vidal 2015-2020. 
 #               EU ALMA Regional Center. Nordic node.
-#               Observatori Astronòmic, Universitat de València
+#               Observatori Astronomic, Universitat de Valencia
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -58,7 +58,9 @@
 // compiler warning that we use a deprecated NumPy API
 // #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #define NO_IMPORT_ARRAY
+#if PY_MAJOR_VERSION >= 3
 #define NPY_NO_DEPRECATED_API 0x0
+#endif
 #include <numpy/npy_common.h>
 #include <numpy/arrayobject.h>
 

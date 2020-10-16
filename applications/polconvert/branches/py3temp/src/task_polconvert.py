@@ -1,6 +1,6 @@
 # Copyright (c) Ivan Marti-Vidal 2012-2020 
 #               EU ALMA Regional Center. Nordic node.
-#               Observatori Astronòmic, Universitat de València
+#               Observatori Astronomic, Universitat de Valencia
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -2761,11 +2761,11 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
           printMsg("writing FRINGE.PEAKS%i-ANT%i.dat"%(pli,ant1))
           pfile = open('FRINGE.PEAKS/FRINGE.PEAKS%i-ANT%i.dat'%(pli,ant1),'w' )
           pmsg = (('\n\n\nFOR IF #%i. NORM. FRINGE PEAKS: \n' +
-            'RR: %.2e ; SNR: %.1f \n' +
-            'LL: %.2e ; SNR: %.1f \n' +
-            'RL: %.2e ; SNR: %.1f \n' +
-            'LR: %.2e ; SNR: %.1f\n\n' +
-            'AMPLITUDE: %.2e\nRL/LR Norm.: %.2e\n\n\n')%tuple(toprint))
+            '  RR: %.2e ; SNR: %.1f \n' +
+            '  LL: %.2e ; SNR: %.1f \n' +
+            '  RL: %.2e ; SNR: %.1f \n' +
+            '  LR: %.2e ; SNR: %.1f\n\n' +
+            ' AMPLITUDE: %.2e\nRL/LR Norm.: %.2e\n\n\n')%tuple(toprint))
 
           printMsg(pmsg)
           pfile.write(pmsg)

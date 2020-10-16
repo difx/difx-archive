@@ -1,7 +1,7 @@
 /* Copyright (C) 2013-2020
  *                     Nordic Node of EU ALMA Regional Center (Onsala, Sweden)
                        Max-Planck-Institut fuer Radioastronomie (Bonn, Germany)
-                       Observatori Astronòmic, Universitat de València
+                       Observatori Astronomic, Universitat de Valencia
   
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

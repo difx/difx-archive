@@ -49,12 +49,12 @@ if [test $have_casa = true] ; then
     AC_PATH_PROG([casapy2], [python], [/bin/false], [$DIFXCASAPATH])
     # we presume only one will be defined.  See the Makefile.am
     # to understand what is going on with BMT*
-    if [test $casapy3 = $DIFXCASAPATH/python3] ; then
+    if [test x$casapy3 = x$DIFXCASAPATH/python3] ; then
         BMTASKARG='--upgrade polconvert.xml'
         BMTASKXML='polconvert.xml'
         CASAPYTHON=$casapy3
         AC_MSG_NOTICE([Invoking CASAPYTHON as $CASAPYTHON])
-    elif [test $casapy = $DIFXCASAPATH/python] ; then
+    elif [test x$casapy2 = x$DIFXCASAPATH/python] ; then
         BMTASKARG='&& false'
         BMTASKXML='&& false'
         CASAPYTHON=$casapy2

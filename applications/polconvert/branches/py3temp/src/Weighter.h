@@ -3,7 +3,7 @@
              Copyright (C) 2015-2020  Ivan Marti-Vidal
              Nordic Node of EU ALMA Regional Center (Onsala, Sweden)
              Max-Planck-Institut fuer Radioastronomie (Bonn, Germany)
-             Observatori Astronòmic, Universitat de València
+             Observatori Astronomic, Universitat de Valencia
   
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

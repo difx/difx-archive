@@ -3,7 +3,7 @@
              Copyright (C) 2017-2020  Ivan Marti-Vidal
              Nordic Node of EU ALMA Regional Center (Onsala, Sweden)
              Max-Planck-Institut fuer Radioastronomie (Bonn, Germany)
-             Observatori Astronòmic, Universitat de València
+             Observatori Astronomic, Universitat de Valencia
   
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,7 +26,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 // compiler warning that we use a deprecated NumPy API
 // #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 // #define NO_IMPORT_ARRAY
+#if PY_MAJOR_VERSION >= 3
 #define NPY_NO_DEPRECATED_API 0x0
+#endif
 #include <numpy/npy_common.h>
 #include <numpy/arrayobject.h>
 
