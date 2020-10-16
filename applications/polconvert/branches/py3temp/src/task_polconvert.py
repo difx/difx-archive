@@ -267,7 +267,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
       if IANT>=0:
         allAnts = [IANT]
       else:
-        allAnts = range(len(GallAnts))
+        allAnts = list(range(len(GallAnts)))
 
       tb.open('%s.XYsmooth.PolConvert'%GAINTABLE,nomodify=False)
       Gtimes = tb.getcol('TIME')
@@ -934,7 +934,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
     printError('ERROR: NO VALID ANTENNA TABLE FOUND!')
 
    allants = list(tb.getcol('NAME'))
-   allantidx = range(len(allants))
+   allantidx = list(range(len(allants)))
    tb.close()
 
    refants = np.array([allants.index(phants[t][refs[t]]) for t in range(len(phants))])
@@ -1083,7 +1083,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
       fr = FreqL[0]
       Nfreq = int(list(filter(
         lambda x: 'FREQ ENTRIES' in x, inputlines[fr+1:]))[0].split()[-1])
-      Nr = range(Nfreq)
+      Nr = list(range(Nfreq))
     except Exception as ex:
       printMsg(str(ex))
       printError("BAD input file!")
@@ -1103,7 +1103,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 # SORT OUT THE CHANNEL FREQUENCIES:
 
     if len(doIF)==0:
-      doIF = range(1,len(Nr)+1)
+      doIF = list(range(1,len(Nr)+1))
 
     metadata = []
     IFchan = 0
@@ -1148,7 +1148,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
       FrInfo['NUM CHANNELS'] += [int(nch)]
 
     if len(doIF)==0:
-     doIF = range(1,1+fitsf['FREQUENCY'].header['NO_BAND'])
+     doIF = list(range(1,1+fitsf['FREQUENCY'].header['NO_BAND']))
 
     fitsf.close()
 
@@ -1160,7 +1160,8 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
   calAnts = []
   for exA in antcodes:
     if exA not in excludeAnts:
-      calAnts.append(antcodes.index(exA)+1) ### = [i+1 for i in range(len(antcoords)) if i+1 not in excludeAnts]
+      calAnts.append(antcodes.index(exA)+1)
+      ### = [i+1 for i in range(len(antcoords)) if i+1 not in excludeAnts]
 
 
   FlagBas1 = []
@@ -1264,7 +1265,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
             "Problematic IFs are:  %s"%(','.join(errmsg)))
 
          doIF = [doIF[i] for i in range(len(doIF)) if i in list(np.where(spwsel>=0)[0])]
-         printMsg('\n\n  NEW LIST OF IFs: '+','.join(map(str,doIF)))
+         printMsg('\n\n  NEW LIST OF IFs: '+','.join(list(map(str,doIF))))
 
     spwsel = list(set(spwsel[spwsel>=0]))
     if len(spwsel)>1:
@@ -1313,7 +1314,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
     if doant in XYdel.keys():
       if type(XYdel[doant]) is list:
         try:
-          XYdelF[i] = map(float,XYdel[doant]) #float(XYdel[i]*np.pi/180.)
+          XYdelF[i] = list(map(float,XYdel[doant])) #float(XYdel[i]*np.pi/180.)
         except:
           printError("Invalid format for XYdel!\n Should be a dictionary with LISTS of numbers!")
       else:
@@ -1427,7 +1428,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
     mjd = np.zeros(len(OUTPUT))
     mjs = np.zeros(len(OUTPUT))
     for i,fi in enumerate(OUTPUT):
-      mjd[i],mjs[i] = map(float,((os.path.basename(fi)).split('.')[0]).split('_')[1:3])
+      mjd[i],mjs[i] = list(map(float,((os.path.basename(fi)).split('.')[0]).split('_')[1:3]))
     mjd0 = np.min(mjd)
     mjp = Ran + mjd0
     metadata.append(mjd0)
@@ -1946,7 +1947,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
     for i,entry in enumerate(entries):
       IFs[i] = int(entry[0])
       AntIdx[i] = int(entry[1])
-      Data[i,:] = map(float,entry[2:])
+      Data[i,:] = list(map(float,entry[2:]))
 
     Times = np.unique(Data[:,0])
     Tsys = np.zeros((len(Times),len(doIF)+1))
@@ -2262,7 +2263,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
      for plii,pli in enumerate(doIF):
        Nchans = np.shape(AllFreqs[plii])[0]
        temp = [np.zeros(Nchans,dtype=np.complex64) for ci in fitAnts]
-       BPChan = range(0,Nchans,ChAv)
+       BPChan = list(range(0,Nchans,ChAv))
        if BPChan[-1]<Nchans-1:
          BPChan.append(Nchans-1)
        BPChan = np.array(BPChan,dtype=np.int32)
@@ -2533,8 +2534,8 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 
 # Calibration matrix (in frequency-time space)
 
-           MAXK = max(map(np.max,map(np.abs,Kmat)))    
-           MINK = min(map(np.min,map(np.abs,Kmat)))   
+           MAXK = max(list(map(np.max,list(map(np.abs,Kmat)))))
+           MINK = min(list(map(np.min,list(map(np.abs,Kmat)))))
 
 # Peaks to scale plots:
 
