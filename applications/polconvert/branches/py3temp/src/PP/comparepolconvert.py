@@ -16,8 +16,6 @@ import math
 import os
 import re
 import sys
-# not necessary:
-# from six.moves import zip
 
 def parseOptions():
     '''
@@ -157,7 +155,11 @@ def deviant(verb, what, tval, rval, atol, rtol):
     if math.fabs(tval - rval) > atol:
         judgement,how = (True,'abs')
     elif tval + rval == 0.0:
-        judgement,how = (True,'inf')
+        # prevent div by zero in next elif clause
+        if tval == 0.0 or rval == 0.0:
+            judgement,how = (False,'zer')
+        else:
+            judgement,how = (True,'inf')
     elif math.fabs(2 * (tval - rval) / (tval + rval)) > rtol:
         judgement,how = (True,'rel')
     else:

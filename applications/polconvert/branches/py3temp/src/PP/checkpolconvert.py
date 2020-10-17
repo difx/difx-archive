@@ -10,7 +10,7 @@
 # look for "(Sync with drivepolconvert.)" in the doc strings.
 #
 '''
-checkpolconvert.py -- a program to check the polconvert tables
+checkepolconvert.py -- a program to check the polconvert tables
 '''
 
 from __future__ import absolute_import
@@ -20,8 +20,6 @@ import datetime
 import re
 import os
 import sys
-# not required
-# from six.moves import zip
 
 def parseOptions():
     '''
@@ -152,7 +150,6 @@ def calibrationChecks(o):
     if len(o.qal) < 7:
         raise Exception('at least 7 QA2 tables are required, see --qa2 option')
     keys = ['a', 'c', 'd', 'b', 'g', 'p', 'x', 'y']
-    # o.qa2_dict = dict(list(zip(keys,o.qal)))
     o.qa2_dict = dict(zip(keys,o.qal))
     o.qa2_full = dict()
     o.qa2_copy = dict()
