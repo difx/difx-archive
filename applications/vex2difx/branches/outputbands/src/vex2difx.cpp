@@ -1729,7 +1729,7 @@ static int bestMatchingFreq(const ZoomFreq &zoomfreq, const std::vector<int> mat
 
 // Generate spectral channel flagging file for in-band edge channels.
 // Format of each line:
-//    <mjd start> <mjd stop> <difx freq id> <spectral channel start> <spectral channel stop> <flag reason string|'edge'>
+//    <antenna name> <mjd start> <mjd stop> <difx freq id> <spectral channel start> <spectral channel stop> <flag reason string|'edge'>
 static void writeDifxChannelFlags(const DifxInput *D, const CorrSetup *corrSetup)
 {
 	const char *flagReason = "edge";
