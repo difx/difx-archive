@@ -636,14 +636,21 @@ def createCasaCommand(o, job, workdir):
     cmd[4]  = '%s --nologger --nogui -c %s > %s 2>&1 < /dev/null' % (
         o.casa, o.input, o.output)
     cmd[5]  = 'casarc=$?'
-    cmd[6]  = 'if [ "$casarc" == 0 ]; then echo "conversion"; else echo "conversion failed with code $casarc"; fi > ./status'
+    cmd[6]  = ('if [ "$casarc" == 0 ]; then echo "conversion"; ' +
+        'else echo "conversion failed with code $casarc"; fi > ./status')
     cmd[7]  = 'mv casa*.log ipython-*.log casa-logs 2>&-'
-    cmd[8]  = 'mv %s %s *.pc-casa-command casa-logs' % (o.input, o.output)
+    # do not move self (basecmd) until self is done.
+    # cmd[8]  = 'mv %s %s *.pc-casa-command casa-logs' % (o.input, o.output)
+    cmd[8]  = 'mv %s %s casa-logs' % (o.input, o.output)
     cmd[9]  = 'mv polconvert.last casa-logs'
-    cmd[10] = 'if [ "$casarc" == 0 ]; then echo "completed"; else echo "failed with code $casarc"; fi > ./status'
+    cmd[10] = ('if [ "$casarc" == 0 ]; then echo "completed"; ' +
+        'else echo "failed with code $casarc"; fi > ./status')
     cmd[11] = 'date -u +%Y-%m-%dT%H:%M:%S >> ./timing'
-    cmd[12] = 'echo " "CASA for job %s finished with return code $casarc.' % job
-    cmd[13] = 'exit 0'
+    cmd[12] = ('echo " "CASA for job %s finished with return code $casarc.' %
+        job)
+    # cmd[13] = 'exit 0'
+    cmd[13] = 'exec sh -c "mv %s casa-logs; echo done."' % basecmd
+    # add newlines and give it execute permissions so it can run
     cs = open(cmdfile, 'w')
     for ii in range(len(cmd)): cs.write(cmd[ii] + '\n')
     cs.close()
