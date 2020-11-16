@@ -386,9 +386,7 @@ int main(int argc, char *argv[])
 
 		     http://stackoverflow.com/questions/38680530/use-of-undeclared-identifier-mpi-when-using-c-syntax-for-openmpi-on-macos
   */
-#if !(__APPLE__)
-  try
-#endif
+  //  try
   {
     //work out what process we are and run accordingly
     if(myID == fxcorr::MANAGERID) //im the manager
@@ -456,13 +454,11 @@ int main(int argc, char *argv[])
   }
 
   /* See comment about MPI bindings above */
-#if !(__APPLE__)
-  catch (MPI::Exception e)
-  {
-    cerror << startl << "Caught an exception!!! " << e.Get_error_string() << endl;
-    return EXIT_FAILURE;
-  }
-#endif
+  //catch (MPI::Exception e)
+  //{
+  //  cerror << startl << "Caught an exception!!! " << e.Get_error_string() << endl;
+  //  return EXIT_FAILURE;
+  //}
 
   MPI_Finalize();
 
