@@ -24,23 +24,22 @@ def parseOptions():
     This script is intended to be run after the DiFX correlation concludes,
     but prior to running post-processing scripts such as difx2fits or
     difx2mark4.  It saves the files from the original correlation and
-    provides new versions with polarizations such as would be converted
-    by PolConvert (i.e. X->R and Y->L).  Optionally, the required files
-    may be relocated to a new directory.
+    provides new versions with polarizations labels adjusted to reflect 
+    such as would result after conversion by PolConvert (i.e. X->R and Y->L).
     '''
     des = parseOptions.__doc__
-    epi =  'Both -j and -e need to be supplied, ' + '(not yet supported)'
-    epi += ' or alternatively'
-    epi += ' a list of input files may be provided as positional'
-    epi += ' on the command line.  You may need the *.vex.obs file'
-    epi += ' if you wish to run difx2mark4 and have the root be correct.'
+    epi = 'In standard use, the input files for the jobs to be processed '
+    epi += 'are provided as the "nargs" positional arguments after the '
+    epi += 'options.  It is recommended to use the destination directory '
+    epi += 'option.  You will need to provide the VEX *.vex.obs file '
+    epi += 'separately if you plan to use difx2mark4.'
     use = '%(prog)s [options] [input_file] [...]\n  Version'
     use += ' $Id$'
     parser = argparse.ArgumentParser(epilog=epi, description=des, usage=use)
     primary = parser.add_argument_group('Primary Options')
     secondy = parser.add_argument_group('Secondary Options')
-    develop = parser.add_argument_group('Development Options',
-        '(not yet supported)')
+    develop = parser.add_argument_group(
+        'Development Options (not yet supported)')
     # options
     primary.add_argument('-v', '--verbose', dest='verb',
         default=False, action='store_true',
@@ -48,7 +47,7 @@ def parseOptions():
     primary.add_argument('-s', '--srcdir', dest='srcdir',
         metavar='DIR', default='.',
         help='source directory with DiFX output (.)')
-    secondy.add_argument('-d', '--dstdir', dest='dstdir',
+    primary.add_argument('-d', '--dstdir', dest='dstdir',
         metavar='DIR', default='.',
         help='destination directory for PolConvert inputs (.)')
     secondy.add_argument('-k', '--clobber', dest='clobber',
@@ -61,7 +60,7 @@ def parseOptions():
         '"path/" to "srcdir/" prior to executing this script.')
     secondy.add_argument('-l', '--suffices', dest='suffices',
         metavar='LIST', default='input,calc,flag,im,difx,save',
-        help='comma-separated list of file/dir suffices' +
+        help='comma-separated list of file/dir suffices ' +
              'to process, default is "input,calc,flag,im,difx,save"')
     secondy.add_argument('-o', '--orig', dest='orig',
         metavar='STRING', default='orig',
@@ -69,15 +68,18 @@ def parseOptions():
     secondy.add_argument('-r', '--recbands', dest='updaterecpols',
         default=False, action='store_true',
         help='relabel not only ZOOM but also REC band X->R and Y->L')
-    develop.add_argument('-j', '--jobs', dest='jobs',
-        metavar='LIST', default='',
-        help='list of job numbers to process; a comma-sep list of ' +
-             'numbers or ranges from:to (inclusive)')
     develop.add_argument('-e', '--exp', dest='exp',
         metavar='STRING', default='',
-        help='VEX experiment name')
+        help='VEX exper_name to allow import of exper_name.vex.obs')
+    develop.add_argument('-j', '--jobs', dest='jobs',
+        metavar='LIST', default='',
+        help='a comma-sep list of job numbers ' +
+             'or job from-to ranges (inclusive).  This requires -e ' +
+             'to also be used, and there should then be no positional ' +
+             'arguments.')
     # list of input files
-    parser.add_argument('nargs', nargs='*')
+    parser.add_argument('nargs', nargs='*',
+        help='one or more DiFX job input files')
     return parser.parse_args()
 
 def checkOptions(o):
