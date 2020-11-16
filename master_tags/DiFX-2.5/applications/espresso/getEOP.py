@@ -22,14 +22,18 @@
 # given date and return in format suitable for appending to .v2d or .vex file.
 # Takes dates in MJD, VEX, ISO8601 or VLBA format.
 # October 2017: change to use requests module. Optional vex output.
-# EOP data from http://gemini.gsfc.nasa.gov/solve_save/usno_finals.erp
-# Leap second data come from:
-# http://gemini.gsfc.nasa.gov/500/oper/solve_apriori_files/ut1ls.dat
+# May 2019: New download site.
+# Sep 2020: Use encrypted ftp.
+#
+# EOP/ut1 data from:
+# ftp://gdc.cddis.eosdis.nasa.gov/vlbi/gsfc/ancillary/solve_apriori/
+#
 
 import optparse
 import re
 #import urllib
-import requests
+#import requests
+import ftplib
 import espressolib
 import sys
 import time
@@ -45,6 +49,17 @@ def get_leapsec(leapsec_page, targetJD):
             tai_utc = int(float(line[38:49]))
     return tai_utc
 
+def ftpget(url, directory, filename):
+    """Return contents of a file on an ftp-ssl site"""
+    contents = []
+    ftps = ftplib.FTP_TLS(url)
+    # login and encrypt connection
+    ftps.login()
+    ftps.prot_p()
+    ftps.cwd(directory)
+    ftps.retrlines("RETR {:s}".format(filename), contents.append)
+
+    return contents
 
 usage = """%prog <date>
 <date> can either be in MJD, VEX, ISO8601 or VLBA format
@@ -74,18 +89,17 @@ if (targetJD < 2444055.5):
     raise Exception("Date too early. No valid EOPs before July 1979")
 
 # fetch EOP data
-eop_url = "https://gemini.gsfc.nasa.gov/solve_save/usno_finals.erp"
-leapsec_url = (
-        "https://gemini.gsfc.nasa.gov/500/oper/solve_apriori_files/ut1ls.dat")
+gsfc_url = "gdc.cddis.eosdis.nasa.gov"
+eop_dir = "vlbi/gsfc/ancillary/solve_apriori/"
+eop_filename = "usno_finals.erp"
+leapsec_filename = "ut1ls.dat"
 
 print >>sys.stderr, "Fetching EOP data..."
-#eop_page = urllib.FancyURLopener().open(eop_url).readlines()
-eop_page = requests.get(eop_url).content.split("\n")
+eop_page = ftpget(gsfc_url, eop_dir, eop_filename)
 print >>sys.stderr, "...got it."
 
 print >>sys.stderr, "Fetching Leap second data..."
-#leapsec_page = urllib.FancyURLopener().open(leapsec_url).readlines()
-leapsec_page = requests.get(leapsec_url).content.split("\n")
+leapsec_page = ftpget(gsfc_url, eop_dir, leapsec_filename)
 print >>sys.stderr, "...got it.\n"
 
 if options.vex:
@@ -145,3 +159,4 @@ for line in eop_page:
         print eopformat.format(eopdate, xpole, ypole, tai_utc, ut1_utc, neop)
 
 print >>sys.stderr, "Processed %d lines" % nlines
+
