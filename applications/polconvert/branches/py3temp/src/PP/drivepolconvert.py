@@ -611,17 +611,6 @@ def createCasaInput(o, joblist, caldir, workdir):
     ci.close()
     return os.path.exists(oinput)
 
-#def createCasaInputSingle(o):
-#    '''
-#    Create the input to process all jobs in the current
-#    working directory, sequentially.
-#    '''
-#    if createCasaInput(o, o.djobs, '.', '.'):
-#        if o.verb: print('Created %s for single-threaded execution' % o.input)
-#    else:
-#        print('Problem creating',o.input)
-#        o.run = False
-
 def createCasaCommand(o, job, workdir):
     '''
     The required shell incantation to run one job (it is the
@@ -728,99 +717,6 @@ def checkDifxSaveDirsError(o, vrb):
         return True
     return False
 
-#def doFinalRunCheck(o):
-#    '''
-#    runpolconvert is careful, but the overhead of getting to it
-#    is high, so we check for this last bit of operator fatigue
-#    '''
-#    if o.run and checkDifxSaveDirsError(o, o.run):
-#        print('\n\n### Disabling Run so you can fix the issue\n')
-#        o.run=False
-
-#def executeCasaSingle(o):
-#    '''
-#    This function pipes input to CASA and collects output.  The
-#    various developer debugging files (if present) are swept into
-#    the casa-logs directory (which is subsequently timestamped).
-#    '''
-#    misc = [ 'polconvert.last', 'POLCONVERT_STATION1.ANTAB',
-#             'POLCONVERT.FRINGE', 'POLCONVERT.GAINS', 'PolConvert.log',
-#             'CONVERSION.MATRIX', 'FRINGE.PEAKS', 'FRINGE.PLOTS',
-#             'PolConvert.XYGains.dat' ]
-#    removeTrash(o, misc)
-#    cmd1 = 'rm -f %s' % (o.output)
-#    cmd2 = '%s --nologger --nogui -c %s > %s 2>&1 < /dev/null' % (
-#        o.casa, o.input, o.output)
-#    cmd3 = '[ -d casa-logs ] || mkdir casa-logs'
-#    if o.prep: cmd4 = 'mv prepol*.log '
-#    else:      cmd4 = 'mv '
-#    cmd4 += ' casa*.log ipython-*.log casa-logs 2>&-'
-#    cmd5 = 'mv %s %s casa-logs' % (o.input, o.output)
-#    cmd6 = ''
-#    casanow = o.exp + '-casa-logs.' + datetime.datetime.now().isoformat()[:-7]
-#    if o.run:
-#        doFinalRunCheck(o)
-#    if o.run:
-#        if os.system(cmd1):
-#            raise Exception('That which cannot fail (rm -f), failed')
-#        if o.verb:
-#            print('Note, ^C will not stop CASA (or polconvert).')
-#            print('If it appears to hang, use kill -9 and then')
-#            print('"touch killcasa" to allow normal cleanup.')
-#            print('Follow CASA run with:\n  tail -n +1 -f %s\n' % (o.output))
-#        rc = os.system(cmd2)
-#        if rc:
-#            if os.path.exists('killcasa'):
-#                print('Removing killcasa')
-#                os.unlink('killcasa')
-#                print('Proceeding with remaining cleanup')
-#            else:
-#                raise Exception('CASA execution "failed" with code %d' % (rc))
-#        if o.verb:
-#            print('Success!  See %s for output' % o.output)
-#        logerr = False
-#        mscerr = False
-#        for m in misc:
-#            if os.path.exists(m):
-#                cmd6 += '[ -f %s ] && mv %s casa-logs ;' % (m,m)
-#        if os.system(cmd3 + ' ; ' + cmd4 + ' ; ' + cmd5):
-#            logerr = True
-#        if os.system(cmd6):
-#            mscerr = True
-#        if o.verb:
-#            print('Swept CASA logs to ' + casanow)
-#        if logerr: print('  There was a problem collecting CASA logs')
-#        if mscerr: print('  There was a problem collecting misc trash')
-#        jl = open('casa-logs/%s.joblist'%o.exp, 'w')
-#        o.nargs.sort()
-#        for jb in o.nargs: jl.write(jb + '\n')
-#        jl.close()
-#        os.rename('casa-logs', casanow)
-#        print('Completed job list is in %s/%s.joblist' % (casanow,o.exp))
-#        if o.verb: print('Review CASA run with:\n  tail -n +1 %s/%s\n' % (
-#            casanow, o.output))
-#    else:
-#        for m in misc:
-#            cmd6 += '[ -f %s ] && mv %s casa-logs ;' % (m,m)
-#        print('')
-#        print('You can run casa manually with input from ' + o.input)
-#        print('Or just do what this script would do now, viz: ')
-#        print('    ' + cmd1)
-#        print('    ' + cmd2 + ' &')
-#        print('    tail -n +1 -f ' + o.output)
-#        print('    ' + cmd3)
-#        print('    ' + cmd4)
-#        print('    ' + cmd5)
-#        print('    ' + cmd6)
-#        print('    mv casa-logs ' + casanow)
-#        print('')
-#    if o.test:
-#        print('')
-#        print('The *.difx and *.save directories should have identical')
-#        print('contents, and you will need to remove *.save to continue')
-#        print('additional test runs on the same jobs.')
-#        print('')
-
 def convertOneScan(o,job,wdr,cmd):
     '''
     Process one scan for this job as laid out in wdr using cmd
@@ -913,7 +809,7 @@ def reportWorkTodo(o):
             len(pclogs),len(o.jobnums)))
     if o.verb:
         for pc in pcdirs: print('   ',pc)
-    print('drivepolconvert is finished.\n')
+    print('drivepolconvert is finished.')
 
 def executeCasaParallel(o):
     '''
@@ -973,16 +869,13 @@ if __name__ == '__main__':
         runPrePolconvert(opts)
     deduceZoomIndicies(opts)
     plotPrep(opts)
-#   if opts.parallel == 0 and not opts.hide:
-#       if opts.verb: print('CasaSingle processing')
-#       createCasaInputSingle(opts)
-#       executeCasaSingle(opts)
-#   else:
-    if True:
-#       if opts.parallel == 0: opts.parallel = 6
-#       if opts.verb: print('CasaParallel processing')
-        createCasaInputParallel(opts)
-        executeCasaParallel(opts)
+    # run the jobs in parallel
+    if opts.verb:
+        print('\nParallel execution with %d threads\n' % opts.parallel)
+    createCasaInputParallel(opts)
+    executeCasaParallel(opts)
+    if opts.verb:
+        print('\nDrivePolconvert execution is complete\n')
     # explicit 0 exit 
     sys.exit(0)
 
