@@ -24,9 +24,13 @@
 #
 #============================================================================
 
-
+$FINALS_SITE = "ftp://gdc.cddis.eosdis.nasa.gov";
+$FINALS_PATH = "vlbi/gsfc/ancillary/solve_apriori";
 $FINALS_FILE = "usno_finals.erp";
-$FINALS_URL = "http://gemini.gsfc.nasa.gov/solve_save/$FINALS_FILE";
+$FINALS_URL = "$FINALS_SITE/$FINALS_PATH/$FINALS_FILE";
+
+# lip service to anon ftp security
+if (not exists $ENV{EMAIL_ADDR}) { &printUsage && die("\n"); }
 
 $eopCount = 0;
 $eopSuffix = "";
@@ -81,7 +85,7 @@ else
 
 # get the solution file
 system ("rm $FINALS_FILE");
-system ("wget $FINALS_URL");
+system ("curl -u anonymous:$ENV{EMAIL_ADDR} --ftp-ssl $FINALS_URL > $FINALS_FILE");
 sleep(1);
 
 open(INFILE, $FINALS_FILE) || die("Could not open file: $FINALS_FILE");
@@ -160,16 +164,19 @@ sub printUsage
 {
         print "----------------------------------------------------------------------\n";
         print " Script to obtain EOP values from this URL:\n";
-	print " $FINALS_URL\n";
-	print " The EOPS are reformated to a format that can be used in the vex file \n";
+        print " $FINALS_URL\n";
+        print " The EOPS are reformated to a format that can be used in the vex file.\n";
         print "----------------------------------------------------------------------\n";
-        print "\nUsage: $0 yyyy-doy numEOP [EOPsuffix]\n\n";
+        print "\nUsage: EMAIL_ADDR=you\@domain $0 yyyy-doy numEOP [EOPsuffix]\n\n";
         print "yyyy-doy: the year and day-of-year of the first EOP value to obtain\n";
         print "numEOP:  the number of EOPs to get\n";
-        print "if provided, EOPsuffix will be appended to the EOP def name.\n";
-        print "output will be written to EOP.txt\n\n";
+        print "EOPsuffix: (optional) is appended to the EOP def name.\n";
+        print "output will be written to EOP.txt and the usno_finals.erp saved.\n\n";
         print "----------------------------------------------------------------------\n";
-	exit;
+        print "The script uses anonymous ftp which requires a valid user email which\n";
+        print "must be supplied via an environment variable EMAIL_ADDR\n";
+        print "----------------------------------------------------------------------\n";
+        exit;
 }
 
 
