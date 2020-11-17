@@ -28,35 +28,34 @@ import time
 
 def parseOptions():
     '''
-    Normally CASA is intended to be run interactively, and
-    that requires the user to be familiar with its quirks.
-    This script generates the appropriate (Python) commands
-    that could be typed into an interactive session, or for the
-    more likely use case, piped into CASA for the desired work.
-    If CASA is not found in your path, you must supply it via
-    the environment variable DIFXCASAPATH (which is used to
-    build these tools and hence is probably set in your DiFX setup).
+    PolConvert is executed within CASA which is inconvenient for
+    production work.  This script generates appropriate (Python)
+    commands with which CASA may be executed as a background task.
+    Multiple conversion jobs can and should be executed in parallel
+    (no more than one job per processor core is best, controlled with -P).
+    The DiFX compilation assumes DIFXCASAPATH is defined to point
+    to the CASA bin directory.  If DIFXCASAPATH is not in your
+    environment when this script is run, but the same version is to
+    be found as "casa" you should have no trouble.
     '''
     des = parseOptions.__doc__
     epi =  'In the typical use case, you would first unpack the QA2 tarball '
     epi += 'and then process some number of similar jobs '
     epi += 'first with prepolconvert.py, then with '
     epi += 'drivepolconvert.py, and finally difx2mark4 and/or difx2fits. '
-    epi += 'If you want to adjust the CASA invocation beyond what the '
-    epi += 'script provides, edit the input file and '
-    epi += 'then run it manually using the instructions provided. '
     epi += 'In normal usage, you only need '
     epi += 'to supply the list of jobs, the QA2 label (-l) '
-    epi += 'and the -q version (which tables to use). '
+    epi += 'the -q version (which tables to use) and -r to run.'
+    epi += 'You may omit the -r option, in which case the jobs will be '
+    epi += 'prepared with instructions for running them manually.  You '
+    epi += 'can then edit the input files as needed. '
     epi += 'The number of diagnostic plots of per-IF fringes '
     epi += 'is controlled with the '
-    epi += '-f option; you can also use -m, -S, -X and -T.  In '
+    epi += '-f option; you can also use -m, -S, -X and -T, see above.  In '
     epi += 'particular, with the test option (-T), no conversion is '
     epi += 'written to disk, '
     epi += 'but all of the diagnostic plots are made and saved. '
-    epi += 'Parallelization is possible with the -P option.  In the event '
-    epi += 'of problematic jobs, remove them from your list and deal with '
-    epi += 'them individually.'
+    epi += 'This is useful to manually tweak things prior to committing. '
     use = '%(prog)s [options] [input_file [...]]\n  Version'
     use += '$Id$'
     parser = argparse.ArgumentParser(epilog=epi, description=des, usage=use)
@@ -75,23 +74,15 @@ def parseOptions():
     primary.add_argument('-l', '--label', dest='label',
         default='', metavar='STRING',
         help='prefix to the QA2 polconvert calibration directories. '
-        'The exact names despend on the QA2 version (see -q option).')
+        'The names despend on the QA2 version (see -q option).')
     primary.add_argument('-q', '--qa2', dest='qa2',
         default='v8', metavar='STRING',
-        help='table naming scheme for the QA2 tables; there should be '
-            'eight tables for antennas, appphase, dterms, bandpass, '
-            'ampgains, phasegains and xy phase and xy gains.  '
-            'Options are "v0" .. "v11" or a '
-            'comma-sep list in an environment variable QA2TABLES.  In '
-            'versions prior to v4, ".concatenated.ms" was part of the '
-            'label.  For v4-v11 and subsequent the label is just the '
-            'uid name (and/or other identifiers).   The default is "v8". '
-            'Examine the script for the details....')
+        help='table naming scheme: v{0..11} are for QA2 tables, or '
+            's{0...} for non-QA2 cases.  Use "help" for details.')
     # not normally needed, secondary arguments
     secondy.add_argument('-P', '--parallel', dest='parallel',
         default=6, metavar='INT', type=int,
-        help='Number of CASA jobs to run in parallel.  The best value '
-        'depends on the number of physical cores and the memory available. '
+        help='Number of jobs to run in parallel. '
         '(The default is 6.)')
     secondy.add_argument('-p', '--prep', dest='prep',
         default=False, action='store_true',
@@ -100,18 +91,21 @@ def parseOptions():
     secondy.add_argument('-a', '--ant', dest='ant',
         default=1, metavar='INT', type=int,
         help='1-based index of linear (ALMA) antenna (normally 1)')
+    secondy.add_argument('-L', '--lin', dest='lin',
+        default='AA', metavar='SC', # 'alma'
+        help='2-letter station code (all caps) for linear pol station (AA)')
     # plotting arguments
     plotter.add_argument('-f', '--fringe', dest='fringe',
         default=4, metavar='INT', type=int,
-        help='Activate plotting diagnostics during conversion with the '
+        help='Activate plotting diagnostics after conversion with the '
             'number of IFs (channels) to produce fringe diagnostics on. '
-            'The default is 4.  Sensible values are 1 (a middle channel), '
+            'The default is 4.  Sensible values are 1 (pick a middle channel), '
             'N for that many channels spread through the IF range, '
             'or 0 for off.')
     plotter.add_argument('-S', '--sites', dest='sites',
         default='', metavar='LIST',
-        help='comma-sep list of 2-letter station codes to try'
-            ' (in order) to use for plot diagnostics')
+        help='comma-sep list of 2-letter station codes (Xx,Yy,...) to try'
+            ' (in this order) to use for plot diagnostics')
     plotter.add_argument('-X', '--npix', dest='npix',
         default=50, metavar='INT', type=int,
         help='The number of pixels to show in the fringe plots (50)')
@@ -132,7 +126,7 @@ def parseOptions():
     develop.add_argument('-x', '--xyadd', dest='xyadd',
         default='', metavar='STRING',
         help='user supplied per station XY angle adjustment dict, e.g. '
-        ' "Xx:0.0, ...", or empty for default.  Normally 180.0 or 0.0 are '
+        ' "Xx:0.0, ..."  (empty by default).  Normally 180.0 or 0.0 are '
         ' the values you might need to supply ')
     develop.add_argument('-E', '--avgtime', dest='avgtime',
         default=0.0, metavar='FLOAT', type=float,
@@ -147,7 +141,7 @@ def parseOptions():
         help='disable use of Dterm calibration tables')
     develop.add_argument('-A', '--ampNorm', dest='ampnrm',
         default=1.0, type=float,
-        help='set the DPFU in ANTAB or <=0 to apply it (0)')
+        help='value for the DPFU in ANTAB or <=0 to just apply it (0)')
     develop.add_argument('-G', '--gainDel', dest='gaindel',
         default='', metavar='LIST',
         help='comma-sep list of gain tables to delete: del(gains[x])'
@@ -173,10 +167,63 @@ def parseOptions():
         help='List of DiFX input job files to process')
     return parser.parse_args()
 
+def tableSchemeHelp():
+    '''
+    Provide some help on the complex scheme
+    '''
+    story='''
+    There are two modes of operation: QA2 mode, where a set of CASA
+    calibration tables have been (separately) derived from polarimetric
+    observations, and non-QA2 (solve) mode where a solution is derived
+    from one scan and applied to others.
+
+    The first scheme has twelve versions, v0 .. v11 based on the development
+    history.  Currently v4 .. v11 are sensible; the default is v8.  This
+    scheme requires a set of tables (named with the the -l label argument):
+
+        a <label>.concatenated.ms.ANTENNA
+        c <label>.concatenated.ms.calappphase
+        d <label>.calibrated.ms.Df0.<APP|ALMA>
+        b <label>.concatenated.ms.bandpass-zphs
+        g <label>.concatenated.ms.flux_inf.<APP|ALMA>
+        p <label>.concatenated.ms.phase_int.<APP|ALMA><.XYsmooth>
+        x <label>.calibrated.ms.XY0.<APP|ALMA>
+        y <label>.calibrated.ms.Gxyamp.<APP|ALMA>
+    
+    Here APP or ALMA refers to ALMA Phasing Project/System (APP/APS) scans
+    used for VLBI or normal ALMA calibration scans and calibrated or
+    concatenated refer to the details of the QA2 production script.
+    (APS data is used for the tables labelled with APP, ALMA data for
+    the tables with ALMA.)  Finally ".XYsmooth" appears if the data was
+    smoothed, and absent if not.
+
+        a    c    d    b    g    p    x    y    XYsmooth
+    v4  .    .    APP  .    APP  APP  APP  APP  no
+    v5  .    .    APP  .    APP  ALMA APP  ALMA no
+    v6  .    .    APP  .    APP  ALMA APP  APP  no
+    v7  .    .    APP  .    APP  APP  APP  ALMA no
+    v8  .    .    APP  .    APP  APP  APP  APP  yes
+    v9  .    .    APP  .    APP  ALMA APP  ALMA yes
+    v10 .    .    APP  .    APP  ALMA APP  APP  yes
+    v11 .    .    APP  .    APP  APP  APP  ALMA yes
+
+    The second scheme assumes an initial reduction with <TBD.py>.
+
+    Finally an environment variable QA2TABLES may be set to a comma-sep
+    list of compete table names (ignoring label, concatenated and calibrated)
+    may be used for any arbitrary set of tables.
+    '''
+    print(story)
+
 def calibrationChecks(o):
     '''
     Check that required files are present.
     '''
+    ### help on -q option
+    if o.qa2 == 'help':
+        tableSchemeHelp()
+        sys.exit(0)
+    ### label processing
     if o.label == '':
         raise Exception('A label (-l) is required to proceed')
     if o.verb: print('Using label %s' % o.label)
@@ -351,14 +398,14 @@ def deduceZoomIndicies(o):
     in runpolconvert) switches to o.remotelist assuming it is of the
     proper length.  This should solve poor plotting choices.
     '''
-    # Todo: fix for the case antenna needing work isn't telescope 0/AA
     sitelist = o.sites.split(',')
     if o.verb: print('Sitelist is',sitelist)
     o.remotelist = []
     o.remotename = []
     o.remote_map = []
     zoompatt = r'^ZOOM.FREQ.INDEX.\d+:\s*(\d+)'
-    almapatt = r'^TELESCOPE NAME %d:\s*AA' % (o.ant-1)
+    # we call it 'alma' but o.lin holds the choice
+    almapatt = r'^TELESCOPE NAME %d:\s*%s' % (o.ant-1,o.lin)
     amap_re = re.compile(r'^TELESCOPE NAME\s*([0-9])+:\s*([A-Z0-9][A-Z0-9])')
     freqpatt = r'^FREQ..MHZ..\d+:\s*(\d+)'
     zfirst = set()
@@ -389,7 +436,7 @@ def deduceZoomIndicies(o):
         zfir = str(zfirch)
         zfin = str(zfinch)
 
-        # cull jobs that do not appear to have AA as telescope 0
+        # cull jobs that do not appear to have 'alma' as telescope 0
         if almaline == '':
             issue = True
             for jn in o.jobnums:
@@ -401,7 +448,7 @@ def deduceZoomIndicies(o):
             if issue: raise Exception('Unable to purge job ' + jobin)
             else:     continue
         else:
-            print('Found ALMA in',jobin,almaline.rstrip())
+            print('Found %s in'%o.lin,jobin,almaline.rstrip())
             newargs.append(jobin)
             # workout plot ant for this job
             plotant = -1
@@ -470,14 +517,17 @@ def deduceZoomIndicies(o):
         print('Leaving it up to PolConvert to sort out')
         return
     # finally the diagnostic message
-    if   medianfreq <  90000.0: medianband = '3 (GMVA)'
-    elif medianfreq < 214100.0: medianband = 'b1 (Cycle5 6[LSB]Lo)'
-    elif medianfreq < 216100.0: medianband = 'b2 (Cycle5 6[LSB]Hi)'
-    elif medianfreq < 228100.0: medianband = 'b3 (Cycle4 6[USB]Lo)'
-    elif medianfreq < 230100.0: medianband = 'b4 (Cycle4 6[USB]Hi)'
-    else:                       medianband = '??? band 7 ???'
-    print('Working with band %s based on median freq (%f)' % (
-            medianband, medianfreq))
+    if o.lin == 'AA':
+        if   medianfreq <  90000.0: medianband = '3 (GMVA)'
+        elif medianfreq < 214100.0: medianband = 'b1 (Cycle5 6[LSB]Lo)'
+        elif medianfreq < 216100.0: medianband = 'b2 (Cycle5 6[LSB]Hi)'
+        elif medianfreq < 228100.0: medianband = 'b3 (Cycle4 6[USB]Lo)'
+        elif medianfreq < 230100.0: medianband = 'b4 (Cycle4 6[USB]Hi)'
+        else:                       medianband = '??? band 7 ???'
+        print('Working with band %s based on median freq (%f)' % (
+                medianband, medianfreq))
+    else:
+        print('Non-ALMA case, no comment on median band or freq')
 
 def plotPrep(o):
     '''
