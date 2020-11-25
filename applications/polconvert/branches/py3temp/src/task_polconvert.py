@@ -67,7 +67,7 @@ try:
 # sys.path.append(mypath)
  import _PolConvert as PC
  goodclib = True
- print('\nC++ shared library loaded successfully\n')
+ print('\nC++ shared library loaded successfully (first try)\n')
 except:
  goodclib=False
  print('\n There has been an error related to the numpy') 
@@ -84,7 +84,7 @@ if not goodclib:
 #   sys.path.append(mypath)
    import _PolConvert as PC
    goodclib = True
-   print('\nC++ shared library loaded successfully\n')
+   print('\nC++ shared library loaded successfully (2nd try)\n')
   except:
    goodclib=False
    print('\nNo, the shared library did not load successfully\n')
@@ -94,7 +94,7 @@ if not goodclib:
   try:
    import _PolConvert as PC
    goodclib = True
-   print('\nC++ shared library loaded successfully\n')
+   print('\nC++ shared library loaded successfully (3rd try)\n')
   except:
    goodclib=False
    print('\nNo, the shared library still did not load successfully\n')
@@ -198,11 +198,13 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 ############################################
 
   # this turns into the verbosity argument of _PolConvert.so
+  print('Entered task_polconvert::polconvert()')
   DEBUG = False # or True
   if 'POLCONVERTDEBUG' in os.environ:
     if os.environ['POLCONVERTDEBUG'] == 'True': DEBUG = True
     else:                                       DEBUG = False
   print('DEBUG setting is ' + str(DEBUG))
+  print('__name__ is ' + __name__)
 
 # Auxiliary function: print error and raise exception:
   def printError(msg):
@@ -221,7 +223,8 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
     if dolog:
       #casalog.post('PolConvert: '+msg)
       lfile = open("PolConvert.log","a")
-      print('\n'+msg+'\n', file=lfile)
+      #print('\n'+msg+'\n', file=lfile)
+      print(msg, file=lfile)
       sys.stdout.flush()
       lfile.close()
 
@@ -695,7 +698,9 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
     printError("ERROR! either both or none of calAPP and ALMAant need to be set!")
 
   if c0:
-    printMsg("WARNING: calAPP and ALMAant are not set.\nALMA DID NOT SEEM TO BE USED, ACCORDING TO USER\n\n")
+    printMsg("WARNING: calAPP and ALMAant are not set.")
+    printMsg("ALMA CAL TABLES DO NOT SEEM TO BE USED, ACCORDING TO USER.")
+    printMsg("This is not a problem in some cases...(isPhase now False).")
     isPhased=False
   else:
     if not os.path.exists(calAPP) or not os.path.exists(ALMAant):
@@ -856,6 +861,9 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
   if plotAnt in linAntIdx:
     printMsg("WARNING: Plotting will involve autocorrelations. \nThis has not been fully tested!") 
 
+  printMsg("XYadd is %s"%str(XYadd))
+  printMsg("XYratio is %s"%str(XYratio))
+
 #########################################
 
 
@@ -973,7 +981,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
     isSWIN = True
     printMsg('\n\nYou have asked to convert a set of SWIN files.')
     if len(DiFXinput)==0 or not os.path.exists(DiFXinput) or not os.path.isfile(DiFXinput):
-      printError("Invalid DiFX input file!")
+      printError("Invalid DiFX input file! %s"%DiFXinput)
     printMsg('Opening calc file... %s' % DiFXcalc)
     try:
       printMsg('Opening "%s"' % (DiFXcalc))
@@ -1408,6 +1416,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
     os.system('rm -rf %s'%OUTPUTIDI)
     os.system('cp -rf %s %s'%(IDI,OUTPUTIDI))
   elif not os.path.exists(OUTPUTIDI):
+    printMsg('Copying IDI to OUTPUTIDI!\n')
     os.system('cp -rf %s %s'%(IDI,OUTPUTIDI))
 #     
 #######
@@ -1449,6 +1458,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 
   if type(XYadd) is not dict: # or len(XYadd.keys) != nALMA:
     printError("Invalid format for XYadd!\n") # Should be a list as large as the number of linear-polarization VLBI stations!\nThe elements of that list shall be either numbers or lists as large as the number of IFs")
+  printMsg('keys of XYadd:' + str(XYadd.keys()))
 
 
   if isPcalUsed:
@@ -1508,7 +1518,8 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 
     else:
         
-      printMsg("Processing XYadd for %d,%d" % (i,doant))
+      #printMsg("Processing XYadd for %d,%d" % (i,doant))
+      printMsg("Processing XYadd for %d,%s" % (i,doant))
       if type(XYadd[doant]) is list:
         for j in range(len(XYadd[doant])):
          if type(XYadd[doant][j]) in [list,np.ndarray]:
@@ -1538,6 +1549,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
   
   
   
+  printMsg('keys of XYratio: ' + str(XYratio.keys()))
   for i,doant in enumerate(linAntNamTrue):
 
     try:  
@@ -1547,7 +1559,8 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 
       else:
           
-        printMsg("Processing XYratio for %d,%d" % (i,doant))
+        #printMsg("Processing XYratio for %d,%d" % (i,doant))
+        printMsg("Processing XYratio for %d,%s" % (i,doant))
         if type(XYratio[doant]) not in [list,np.ndarray]:
 
           if float(XYratio[doant]) < 0.0:
@@ -1924,11 +1937,11 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 
 # GENERATE ANTAB FILE(s):
 
-  DPFU = float(amp_norm)
-  printMsg("DPFU(amp_norm) is %f\n" % DPFU)
-
   if doAmpNorm:
     printMsg('Generating ANTAB file(s).')
+    DPFU = float(amp_norm)
+    printMsg("DPFU(amp_norm) is %f\n" % DPFU)
+
     try:
       gfile = open("POLCONVERT.GAINS")
     except:
@@ -2058,7 +2071,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
    try: 
      import _PolGainSolve as PS
      goodclib = True
-     print('\nC++ shared library loaded successfully\n')
+     print('\nC++ shared library loaded successfully (first try)\n')
    except:
      goodclib=False
      print('\n There has been an error related to the numpy') 
@@ -2072,7 +2085,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
      try: 
        import _PolGainSolve as PS
        goodclib = True
-       print('\nC++ shared library loaded successfully\n')
+       print('\nC++ shared library loaded successfully (2nd try)\n')
      except:
        goodclib=False
 
@@ -2223,22 +2236,34 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 
     cAnts = np.array(calAnts,dtype=np.int32)
     lAnts = np.array(linAntIdxTrue,dtype=np.int32)
-    MySolve = PS.PolGainSolve(doSolveD,solint,selAnts,lAnts,FlagBas1,FlagBas2)
+    if (len(FlagBas1) > 0 or len(FlagBas1) > 0):
+     printMsg("Using 6 argument method of PolGainSolve")
+     MySolve = PS.PolGainSolve(doSolveD,solint,selAnts,lAnts,FlagBas1,FlagBas2)
+    else:
+     printMsg("Using 4 argument method of PolGainSolve:")
+     printMsg("  selAnts is " + str(selAnts))
+     printMsg("    lAnts is " + str(lAnts))
+     MySolve = PS.PolGainSolve(doSolveD,solint,selAnts,lAnts)
+    printMsg('PolGainSolve finished with return: <%s>' % str(MySolve))
 
     AllFreqs = []
-    print('\n\n')
+    printMsg('%%%')
     for pli in doIF:
       printMsg("Reading back IF #%i"%pli)
       file1 = "POLCONVERT.FRINGE/OTHERS.FRINGE_%i"%pli
       file2 = "POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i"%pli
+      printMsg("  file1 is %s" % file1)
+      printMsg("  file2 is %s" % file2)
       success = PS.ReadData(pli, file1, file2)
+      printMsg("  calling GetNScan(0) (success = %d)"% success)
       NScan = PS.GetNScan(0)
       if success != 0:
         printError('Failed PolGainSolve: ERROR %i'%success)
-      AllFreqs.append(PS.GetIFs(pli))
-
+      ifsofIF = PS.GetIFs(pli)
+      AllFreqs.append(ifsofIF)
+      #AllFreqs.append(PS.GetIFs(pli))
     MaxChan = max([np.shape(pp)[0] for pp in AllFreqs])
-
+    printMsg("  length of AllFreqs is %d MaxChan %d"%(len(AllFreqs),MaxChan))
     printMsg("\nWill now estimate the residual cross-polarization gains.\n")
 
 
@@ -2351,47 +2376,48 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
         CGains['XYratio'][antcodes[calant-1]].append(cp.copy(1./np.abs(CrossGain)))
     # end of if BP else MBD MODE:
 
+    # see what we got...
+    print(CGains['XYadd'])
+    print(CGains['XYratio'])
+
+    if False:
+      fig = pl.figure()
+      sub1 = fig.add_subplot(211)
+      MaxG = 0.0
+      color = ['r','g','b','k','m','y','c']
+      symbol = ['o','^','x']
+      Freq2Plot = np.concatenate(AllFreqs)/1.e9
+
+      for antii,anti in enumerate(CGains['XYadd'].keys()):
+        sub1.plot(Freq2Plot,np.concatenate([np.array(ll) for ll in CGains['XYadd'][anti]]),symbol[((antii)/len(color))%len(symbol)]+color[(antii)%len(color)],label='ANT. '+str(anti))
+
+      sub2 = fig.add_subplot(212,sharex=sub1)
+      for antii,anti in enumerate(CGains['XYratio'].keys()):
+        toplot = np.concatenate([np.array(ll) for ll in CGains['XYratio'][anti]])
+        MaxG = max(MaxG,np.max(toplot))
+        sub2.plot(Freq2Plot,toplot,symbol[((antii)/len(color))%len(symbol)]+color[(antii)%len(color)],label='ANT. '+str(anti))
 
 
-    fig = pl.figure()
-    sub1 = fig.add_subplot(211)
-    MaxG = 0.0
-    color = ['r','g','b','k','m','y','c']
-    symbol = ['o','^','x']
-    Freq2Plot = np.concatenate(AllFreqs)/1.e9
-    for antii,anti in enumerate(CGains['XYadd'].keys()):
-      sub1.plot(Freq2Plot,np.concatenate([np.array(ll) for ll in CGains['XYadd'][anti]]),symbol[((antii)/len(color))%len(symbol)]+color[(antii)%len(color)],label='ANT. '+str(anti))
-    sub2 = fig.add_subplot(212,sharex=sub1)
-    for antii,anti in enumerate(CGains['XYratio'].keys()):
-      toplot = np.concatenate([np.array(ll) for ll in CGains['XYratio'][anti]])
-      MaxG = max(MaxG,np.max(toplot))
-      sub2.plot(Freq2Plot,toplot,symbol[((antii)/len(color))%len(symbol)]+color[(antii)%len(color)],label='ANT. '+str(anti))
+      sub1.set_ylim((-180.,180.))
+      sub2.set_ylim((0.,1.1*MaxG))
+      pl.setp(sub1.get_xticklabels(),'visible',False)
+      Dnu = np.max(Freq2Plot)-np.min(Freq2Plot)
+      sub1.set_xlim((np.min(Freq2Plot) - Dnu*0.1,np.max(Freq2Plot) + Dnu*0.45))
+      sub2.set_xlim((np.min(Freq2Plot) - Dnu*0.1,np.max(Freq2Plot) + Dnu*0.45))
+      sub2.set_ylim((0.,2.5))
 
+      sub2.legend(numpoints=1)
+      sub1.set_ylabel('Cross-Phase (deg.)')
+      sub2.set_ylabel('Cross-Amp (Norm.)')
+      sub2.set_xlabel('Frequency (GHz)')
 
-
-
-    sub1.set_ylim((-180.,180.))
-    sub2.set_ylim((0.,1.1*MaxG))
-    pl.setp(sub1.get_xticklabels(),'visible',False)
-    Dnu = np.max(Freq2Plot)-np.min(Freq2Plot)
-    sub1.set_xlim((np.min(Freq2Plot) - Dnu*0.1,np.max(Freq2Plot) + Dnu*0.45))
-    sub2.set_xlim((np.min(Freq2Plot) - Dnu*0.1,np.max(Freq2Plot) + Dnu*0.45))
-    sub2.set_ylim((0.,2.5))
-
-
-    sub2.legend(numpoints=1)
-    sub1.set_ylabel('Cross-Phase (deg.)')
-    sub2.set_ylabel('Cross-Amp (Norm.)')
-    sub2.set_xlabel('Frequency (GHz)')
-
-
-    fig.suptitle('CROSS-POLARIZATION GAINS')
-    pl.savefig('Cross-Gains.png')
-    pl.show()
+      fig.suptitle('CROSS-POLARIZATION GAINS')
+      pl.savefig('Cross-Gains.png')
+      pl.show()
 
     PS.FreeData()
 
-   else:
+   else: # if goodclib
     printMsg("\n\n  doSolve can ONLY work with the source was compiled with DO_SOLVE=True\n  PLEASE, RECOMPILE!\n\n")
 
   else:  # if doSolve >= 0.0:
