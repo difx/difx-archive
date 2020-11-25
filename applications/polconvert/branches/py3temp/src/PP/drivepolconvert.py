@@ -26,6 +26,9 @@ import time
 # from six.moves import range
 # from six.moves import zip
 
+# this Kluge is for re-use by singlepolsolve.py
+# import solvepclib as spc
+
 def parseOptions():
     '''
     PolConvert is executed within CASA which is inconvenient for
@@ -389,7 +392,7 @@ def runPrePolconvert(o):
     if os.system(cmd):
         raise Exception('Error while running prepolconvert, see prepol.log')
 
-def deduceZoomIndicies(o):
+def deduceZoomIndices(o):
     '''
     Pull the Zoom frequency indicies from the input files and check
     that all input files produce the same first and last values.
@@ -553,7 +556,7 @@ def plotPrep(o):
         print('Shifting baseline from %d-%d to %d-%d' % (
             o.ant, o.remote - 1, o.ant, o.remote))
 
-def getInputTemplate():
+def getInputTemplate(o):
     '''
     This is the input script with %-able adjustments.
     '''
@@ -563,6 +566,14 @@ def getInputTemplate():
     # the interactive CASA prompts (which you should do if you
     # are having trouble or wish to see some of the plots).
     #
+    '''
+    # found this via inspect...
+    for key,val in o._get_kwargs():
+        if type(val) is str or type(val) is datetime.datetime:
+            template += ('\n    print("debug: %12s = ","%s")' % (key,val))
+        else:   # str(val) is acceptable to print
+            template += ('\n    print("debug: %12s = ", %s )' % (key,val))
+    template += '''
     import os
     import sys
     %simport pylab as pl
@@ -607,12 +618,12 @@ def getInputTemplate():
     %stimeRange = [0,0,0,0, 14,0,0,0]   # first 14 days
     #
     spwToUse = %d
-    # default is empty dictionary, equivalent to 'Aa':0.0
+    # default is empty dictionary, equivalent to 'AA':0.0
     XYadd = {}
     constXYadd = %s
     %sXYadd = {%s}
     print('using XYadd   %%s' %% (str(XYadd)))
-    # default is empty dictionary, equivalent to 'Aa':1.0
+    # default is empty dictionary, equivalent to 'AA':1.0
     XYratio = {}
     print('using XYratio %%s' %% (str(XYratio)))
     #
@@ -626,8 +637,10 @@ def getInputTemplate():
     print(workdir)
     print(os.getcwd())
     if sys.version_info.major < 3:
+        print('Python 2 execution')
         execfile(rpcpath)               # Py2 form
     else:
+        print('Python 3 execution')
         execfile(rpcpath, globals())    # Py3 form
     quit()
     '''
@@ -636,8 +649,9 @@ def getInputTemplate():
 def createCasaInput(o, joblist, caldir, workdir):
     '''
     This function creates a file of python commands that can be piped
-    directly into CASA.  It is now written to support both the single
-    processing as well as the parallel processing case.
+    directly into CASA.  It now only supports parallel execution.
+    Note that joblist is now a list with precisely one job:  [job],
+    caldir is '..', and workdir is where we cd'd to for the work.
     '''
     oinput = workdir + '/' + o.input
     if o.verb: print('Creating CASA input file\n  ' + oinput)
@@ -646,7 +660,7 @@ def createCasaInput(o, joblist, caldir, workdir):
     if o.test:   dotest = 'True'
     else:        dotest = 'False'
 
-    template = getInputTemplate()
+    template = getInputTemplate(o)
     # o.doPlot is set in plotPrep()
     script = template % (o.doPlot[0], o.doPlot[0],
         caldir, o.label, o.exp, o.ant, o.zfirst, o.zfinal,
@@ -917,7 +931,7 @@ if __name__ == '__main__':
     checkOptions(opts)
     if opts.prep:
         runPrePolconvert(opts)
-    deduceZoomIndicies(opts)
+    deduceZoomIndices(opts)
     plotPrep(opts)
     # run the jobs in parallel
     if opts.verb:

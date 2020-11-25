@@ -21,10 +21,12 @@ ScriptCopies = runpolconvert.py README.POLCONVERT \
 BuiltSources = $(PolConvertSources) $(PostPolScripts)
 
 bin_SCRIPTS = PP/prepolconvert.py PP/drivepolconvert.py \
-	PP/checkpolconvert.py PP/comparepolconvert.py
+	PP/checkpolconvert.py PP/comparepolconvert.py \
+	PP/singlepolsolve.py
 pkgdata_DATA = _PolConvert.so _getAntInfo.so _PolGainSolve.so _XPCal.so \
 	PP/runpolconvert.py task_polconvert.py polconvert.xml \
-	PP/README.POLCONVERT PP/Estimate_DPFU.py PP/DPFU_scanner.py
+	PP/README.POLCONVERT PP/Estimate_DPFU.py PP/DPFU_scanner.py \
+	drivepclib.py solvepclib.py
 
 # need to get the install first, then the local data install task
 install-data-am: install-pkgdataDATA install-data-local
@@ -54,6 +56,21 @@ install-data-local: install-pkgdataDATA
 	sh -c "cd $(pkgdatadir) ; mv polconvert_cli.py polconvert_cli.py.bak ;\
 		sed '/casac.casac.utils...verify/s/casac/#casac/' \
 			polconvert_cli.py.bak > polconvert_cli.py"
+
+#
+# massive Kluge here to share code between scripts
+#
+drivepclib.py: $(srcdir)/PP/drivepolconvert.py
+	sed -e '/if __name__ == .__main__./,/eof/d' \
+	    -e '/import solvepclib/s/^\#.*import/import/' \
+	    -e '/def createCasaInput(/s/create/xxx_create/' \
+	    -e '/if createCasaInput/s/create/spc.create/' \
+	    -e '/enter.here/s/^.*/\# eof/' $< > $@
+
+#sed -e '/if __name__ == .__main__./,/eof/d'
+solvepclib.py: $(srcdir)/PP/singlepolsolve.py
+	sed -e '/if __name__ == .__main__./,9999d' \
+	    -e '/enter.here/s/^.*/\# eof/' $< > $@
 
 # brutal, but hey..
 uninstall-hook:
@@ -101,7 +118,7 @@ clean-local:
 	rm -rf polconvert.py polconvert_cli.py mytasks.py
 	rm -f $(ScriptCopies)
 	-[ -f copy.them ] && rm -f $(PolConvertSources) && rm -f copy.them
-	rm -f build.sos
+	rm -f build.sos drivepclib.py solvepclib.py
 endif
 #
 # eof
