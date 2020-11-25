@@ -59,6 +59,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 #define Py_TPFLAGS_HAVE_CLASS Py_TPFLAGS_BASETYPE
 #define PyString_AS_STRING(x) PyUnicode_AS_STRING(x)
 #define _PyLong_FromSsize_t(x) PyLong_FromSsize_t(x)
+#define INTEGER long
+#else
+#define INTEGER int
 #endif
 
 // and after some hacking
@@ -194,7 +197,7 @@ PyMODINIT_FUNC init_PolGainSolve(void)
    int *DerIdx,*AvVis;
 
 
-   FILE *logFile;
+   FILE *logFile = 0;
 
 
 
@@ -205,6 +208,11 @@ PyMODINIT_FUNC init_PolGainSolve(void)
 static PyObject *GetNScan(PyObject *self, PyObject *args){
   int cIF;
   PyObject *ret;
+
+  // append after first call
+  if (!logFile) logFile = fopen("PolConvert.GainSolve.log","a");
+  fprintf(logFile,"into GetNScan...\n"); fflush(logFile);
+
   if (!PyArg_ParseTuple(args, "i",&cIF)){
      sprintf(message,"Failed GetNScan! Check inputs!\n"); 
      fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
@@ -212,6 +220,7 @@ static PyObject *GetNScan(PyObject *self, PyObject *args){
      return ret;
   };
 
+  fprintf(logFile,"got %d\n", NScan[cIF]); fflush(logFile);
   ret = Py_BuildValue("i",NScan[cIF]);
   return ret;
 
@@ -222,6 +231,7 @@ static PyObject *GetNScan(PyObject *self, PyObject *args){
 
 static PyObject *PolGainSolve(PyObject *self, PyObject *args){
 
+  // truncate for first call
   logFile = fopen("PolConvert.GainSolve.log","w");
   PyObject *calant, *linant, *solints;
 
@@ -233,6 +243,8 @@ static PyObject *PolGainSolve(PyObject *self, PyObject *args){
     return ret;
   };
 
+  sprintf(message,"Entered PolGainSolve with RelWeight %g\n\n", RelWeight);
+  fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
   
 // Assign dummy sizes to all variables:  
 // unused:
@@ -281,6 +293,9 @@ AddCrossHand = true;
 
   int MaxAnt = 0;
   for(i=0;i<NCalAnt;i++){if(CalAnts[i]>MaxAnt){MaxAnt=CalAnts[i];};};
+  sprintf(message,"MaxAnt is %d\n", MaxAnt);
+  fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
+
   BasNum = new int*[MaxAnt];
   LinBasNum = new int[MaxAnt];
   NLinBas = 0;
@@ -306,15 +321,19 @@ AddCrossHand = true;
         BasNum[i][j] = k;
         
         for(l=0;l<Nlin; l++){if(i==Lant[l] || j==Lant[l]){LinBasNum[NLinBas]=k; NLinBas += 1; break; };};
+
+        sprintf(message,"BL %d is %d - %d\n", k, i, j);
+        fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
         
-   //     BasNum[j][i] = k;
+        // BasNum[j][i] = k;
         k += 1;
       };
 
-
-
     };
   };
+  sprintf(message,"NLinBas is %d\n", NLinBas);
+  fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
+
   
   auxC00 = new cplx64f*[k]; 
   auxC01 = new cplx64f*[k]; 
@@ -326,11 +345,11 @@ AddCrossHand = true;
     auxC11[i] = new cplx64f[3*NCalAnt+1];
     auxC01[i] = new cplx64f[3*NCalAnt+1];
     auxC10[i] = new cplx64f[3*NCalAnt+1];
-
   };
 
   NBas = k;
-
+  sprintf(message,"NBas is %d\n", NBas);
+  fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
 
   CrossSpec00 = (cplx64f **) malloc(NBas*sizeof(cplx64f*));
   CrossSpec11 = (cplx64f **) malloc(NBas*sizeof(cplx64f*));
@@ -425,13 +444,16 @@ int IFN;
 const char *file1, *file2;
 std::ifstream CPfile, MPfile;
 
+if (!logFile) logFile = fopen("PolConvert.GainSolve.log","a");
+fprintf(logFile,"ReadData entered...\n"); fflush(logFile);
 if (!PyArg_ParseTuple(args, "iss", &IFN,&file1, &file2)){
-     sprintf(message,"Failed ReadData! Check inputs!\n"); 
+     sprintf(message,"Failed ReadData! Check inputs! (return -1)\n"); 
      fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
      fclose(logFile);
     PyObject *ret = Py_BuildValue("i",-1);
     return ret;
 };
+fprintf(logFile,"ReadData parsed...\n"); fflush(logFile);
 
 
 
@@ -451,6 +473,7 @@ NIF += 1;
 
 if (NIF > MAXIF){
 // Set memory for new IF:
+  fprintf(logFile,"(realloc) %d > %d\n", NIF, MAXIF); fflush(logFile);
   MAXIF *= 2;
   Nchan = (int*) realloc(Nchan,MAXIF*sizeof(int));
   Frequencies = (double**) realloc(Frequencies,MAXIF*sizeof(double*));
@@ -460,6 +483,7 @@ if (NIF > MAXIF){
   IFNum = (int*) realloc(IFNum,MAXIF*sizeof(int));
   if(!Nchan || !Frequencies || !NVis || !NCVis || !NLVis || !IFNum){
     Nchan=NULL; Frequencies=NULL; NVis=NULL; NCVis=NULL; NLVis=NULL; IFNum=NULL;
+    fprintf(logFile,"(return -2)"); fflush(logFile);
     PyObject *ret = Py_BuildValue("i",-2);
     return ret;
   };
@@ -484,12 +508,14 @@ if (NIF > MAXIF){
   if(!Ant1 || !Ant2 || !Times || !PA1 || !PA2 || !RR || !LR || !RL || !LL){
     Ant1=NULL; Ant2=NULL; Times=NULL; PA1=NULL; PA2=NULL; RR=NULL;
     LR=NULL; RL=NULL; LL=NULL;
+    fprintf(logFile,"(return -3)"); fflush(logFile);
     PyObject *ret = Py_BuildValue("i",-3);
     return ret;
   };
 
   if(!Rates || !Delays00 || !Delays11){
     Rates=NULL; Delays00=NULL; Delays11=NULL;
+    fprintf(logFile,"(return -4)"); fflush(logFile);
     PyObject *ret = Py_BuildValue("i",-4);
     return ret;
   };
@@ -502,7 +528,7 @@ IFNum[NIF-1] = IFN;
 
 // Number of channels for this IF:
 CPfile.read(reinterpret_cast<char*>(&Nchan[NIF-1]), sizeof(int));
-//printf("There are %i channels\n",Nchan[NIF-1]);
+fprintf(logFile, "IF%d has %i channels\n",IFN,Nchan[NIF-1]); fflush(logFile);
 
 
 // Maximum number of channels:
@@ -513,6 +539,7 @@ if (Nchan[NIF-1] > MaxChan){
     CrossSpec11[i] = (cplx64f *) realloc(CrossSpec11[i],MaxChan*sizeof(cplx64f));
     if(!CrossSpec00[i] || !CrossSpec11[i]){
       CrossSpec00[i]=NULL; CrossSpec11[i]=NULL;
+      fprintf(logFile,"(return -5)"); fflush(logFile);
       PyObject *ret = Py_BuildValue("i",-5);
       return ret;
     };
@@ -534,8 +561,9 @@ Frequencies[NIF-1] = new double[Nchan[NIF-1]];
 CPfile.read(reinterpret_cast<char*>(Frequencies[NIF-1]), Nchan[NIF-1]*sizeof(double));
 
 
-//printf("Freqs. %.5e  %.5e\n",Frequencies[NIF-1][0],Frequencies[NIF-1][Nchan[NIF-1]-1]);
-
+fprintf(logFile,"Freqs. %.8e  %.8e\n",
+    Frequencies[NIF-1][0],Frequencies[NIF-1][Nchan[NIF-1]-1]);
+fflush(logFile);
 
 
 // Number of integration times:
@@ -550,7 +578,9 @@ bool isTime;
 NCVis[NIF-1] = 0;
 int AuxA1, AuxA2;
 
-while(!CPfile.eof()){
+fprintf(logFile,"Reading CPfile...(NCalAnt=%d)\n", NCalAnt); fflush(logFile);
+// eof() doesn't do what everyone thinks....
+while(!CPfile.eof() && CPfile.peek() >= 0){
 
   is1 = false; is2 = false;
   CPfile.ignore(sizeof(double)); 
@@ -564,11 +594,12 @@ while(!CPfile.eof()){
   if(is1 && is2 && AuxA1 != AuxA2){
     NCVis[NIF-1] += 1;
   };
-//  printf("%i %i - %i\n",AuxA1,AuxA2,NCVis[NIF-1]);
+  //  printf("%i %i - %i\n",AuxA1,AuxA2,NCVis[NIF-1]);
 
-CPfile.ignore(2*sizeof(double)+4*Nchan[NIF-1]*sizeof(cplx32f)); 
+  CPfile.ignore(2*sizeof(double)+4*Nchan[NIF-1]*sizeof(cplx32f)); 
 
 };
+fprintf(logFile,"Finished CPfile...\n"); fflush(logFile);
 
 
 
@@ -582,7 +613,9 @@ NLVis[NIF-1] = 0;
 
 
 
-while(!MPfile.eof()){
+fprintf(logFile,"Reading MPfile... (NCalAnt=%d)\n", NCalAnt); fflush(logFile);
+// eof() doesn't do what everyone thinks....
+while(!MPfile.eof() && MPfile.peek() >= 0){
 
   is1 = false; is2 = false;
   MPfile.ignore(sizeof(double)); 
@@ -601,16 +634,17 @@ while(!MPfile.eof()){
 
 //  printf("%i %i - %i\n",AuxA1,AuxA2,NLVis[NIF-1]);
 
-MPfile.ignore(2*sizeof(double)+12*Nchan[NIF-1]*sizeof(cplx32f)); 
+  MPfile.ignore(2*sizeof(double)+12*Nchan[NIF-1]*sizeof(cplx32f)); 
 };
+fprintf(logFile,"Finished MPfile...\n"); fflush(logFile);
 
 
 // Total number of visibilities:
 NVis[NIF-1] = NCVis[NIF-1]+ NLVis[NIF-1];
 
-sprintf(message,"\nFound %i vis in CPol and %i vis in LPol\n",NCVis[NIF-1],NLVis[NIF-1]); 
-fprintf(logFile,"%s",message);  
-
+sprintf(message,"Found %i vis in CPol and %i vis in LPol for a total of %i\n",
+    NCVis[NIF-1],NLVis[NIF-1],NVis[NIF-1]); 
+fprintf(logFile,"%s",message);  fflush(logFile);
 
 
 // Set memory for the visibilities:
@@ -651,6 +685,7 @@ CPfile.seekg(sizeof(int)+Nchan[NIF-1]*sizeof(double),CPfile.beg);
 MPfile.clear();
 MPfile.seekg(sizeof(int),MPfile.beg);
 
+fprintf(logFile, "\nFiles rewound\n"); fflush(logFile);
 
 // Read visibilities (Mix Pol):
 int currI = 0;
@@ -661,13 +696,12 @@ cplx64f Exp1, Exp2;
 cplx32f AuxRR, AuxRL, AuxLR, AuxLL;
 
 i=0;
-while(!MPfile.eof()){
+while(!MPfile.eof() && MPfile.peek() >= 0){
   MPfile.read(reinterpret_cast<char*>(&AuxT), sizeof(double));
   MPfile.read(reinterpret_cast<char*>(&AuxA1), sizeof(int));
   MPfile.read(reinterpret_cast<char*>(&AuxA2), sizeof(int));
   MPfile.read(reinterpret_cast<char*>(&AuxPA1), sizeof(double));
   MPfile.read(reinterpret_cast<char*>(&AuxPA2), sizeof(double));
-
 
 // Check if visib is observed by CalAnts:
   isGood = false; is1 = false; is2 = false;
@@ -769,7 +803,7 @@ while(!MPfile.eof()){
 
 
 };
-
+printf("Reached MP eof\n");
 
 
 
@@ -872,7 +906,7 @@ while(!CPfile.eof()){
 
 };
 
-//printf("DONE READ!\n");
+printf("DONE READ!\n");
 
 CPfile.close();
 MPfile.close();
@@ -957,12 +991,12 @@ free(DiffTimes);
 
 
 
-static PyObject *GetIFs(PyObject *self, PyObject *args) {     //(int Npar, int IF0, intint Ch0, int Ch1, double *pars) {
-
+static PyObject *GetIFs(PyObject *self, PyObject *args) {
+//(int Npar, int IF0, intint Ch0, int Ch1, double *pars) 
 int i,j,k;
-
 //PyObject *IFlist;
 
+if (!logFile) logFile = fopen("PolConvert.GainSolve.log","a");
 if (!PyArg_ParseTuple(args, "i", &i)){
      sprintf(message,"Failed GetIFs! Check inputs!\n"); 
      fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
@@ -975,13 +1009,12 @@ k=-1;
 for (j=0; j<NIF; j++){
   if(IFNum[j] == i){k=j;break;};
 };
-
 if(k<0){
-    PyObject *ret = Py_BuildValue("i",-1);
+    PyObject *ret = Py_BuildValue("i",-2);
     return ret;
 };
 
-int dims[1];
+INTEGER dims[1];
 dims[0] = Nchan[k];
 
 double *copyFreq = new double[Nchan[k]];
@@ -990,10 +1023,13 @@ for (j=0; j<Nchan[k]; j++){
   copyFreq[j] = Frequencies[k][j];
 };
 
-PyArrayObject *out_Freq = (PyArrayObject *) PyArray_FromDimsAndData(1,dims,PyArray_DOUBLE, (char *) copyFreq);
-
+// PyArray_FromDimsAndDataAndDescr and PyArray_FromDims are gone...
+// Use PyArray_NewFromDescr and PyArray_SimpleNew instead. (gh-14100)
+// PyArrayObject *out_Freq = (PyArrayObject *) PyArray_FromDimsAndData(1,dims,PyArray_DOUBLE, (char *) copyFreq);
+PyArrayObject *out_Freq = (PyArrayObject *)PyArray_SimpleNewFromData(
+    1, (const npy_intp*)dims, NPY_DOUBLE, copyFreq);
+PyArray_ENABLEFLAGS(out_Freq, NPY_ARRAY_OWNDATA);
 return PyArray_Return(out_Freq);
-
 };
 
 
@@ -1035,12 +1071,12 @@ double QuinnEstimate(cplx64f *FFTVec){
 
 static PyObject *SetFringeRates(PyObject *self, PyObject *args) {
 
-
 int i,j,NantFix,cIF,cScan;
 double *rates;
 
 PyObject *ratesArr, *antList;
 
+if (!logFile) logFile = fopen("PolConvert.GainSolve.log","a");
 if (!PyArg_ParseTuple(args, "iiOO", &cIF, &cScan, &ratesArr, &antList)){
      sprintf(message,"Failed SetFringeRates! Check inputs!\n"); 
      fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
@@ -1048,9 +1084,6 @@ if (!PyArg_ParseTuple(args, "iiOO", &cIF, &cScan, &ratesArr, &antList)){
     PyObject *ret = Py_BuildValue("i",-1);
     return ret;
 };
-
-
-
 
 
 NantFix = (int) PyList_Size(antList);
@@ -1072,7 +1105,6 @@ for (i=0; i<NantFix; i++){
 PyObject *ret = Py_BuildValue("i",0);
 return ret;
 
-
 };
 
 
@@ -1091,6 +1123,7 @@ double *T0 = new double[NBas];
 double *T1 = new double[NBas];
 bool isFirst = true;
 int applyRate;
+bool showMe, gotAnts;
 
 cplx64f *aroundPeak00 = new cplx64f[3];
 cplx64f *aroundPeak11 = new cplx64f[3];
@@ -1100,6 +1133,7 @@ cplx64f *aroundPeak11 = new cplx64f[3];
 
 PyObject *antList;
 
+if (!logFile) logFile = fopen("PolConvert.GainSolve.log","a");
 if (!PyArg_ParseTuple(args, "Oiii", &antList,&npix, &applyRate,&cScan)){
      sprintf(message,"Failed DoGFF! Check inputs!\n"); 
      fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
@@ -1111,9 +1145,12 @@ if (!PyArg_ParseTuple(args, "Oiii", &antList,&npix, &applyRate,&cScan)){
 
 
 if (applyRate==0){
-  sprintf(message,"\n\n   Residual rate will NOT be estimated\n\n");
+  sprintf(message,"\n\n   DoGFF: Residual rate will NOT be estimated\n\n");
   fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
-};
+} else {
+  sprintf(message,"\n\n   DoGFF: Residual rate WILL be estimated\n\n");
+  fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
+}
 
 NantFit = (int) PyList_Size(antList);
 delete[] antFit;
@@ -1178,19 +1215,19 @@ BufferCYY = reinterpret_cast<std::complex<double> *>(BufferVis11);
 
 
 
-for(j=0; j<NBas; j++){
+for(j=0; j<NBas; j++){  // baseline loop
 
-
-for (i=0; i<NIF; i++){
+for (i=0; i<NIF; i++){ // IF loop
 
   isFirst = true;
+  showMe = false;
 
   BLRates00[i][j] = 0.0;
   BLRates11[i][j] = 0.0;
   BLDelays00[i][j] = 0.0;
   BLDelays11[i][j] = 0.0;
 
-    int NcurrVis = 0;
+  int NcurrVis = 0;
 
 
 
@@ -1215,13 +1252,21 @@ for (i=0; i<NIF; i++){
 
       };
     };
+   
+   if (NcurrVis > 1) showMe = true;
 
 
  //   printf("READ A TOTAL OF  %i VISIBS.\n",NcurrVis);
+   if (showMe) {
+     sprintf(message,"   DoGFF: read %i visiblities\n",NcurrVis);
+     fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
+   }
 
 /////////////////
 // FFT the fringe and find the peak:
    if (NcurrVis > 1){
+    sprintf(message,"FFT on baseline %i IF %i\n",j,i+1);
+    fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
 
 // Re-define the FFTW plan if dimensions changed:
     if (Nchan[i] != prevChan || NcurrVis != prevNvis){
@@ -1265,6 +1310,8 @@ for (i=0; i<NIF; i++){
   nu00[1] = 0; ti00[1] = 0; nu11[1] = 0; ti11[1] = 0;
 
   if (NcurrVis >1){
+   sprintf(message,"Peaks on baseline %i IF %i\n",j,i+1);
+   fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
 
 // First Quadrant:
   for (l=0; l<ti; l++){
@@ -1439,30 +1486,41 @@ if (ti11[1]==NcurrVis-1){ti11[2]=0;} else{ti11[2]=ti11[1]+1;};
      BLDelays00[i][j] = 0.0; BLDelays11[i][j] = 0.0; 
      Weights[i][j] = 0.0;
 
-     sprintf(message,"WARNING! BASELINE %i HAS NO DATA IN IF %i!\n",j,i+1);
+     sprintf(message,"WARNING! BASELINE %i HAS NO DATA IN IF %i ",j,i+1);
      fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
 
-     for (a1=0; a1<NCalAnt; a1++){
+     for (gotAnts = false, a1=0; a1<NCalAnt; a1++){
        for (a2=a1+1;a2<NCalAnt;a2++){
          if(j == BasNum[CalAnts[a1]-1][CalAnts[a2]-1]){
-          sprintf(message,"ANTS: %i-%i\n",a1+1,a2+1);
+          sprintf(message,"ANTS: %i-%i!\n",a1+1,a2+1);
           fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
+          gotAnts = true;
           break;
          };
        };
      };
+     if (!gotAnts) {
+       sprintf(message,"NO-ANTS:\n");
+       fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
+     }
 
   };
 
 //////
-//  printf("RR FRINGE PEAK OF %.5e AT INDEX %i-%i (RATE %.5e Hz, DELAY: %.5e s)\n",Peak00,ti00[1],nu00[1],BLRates00[i][j],BLDelays00[i][j]);
-//  printf("LL FRINGE PEAK OF %.5e AT INDEX %i-%i (RATE %.5e Hz, DELAY: %.5e s)\n",Peak11,ti11[1],nu11[1],BLRates11[i][j],BLDelays00[i][j]);
-
+  if (showMe) {
+    printf(
+      "RR FRINGE PEAK OF %.5e AT INDEX %i-%i (RATE %.5e Hz, DELAY: %.5e s)\n",
+      Peak00,ti00[1],nu00[1],BLRates00[i][j],BLDelays00[i][j]);
+    printf(
+      "LL FRINGE PEAK OF %.5e AT INDEX %i-%i (RATE %.5e Hz, DELAY: %.5e s)\n",
+      Peak11,ti11[1],nu11[1],BLRates11[i][j],BLDelays00[i][j]);
   };
+
+  }; // end IF loop
 ////////////////////
 
 
-};
+}; // end baseline loop
 
 
 
@@ -1815,6 +1873,7 @@ static PyObject *SetFit(PyObject *self, PyObject *args) {
 
   PyObject *IFlist, *antList, *calstokes, *ret, *feedPy;
 
+  if (!logFile) logFile = fopen("PolConvert.GainSolve.log","a");
 if (!PyArg_ParseTuple(args, "iOOiiOiO", &Npar, &IFlist, &antList, &solveAmp, &solveQU, &calstokes, &useCov, &feedPy)){
      sprintf(message,"Failed SetFit! Check inputs!\n"); 
      fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
@@ -1915,7 +1974,7 @@ return ret;
 
 
 
-static PyObject *GetChi2(PyObject *self, PyObject *args) { 
+static PyObject *GetChi2(PyObject *self, PyObject *args) {
 
 //int NIFComp;
 int Ch0, Ch1;
@@ -1947,6 +2006,7 @@ DerAux2 = new double[2];
 PyObject *pars, *ret,*LPy;
 
 
+if (!logFile) logFile = fopen("PolConvert.GainSolve.log","a");
 if (!PyArg_ParseTuple(args, "OOiii", &pars, &LPy, &Ch0, &Ch1,&end)){
      sprintf(message,"Failed GetChi2! Check inputs!\n"); 
      fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
@@ -2261,7 +2321,7 @@ for (i=0; i<NIFComp; i++){
     AvPA2[BNum] += FeedFactor2;
 
 
- //   for (j=Ch0; j<Ch1+1; j++){
+ //   for (j=Ch0; j<Ch1+1; j++) 
     for (j=Ch0; j<Ch1; j++){
 
     
@@ -2427,11 +2487,11 @@ if(StokesSolve){
 
 
 
-   };  // Comes from   for (l=0; l<Nder; l++){
+   };  // Comes from   for (l=0; l<Nder; l++)
 
 
 
-    };  // Comes from loop over channels.
+   };  // Comes from loop over channels.
 
 
 
@@ -2647,7 +2707,7 @@ if(doCov){
 
   };  // Comes from loop over visibilities
 
-};
+}; // comes from loop over NIFComp
 
 
 double TheorImpr = 0.0;
@@ -2720,4 +2780,4 @@ for(i=0;i<Npar;i++){
 
 
 
-
+// eof
