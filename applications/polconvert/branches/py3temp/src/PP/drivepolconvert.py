@@ -403,6 +403,7 @@ def deduceZoomIndices(o):
     '''
     sitelist = o.sites.split(',')
     if o.verb: print('Sitelist is',sitelist)
+    o.amap_dicts = list()
     o.remotelist = []
     o.remotename = []
     o.remote_map = []
@@ -462,6 +463,7 @@ def deduceZoomIndices(o):
                     o.remote_map.append(str(sorted(antmap.keys())))
                     break
             o.remotelist.append(plotant)
+            o.amap_dicts.append(antmap)
             antmap = {}
 
         if o.verb: print('Zoom bands %s..%s from %s' % (zfir, zfin, jobin))

@@ -121,6 +121,8 @@ static PyMethodDef module_methods[] = {
     {NULL, NULL, 0, NULL}   /* terminated by list of NULLs, apparently */
 };
 
+static long chisqcount = 0;
+static long twincounter = 0;
 
 /* Initialize the module */
 #if PY_MAJOR_VERSION >= 3
@@ -159,6 +161,7 @@ PyMODINIT_FUNC init_PolGainSolve(void)
    int NCalAnt, Nlin, Ncirc, *Nchan, SolMode, SolAlgor;
    int *IFNum;
    int *Lant, *Cant, *NVis, *NLVis, *NCVis, *CalAnts, *NScan;
+   int *Twins[2], Ntwin;
    int solveAmp, useCov, solveQU;
    int *LinBasNum, NLinBas;
    int NIF, NIFComp;
@@ -204,7 +207,6 @@ PyMODINIT_FUNC init_PolGainSolve(void)
 
 
 
-
 static PyObject *GetNScan(PyObject *self, PyObject *args){
   int cIF;
   PyObject *ret;
@@ -233,9 +235,10 @@ static PyObject *PolGainSolve(PyObject *self, PyObject *args){
 
   // truncate for first call
   logFile = fopen("PolConvert.GainSolve.log","w");
-  PyObject *calant, *linant, *solints;
+  PyObject *calant, *linant, *solints, *flagBas;;
 
-  if (!PyArg_ParseTuple(args, "dOOO",&RelWeight, &solints, &calant, &linant)){
+  if (!PyArg_ParseTuple(args, "dOOOO",&RelWeight, &solints, &calant,
+    &linant, &flagBas)){
      sprintf(message,"Failed initialization of PolGainSolve! Check inputs!\n"); 
      fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
      fclose(logFile);
@@ -274,6 +277,10 @@ antFit = new int[1];
 TAvg = (double) PyInt_AsLong(PyList_GetItem(solints,1));
 SolAlgor = (int) PyInt_AsLong(PyList_GetItem(solints,0));
 
+Twins[0] = (int *)PyArray_DATA(PyList_GetItem(flagBas,0));
+Twins[1] = (int *)PyArray_DATA(PyList_GetItem(flagBas,1));
+Ntwin = PyArray_DIM(PyList_GetItem(flagBas,0),0);
+
 sprintf(message,"Will divide each calibration scan into %.1f chunks\n",TAvg);
 fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
 
@@ -300,12 +307,20 @@ AddCrossHand = true;
   LinBasNum = new int[MaxAnt];
   NLinBas = 0;
   
-  bool isCal1, isCal2;
+  bool isCal1, isCal2; // not used: isFlag;
 
   for(i=0;i<MaxAnt;i++){
     BasNum[i] = new int[MaxAnt];
 
-    for(j=0;j<MaxAnt;j++){BasNum[i][j] = -1;};
+//  for(j=0;j<MaxAnt;j++){BasNum[i][j] = -1;};
+//  isFlag = false;
+    for(j=0;j<MaxAnt;j++){
+      BasNum[i][j] = -1;
+   // does not go here, look down about 1500 lines to flagging baselines
+   //    for(k=0;k<Ntwin;k++){
+   //       if((Twins[0][k]==i+1 && Twins[1][k]==j+1) || (Twins[1][k]==i+1 && Twins[0][k]==j+1)){isFlag=true;break;};
+   //    };
+    }
 
     for(j=i+1;j<MaxAnt;j++){
 
@@ -1586,7 +1601,13 @@ for (i=0; i<NIF; i++){
          if (CalAnts[a2]==antFit[j]){af2 = j;};
        };
 
+       // look up about 1500 lines to flagging baselines
        BNum = BasNum[CalAnts[a1]-1][CalAnts[a2]-1];
+       for(j=0;j<Ntwin;j++){
+         if((Twins[0][j]==CalAnts[a1] && Twins[1][j]==CalAnts[a2])||(Twins[0][j]==CalAnts[a2] && Twins[1][j]==CalAnts[a1])){
+           BNum = -1; break;
+         };
+      };
 
       if (BNum>0){
 
@@ -1986,8 +2007,6 @@ double *CrossG;
 
 
 
-
-
 //double *Tm = new double[NBas];
 
 double dx = 1.0e-8;
@@ -2015,6 +2034,7 @@ if (!PyArg_ParseTuple(args, "OOiii", &pars, &LPy, &Ch0, &Ch1,&end)){
     return ret;
 };
 
+chisqcount ++;
 
   Lambda = PyFloat_AsDouble(LPy);
   doCov = Lambda >= 0.0;
@@ -2137,14 +2157,6 @@ for (i=0;i<NantFit;i++){printf(" %i ",antFit[i]);};
 
 
 
-
-
-
-
-
-
-
-
 for(l=0;l<Npar+1;l++){
   for(i=0;i<4;i++){DStokes[l][i] = Stokes[i];};
 };
@@ -2208,6 +2220,27 @@ for (i=0; i<NIFComp; i++){
 // Find which antenna(s) are linear:
     is1 = false ; is2 = false;
     BasWgt = 1.0;
+
+    if (++twincounter < 3) {
+      sprintf(message, "THERE ARE %i TWINS.\n",Ntwin);
+      fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
+    }
+
+    for(j=0; j<Ntwin; j++){
+       sprintf(message,
+        "Checking %i-%i to %i-%i\n",Twins[0][j],Twins[1][j],a1,a2);
+       fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
+       if ((Twins[0][j]==a1 && Twins[1][j]==a2) ||
+           (Twins[0][j]==a2 && Twins[1][j]==a1)){
+          if (twincounter < 3) {
+            sprintf(message, "Found Twins!\n");
+            fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
+          }
+          BasWgt=0.0;
+          break;
+       };
+    };
+
     for(j=0; j<Nlin; j++) {
       if (a1==Lant[j]){is1 = true;};
       if (a2==Lant[j]){is2 = true;};
@@ -2764,6 +2797,9 @@ for(i=0;i<Npar;i++){
   delete[] AvPA1;
   delete[] AvPA2;
 
+  
+  sprintf(message, "Chisq Ret %g (%ld)\n", Chi2, chisqcount);
+  fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
 
   return ret;
 

@@ -862,6 +862,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
     printMsg("WARNING: Plotting will involve autocorrelations. \nThis has not been fully tested!") 
 
   printMsg("XYadd is %s"%str(XYadd))
+  printMsg("XYdel is %s"%str(XYdel))
   printMsg("XYratio is %s"%str(XYratio))
 
 #########################################
@@ -1170,12 +1171,15 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
     if exA not in excludeAnts:
       calAnts.append(antcodes.index(exA)+1)
       ### = [i+1 for i in range(len(antcoords)) if i+1 not in excludeAnts]
+    else:
+      printMsg("Excluding antenna %s"%str(exA))
 
 
   FlagBas1 = []
   FlagBas2 = []
   for fbi in excludeBaselines:
     print(fbi, antcodes)
+    printMsg("Excluding baseline %s"%str(fbi))
     if fbi[0] in antcodes and fbi[1] in antcodes:
       FlagBas1.append(antcodes.index(fbi[0])+1) ### = np.array([int(i[0]+1) for i in excludeBaselines])
       FlagBas2.append(antcodes.index(fbi[1])+1) ### = np.array([int(i[1]+1) for i in excludeBaselines])
@@ -2236,15 +2240,16 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 
     cAnts = np.array(calAnts,dtype=np.int32)
     lAnts = np.array(linAntIdxTrue,dtype=np.int32)
-    if (len(FlagBas1) > 0 or len(FlagBas1) > 0):
-     printMsg("Using 6 argument method of PolGainSolve")
-     MySolve = PS.PolGainSolve(doSolveD,solint,selAnts,lAnts,FlagBas1,FlagBas2)
-    else:
-     printMsg("Using 4 argument method of PolGainSolve:")
-     printMsg("  selAnts is " + str(selAnts))
-     printMsg("    lAnts is " + str(lAnts))
-     MySolve = PS.PolGainSolve(doSolveD,solint,selAnts,lAnts)
-    printMsg('PolGainSolve finished with return: <%s>' % str(MySolve))
+#   if (len(FlagBas1) > 0 or len(FlagBas1) > 0):
+#    printMsg("Using 5 argument method of PolGainSolve")
+     #MySolve = PS.PolGainSolve(doSolveD,solint,selAnts,lAnts,FlagBas1,FlagBas2)
+    MySolve = PS.PolGainSolve(doSolveD,solint,selAnts,lAnts,[FlagBas1,FlagBas2])
+#   else:
+#    printMsg("Using 4 argument method of PolGainSolve:")
+#    printMsg("  selAnts is " + str(selAnts))
+#    printMsg("    lAnts is " + str(lAnts))
+#    MySolve = PS.PolGainSolve(doSolveD,solint,selAnts,lAnts)
+#   printMsg('PolGainSolve finished with return: <%s>' % str(MySolve))
 
     AllFreqs = []
     printMsg('%%%')
@@ -2286,6 +2291,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
        CGains['XYadd'][antcodes[ci-1]] = []
        CGains['XYratio'][antcodes[ci-1]] = []
      for plii,pli in enumerate(doIF):
+       printMsg("working %s,%s"%(str(plii),str(pli)))
        Nchans = np.shape(AllFreqs[plii])[0]
        temp = [np.zeros(Nchans,dtype=np.complex64) for ci in fitAnts]
        BPChan = list(range(0,Nchans,ChAv))
@@ -2294,7 +2300,8 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
        BPChan = np.array(BPChan,dtype=np.int32)
        Npar = len(fitAnts)*{True:2,False:1}[solveAmp]
        laux = [pli]
-       PS.SetFit(Npar,laux,fitAnts,solveAmp,solveQU,Stokes,useCov,feedRot)
+       rv = PS.SetFit(Npar,laux,fitAnts,solveAmp,solveQU,Stokes,useCov,feedRot)
+       printMsg("PS.SetFit rv %d" % rv)
        for chran in range(len(BPChan)-1):
          if chran==0 and plii==0:
            p0 = []
@@ -2314,6 +2321,10 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
    #      print PS.GetChi2(pArr,-1.0,BPChan[chran],BPChan[chran+1])
    #      raw_input('HOLD\n\n')
 
+   ###
+   #H: scipyMethods are probably broken since the interface has changed.
+   ###
+
          if fitMethod not in scipyMethods:
            myfit,FLIP = LMMin(p0,BPChan[chran],BPChan[chran+1])
          else:
@@ -2327,6 +2338,10 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 
            myfit = mymin.values()[5]
 
+   ###
+   #T: scipyMethods are probably broken since the interface has changed.
+   ###
+
          for ci,calant in enumerate(fitAnts):
            PhasFactor = {True:np.pi, False: 0.0}[FLIP and (calant in linAntIdxTrue)]
            if solveAmp:
@@ -2339,9 +2354,11 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
          CGains['XYratio'][antcodes[calant-1]].append(np.copy(1./np.abs(temp[ci])))
          CGains['XYadd'][antcodes[calant-1]].append(np.copy(-180./np.pi*np.angle(temp[ci])))
 
+       printMsg("Done with BP mode\n")
 
 # MBD MODE:
     else:
+      printMsg("\n Estimate antenna cross-pol gains: MBD mode\n")
       p0 = []
       for ci in fitAnts:
         if solveAmp:
@@ -2374,6 +2391,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 
         CGains['XYadd'][antcodes[calant-1]].append(np.copy(-180./np.pi*np.angle(CrossGain)))
         CGains['XYratio'][antcodes[calant-1]].append(cp.copy(1./np.abs(CrossGain)))
+      printMsg("Done with MBD mode\n")
     # end of if BP else MBD MODE:
 
     # see what we got...
@@ -2416,6 +2434,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
       pl.show()
 
     PS.FreeData()
+    printMsg("PS Data freed\n")
 
    else: # if goodclib
     printMsg("\n\n  doSolve can ONLY work with the source was compiled with DO_SOLVE=True\n  PLEASE, RECOMPILE!\n\n")

@@ -104,6 +104,30 @@ def parseOptions():
             'computed as sum[ dosolve*(RR/LL-1)^2 + (RL^2 + LR^2) ].  If '
             'doSolve == 0 you minimize the cross-hands; if doSolve >> 1, '
             'you are assuming negligible Stokes V.')
+    secondy.add_argument('-m', '--method', dest='method',
+        default='gradient', metavar='STRING',
+        help='solve method: "gradient" or "LM" (or "Levenberg-Marquardt"), or '
+            'if scipy is available, also "COBYLA" or "NM" (or "Nelder-Mead")')
+    secondy.add_argument('-A', '--exAnts', dest='exAnts',
+        default='', metavar='LIST',
+        help='comma-separated list of antennas to exclude from gain solution')
+    secondy.add_argument('-B', '--exBase', dest='exBase',
+        default='', metavar='LIST',
+        help='colon-separated list of ant,ant pairs to exclude from gain '
+        'solution, e.g.:  AA,BB:CC,DD to exclude AA-BB and CC-DD baselines.')
+    secondy.add_argument('-x', '--xyadd', dest='xyadd',
+        default='0.0', metavar='STRING',
+        help='a priori x-y manual phase adjustment')
+    secondy.add_argument('-d', '--xydel', dest='xydel',
+        default='0.0', metavar='STRING',
+        help='a priori x-y manual delay adjustment')
+    secondy.add_argument('-R', '--xyratio', dest='xyratio',
+        default='1.0', metavar='STRING',
+        help='a priori x/y manual ratio adjustment')
+    secondy.add_argument('-F', '--feed', dest='feed',
+        default='', metavar='STRING',
+        help='comma-sep dictionary of feed rotation angles (in degrees) '
+        'keyed by SC, e.g., AA:0.0,BB:10.0')
     # the remaining arguments provide the list of input files
     parser.add_argument('nargs', nargs='*',
         help='List of DiFX input job files to process')
@@ -122,7 +146,47 @@ def parseInputIndices(o):
             o.doIF.append(list(range(int(this),int(this)+int(that)+1)))
         else:
             o.doIF.append(int(pp))
-    if o.verb: print('Working with indices',str(o.doIF))
+    o.doIF.sort()
+    o.zfirst = o.doIF[0]
+    o.zfinal = o.doIF[-1]
+    if o.verb:
+        print('  Working with indices',str(o.doIF),o.zfirst,'..',o.zfinal)
+
+def populateRemotelist(o):
+    '''
+    If ZOOM is used, o.remotelist is populated with a list of antennas.
+    If it is not used, we need to do the same.  The code here is derived
+    from dpc.deduceZoomIndices(o):
+        o.remotelist    is the index + 1 of the remote in antmap
+        o.remotename    is the list of the name of the remote station
+        o.remote_map    is the list of stations from input file
+    '''
+    sitelist = o.sites.split(',')
+    amap_re = re.compile(r'^TELESCOPE NAME\s*([0-9])+:\s*([A-Z0-9][A-Z0-9])')
+    o.amap_dicts = list()
+    o.remotelist = list()
+    o.remotename = list()
+    o.remote_map = list()
+    for jobin in o.nargs:
+        antmap = dict()
+        ji = open(jobin, 'r')
+        for line in ji.readlines():
+            amap = amap_re.search(line)
+            if amap: antmap[amap.group(2)] = int(amap.group(1))
+        ji.close()
+        o.amap_dicts.append(antmap)
+        for site in sitelist:
+            if site in antmap:
+                plotant = antmap[site] + 1
+                o.remotename.append(site)
+                o.remote_map.append(str(sorted(antmap.keys())))
+                break
+        o.remotelist.append(plotant)
+    if o.verb:
+        print('  amap_dicts: ',o.amap_dicts)
+        print('  remotelist: ',o.remotelist)
+        print('  remotename: ',o.remotename)
+        print('  remote_map: ',o.remote_map)
 
 def getInputTemplate(o):
     '''
@@ -168,11 +232,12 @@ def getInputTemplate(o):
     doIF = list(range(zfirst+1, zfinal+2))
     NIF = len(doIF)
     linAnt = [%d]
-    remote_map = %s
-    remlistone = re.sub(r'[" \\'\[\]]','',remote_map[0]).split(',')
-    remotename = %s
+    #remote_map = #s # ['..', '..', ... ]
+    #remlistone = re.sub(r'[" \\'\[\]]','',remote_map[0]).split(',')
+    #remotename = #s
     linAntName = '%s'
-    plotAnt = 1 + remlistone.index(remotename[0])
+    #plotAnt = 1 + remlistone.index(remotename[0])
+    plotAnt = %d
     print('linAnt is', linAnt, '('+linAntName+')', 'plotAnt is', plotAnt)
     Range = []
     aantpath = ''   # ALMA Antenna MS table
@@ -184,15 +249,17 @@ def getInputTemplate(o):
     dterm = gains[0]
     amp_norm = 0.0
     # these are dicts on station
-    XYadd = {}      # FIXME  additional phase
-    XYadd[linAntName] = [0.0 for i in range(NIF)]
-    XYdel = {}      # FIXME  additional delay
-    XYratio = {}    # FIXME  X/Y amp ratio
-    XYratio[linAntName] = [1.0 for i in range(NIF)]
+    XYadd = {}
+    XYdel = {}
+    XYratio = {}
+    XYadd[linAntName] = [%s for i in range(NIF)]
+    XYdel[linAntName] = [%s for i in range(NIF)]
+    XYratio[linAntName] = [%s for i in range(NIF)]
+    feedRot = []
     # IDI_conjugated is irrelevant for SWIN
     plotIF = doIF
     # timeRange = []
-    timeRange = [0,0,0,0, 14,0,0,0]   # first 14 days
+    timeRange = [0,0,0,0, 14,0,0,0]   # first 14 days seen
     npix = 50
     # solveMethod may be 'gradient', 'Levenberg-Marquardt' or 'COBYLA'
     # calstokes is [I,Q,U,V] for the calibrator; I is ignored.
@@ -217,16 +284,16 @@ def getInputTemplate(o):
             XYadd=XYadd,
             XYdel=XYdel,
             XYratio=XYratio, usePcal=[], swapXY=[False],
-            swapRL=False, feedRotation=[],
+            swapRL=False, feedRotation=feedRot,
             IDI_conjugated=True,
             plotIF=plotIF, plotRange=timeRange,
             plotAnt=plotAnt,
-            excludeAnts=[], excludeBaselines=[],
+            excludeAnts=%s, excludeBaselines=%s,
             doSolve=%f,
             solint=[1,1],
             doTest=True, npix=npix,
             solveAmp=True,
-            solveMethod='gradient', calstokes=[1.,0.,0.,0.], calfield=-1
+            solveMethod='%s', calstokes=[1.,0.,0.,0.], calfield=-1
             ) 
     print('Polconvert finished')
     #
@@ -234,16 +301,19 @@ def getInputTemplate(o):
     # we shall make a copy to verify that this is all working correctly.
     #
     if %s:  # gain debug
+        print('Pickling CGains')
         import pickle as pk
         if sys.version_info.major < 3:
-            ofile = open('PolConvert.XYGains.copy','w')
+            ofile = open(o.label + '.PolConvert.XYGains.pkl','w')
         else:
-            ofile = open('PolConvert.XYGains.copy','wb')
+            ofile = open(o.label + '.PolConvert.XYGains.pickle','wb')
         try:
             pk.dump(CGains,ofile)
         except Exception as ex:
             printMsg(str(ex))
         ofile.close()
+    else:
+        print('Not pickling CGains')
     '''
     return template
 
@@ -253,6 +323,7 @@ def createCasaInput(o, joblist, caldir, workdir):
     directly into CASA.  It now only supports parallel execution.
     Note that joblist is now a list with precisely one job:  [job],
     caldir is '..', and workdir is where we cd'd to for the work.
+    o.remote is set in createCasaInputParallel() which calls us.
     '''
     oinput = workdir + '/' + o.input
     if o.verb: print('Creating CASA input file\n  ' + oinput)
@@ -260,16 +331,18 @@ def createCasaInput(o, joblist, caldir, workdir):
     else:      verb = '#'
     template = getInputTemplate(o)
     # remember to keep the next two statements synchronized!
+    # xyadd/xydel/xyratio are one constant for all chans of the
+    # one linear antenna, but type is a string to allow other options.
     print('  .' +verb+verb+ '.\n',
         '  ',o.nargs[0], str(joblist), caldir, workdir, '\n',
-        '  ',o.label, o.zfirst, o.zfinal, o.ant, '\n',
-        '  ',o.remote_map, o.remotename, o.lin, '\n',
-        '  ',o.solve, 'True')
+        '  ',o.label, o.zfirst, o.zfinal, o.ant, o.lin, o.remote, '\n',
+        '  ',o.xyadd, o.xydel, o.xyratio,
+        '  ',str(o.exAntList), str(o.exBaseLists), o.solve, o.method, 'True')
     script = template % (verb, verb,
         o.nargs[0], str(joblist), caldir, workdir,
-        o.label, o.zfirst, o.zfinal, o.ant,
-        o.remote_map, o.remotename, o.lin,
-        o.solve, 'True')
+        o.label, o.zfirst, o.zfinal, o.ant, o.lin, o.remote,
+        o.xyadd, o.xydel, o.xyratio,
+        str(o.exAntList), str(o.exBaseLists), o.solve, o.method, 'True')
     # write the file, stripping indents
     ci = open(oinput, 'w')
     for line in script.split('\n'):
@@ -286,8 +359,52 @@ def compatChecks(o):
     o.input = ''
     o.output = ''
     o.remote = -1
-    o.xyadd = ''
     o.test = False
+
+def methodChecks(o):
+    '''
+    Check that the method names are legal, and update with longer names.
+    '''
+    if o.method == 'gradient':
+        return
+    elif o.method == 'COBYLA':
+        return
+    elif o.method == 'LM':
+        o.method = 'Levenberg-Marquardt'
+        return
+    elif o.method == 'NM':
+        o.method = 'Nelder-Mead'
+        return
+    else:
+        raise Exception('Unsupported solution method:  ' + o.method)
+
+def checkAntBase(o):
+    '''
+    Check that the antenna and baseline names are found in inputs.
+    It should be ok to exclude things that are not present in every
+    scan, but the user should be stopped if a name isn't found at all.
+    '''
+    if not o.exAnts == '': o.exAntList = o.exAnts.split(',')
+    else: o.exAntList = list()
+    if not o.exBase == '': o.exBaseList = o.exBase.split(':')
+    else: o.exBaseList = list()
+    o.exBaseLists = [b for b in o.exBaseList]
+    exSet = set(o.exAntList)
+    for bl in o.exBaseList:
+        [exSet.add(a) for a in bl.split(',')]
+    antSet = set()
+    for am in o.amap_dicts:
+        [antSet.add(a) for a in am.keys()]
+    if o.verb and o.exAnts+o.exBase != '':
+        print('Exclusions:')
+        print('  excluding antennas:', o.exAntList)
+        print('  excluding baselines:', o.exBaseList)
+        print('  excluding baseline list:', o.exBaseLists)
+        print('  excluded set:', exSet)
+        print('  input antennas:', antSet)
+    for ant in exSet:
+        if not ant in antSet:
+            raise Exception('Antenna %s not found in input' % str(ant))
 
 def checkOptions(o):
     '''
@@ -296,6 +413,7 @@ def checkOptions(o):
     if such was provided.  The subfunctions throw exceptions on issues.
     '''
     compatChecks(o)
+    methodChecks(o)
     dpc.inputRelatedChecks(o)
     dpc.runRelatedChecks(o)
 
@@ -308,9 +426,15 @@ if __name__ == '__main__':
     if opts.prep:
         runPrePolconvert(opts)
     if opts.indices == 'ZOOM':
+        if opts.verb: print('deducing indices for ZOOM case')
         dpc.deduceZoomIndices(opts)
     else:
+        if opts.verb: print('mapping antenna names and indices')
         parseInputIndices(opts)
+        if opts.verb: print('setting up remote antenna list')
+        populateRemotelist(opts)
+    # finally
+    checkAntBase(opts)
     # run the jobs in parallel
     if opts.verb:
         print('\nParallel execution with %d threads\n' % opts.parallel)
@@ -324,82 +448,3 @@ if __name__ == '__main__':
 #
 # eof
 #
-
-#
-# Original scripting follows...
-#
-REFANT = 4 # Antenna to which refer the conversion gain solution (O8)
-LINANT = 2 # Antenna with linear feed (EB)
-REF_IDI = 'eo014_1_1.IDI6' # IDI with calibrator scan
-CALRANGE = [0,23,28,0,0,23,39,45] # time range of calibrator scan (J0927+3902)
-NCHAN = 32 # Number of channels per IF (to compute the multi-band delay)
-NIF = 8  # Number of IFs.
-NITER = 1  # Number of X-Y phase-estimate iterations (just 1 should suffice)
-# List with the names of all FITS-IDIs to convert:
-ALL_IDIs = ['eo014_1_1.IDI6']
-import os
-import numpy as np
-# Initial gain estimates (dummy gains):
-EndGainsAmp = [1.0 for i in range(NIF)]
-EndGainsPhase = [0.0 for i in range(NIF)]
-TotGains = []
-# Estimate cross-gains with PolConvert:
-for i in range(NITER):
-##################################
-# Convert XYadd and XYratio to lists, in order
-# to avoid corruption of the *.last file
-  if i==0:
-    XYadd = [EndGainsPhase]
-    XYratio = [EndGainsAmp]
-  else:
-    XYadd = [[list(ll) for ll in EndGainsPhase]]
-    XYratio = [[list(ll) for ll in EndGainsAmp]]
-##################################
-  polconvert(IDI=REF_IDI,
-             OUTPUTIDI=REF_IDI,
-             linAntIdx=[LINANT],
-             plotIF = [],
-             doIF = [],
-             XYadd = XYadd,
-             XYratio = XYratio,
-             Range = CALRANGE,
-             plotRange = CALRANGE,
-             IDI_conjugated = False,
-             doSolve = 1000.,   #4,
-             solint = [1,1],  #BP MODE
-             plotAnt = REFANT,
-             amp_norm = 0.0,
-             solveMethod = 'COBYLA',
-             excludeAnts = [8,9],
-             doTest=True)
-  
-  ifile = open('PolConvert.XYGains.dat')
-  GainsIt = pk.load(ifile)
-  ifile.close()
-  TotGains.append(GainsIt)
-  for k in range(NIF):
-    EndGainsAmp[k] = EndGainsAmp[k]*np.array(GainsIt['XYratio'][LINANT][k])
-    EndGainsPhase[k] = EndGainsPhase[k] + np.array(GainsIt['XYadd'][LINANT][k])
-  os.system('rm -rf FRINGE.PLOTS.ITER%i'%i)
-  os.system('mv FRINGE.PLOTS FRINGE.PLOTS.ITER%i'%i)
-  os.system('mv Cross-Gains.png Cross-Gains.ITER%i.png'%i)
-
-
-# Add this suffix to the converted IDIs (empty string -> overwrite!)
-SUFFIX = '.POLCONVERT'
-# HERE WE CAN CONVERT ALL IDIs:
-if False:
- XYadd = [[list(ll) for ll in EndGainsAmp]]
- XYratio = [[list(ll) for ll in EndGainsPhase]]
-
- for IDI in ALL_IDIs:
-  polconvert(IDI=IDI,
-             OUTPUTIDI=IDI+SUFFIX,
-             linAntIdx=[LINANT],
-             plotIF = [],
-             XYadd = [list(Phases)],
-             XYdel = [multiBand],
-             IDI_conjugated = False,
-             XYratio = [AmpRat],
-             amp_norm = 0.0,
-             doTest=False)
