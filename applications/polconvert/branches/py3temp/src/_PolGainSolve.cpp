@@ -41,6 +41,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 #include <complex>
 #include <dirent.h>
 #include <fftw3.h>
+#include <gsl/gsl_errno.h>
 #include <gsl/gsl_linalg.h>
 
 // cribbed from SWIG machinery
@@ -121,6 +122,19 @@ static PyMethodDef module_methods[] = {
     {NULL, NULL, 0, NULL}   /* terminated by list of NULLs, apparently */
 };
 
+// normally abort() is called on problems, which breaks CASA.
+// here we report and save the error condition which can be
+// noticed for a cleaner exit.
+int gsl_death_by = GSL_SUCCESS;
+static void gsl_death(const char * reason, const char * file,
+    int line, int gsl_errno) {
+    // stderr does not end up synchronized with stdout
+    printf("GSL Death by '%s' in file %s at line %d: GSL Error %d\n",
+        reason, file, line, gsl_errno);
+    fflush(stdout); std::cout << std::flush;
+    gsl_death_by = gsl_errno;
+}
+
 static long chisqcount = 0;
 static long twincounter = 0;
 
@@ -138,12 +152,14 @@ PyMODINIT_FUNC PyInit__PolGainSolve(void)
 {
     PyObject *m = PyModule_Create(&pc_module_def);
     import_array();
+    (void)gsl_set_error_handler(gsl_death);
     return(m);
 }
 #else
 PyMODINIT_FUNC init_PolGainSolve(void)
 {
     PyObject *m = Py_InitModule3("_PolGainSolve", module_methods, module_docstring);import_array();
+    gsl_dflt = gsl_set_error_handler(gsl_death);
     if (m == NULL)
         return;
 }
@@ -203,10 +219,6 @@ PyMODINIT_FUNC init_PolGainSolve(void)
    FILE *logFile = 0;
 
 
-
-
-
-
 static PyObject *GetNScan(PyObject *self, PyObject *args){
   int cIF;
   PyObject *ret;
@@ -222,12 +234,11 @@ static PyObject *GetNScan(PyObject *self, PyObject *args){
      return ret;
   };
 
-  fprintf(logFile,"got %d\n", NScan[cIF]); fflush(logFile);
+  fprintf(logFile,"... and got %d\n", NScan[cIF]); fflush(logFile);
   ret = Py_BuildValue("i",NScan[cIF]);
   return ret;
 
 };
-
 
 
 
@@ -250,8 +261,7 @@ static PyObject *PolGainSolve(PyObject *self, PyObject *args){
   fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
   
 // Assign dummy sizes to all variables:  
-// unused:
-// gsl_error_handler_t *ERRH = gsl_set_error_handler_off ();
+
 NIF = 0;
 Npar=0;
 DStokes = new double*[1];
@@ -337,7 +347,7 @@ AddCrossHand = true;
         
         for(l=0;l<Nlin; l++){if(i==Lant[l] || j==Lant[l]){LinBasNum[NLinBas]=k; NLinBas += 1; break; };};
 
-        sprintf(message,"BL %d is %d - %d\n", k, i, j);
+        sprintf(message,"BL %d is %d - %d\n", k, i+1, j+1);
         fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
         
         // BasNum[j][i] = k;
@@ -481,6 +491,7 @@ bool is1, is2;
 
 CPfile.open(file1, std::ios::in | std::ios::binary);
 MPfile.open(file2, std::ios::in | std::ios::binary);
+printf("  file1: %s\n  file2: %s\n", file1, file2);
 
 
 
@@ -563,7 +574,7 @@ if (Nchan[NIF-1] > MaxChan){
 };
 
 
-
+// ignores noI
 MPfile.ignore(sizeof(int));
 
 
@@ -598,7 +609,7 @@ fprintf(logFile,"Reading CPfile...(NCalAnt=%d)\n", NCalAnt); fflush(logFile);
 while(!CPfile.eof() && CPfile.peek() >= 0){
 
   is1 = false; is2 = false;
-  CPfile.ignore(sizeof(double)); 
+  CPfile.ignore(sizeof(double));    // daytemp
   CPfile.read(reinterpret_cast<char*>(&AuxA1), sizeof(int));
   CPfile.read(reinterpret_cast<char*>(&AuxA2), sizeof(int));
   for (i=0; i<NCalAnt; i++) {
@@ -611,6 +622,7 @@ while(!CPfile.eof() && CPfile.peek() >= 0){
   };
   //  printf("%i %i - %i\n",AuxA1,AuxA2,NCVis[NIF-1]);
 
+  // here we are ignoring all the visibility data
   CPfile.ignore(2*sizeof(double)+4*Nchan[NIF-1]*sizeof(cplx32f)); 
 
 };
@@ -633,7 +645,7 @@ fprintf(logFile,"Reading MPfile... (NCalAnt=%d)\n", NCalAnt); fflush(logFile);
 while(!MPfile.eof() && MPfile.peek() >= 0){
 
   is1 = false; is2 = false;
-  MPfile.ignore(sizeof(double)); 
+  MPfile.ignore(sizeof(double));    // Time
   MPfile.read(reinterpret_cast<char*>(&AuxA1), sizeof(int));
   MPfile.read(reinterpret_cast<char*>(&AuxA2), sizeof(int));
   for (i=0; i<NCalAnt; i++) {
@@ -828,7 +840,7 @@ printf("Reached MP eof\n");
 
 // Read visibilities (Circ Pol):
 
-while(!CPfile.eof()){
+while(!CPfile.eof() && CPfile.peek() >= 0){
 
   CPfile.read(reinterpret_cast<char*>(&AuxT), sizeof(double));
   CPfile.read(reinterpret_cast<char*>(&AuxA1), sizeof(int));
@@ -943,7 +955,10 @@ while (isOut){
     };
   };
 };
-
+// sharing to log
+printf("  difftimes %f %f .. %f %f\n",
+    DiffTimes[0], DiffTimes[1],
+    DiffTimes[NDiffTimes-2], DiffTimes[NDiffTimes-1]);
 
 
 // Get scans:
@@ -987,6 +1002,10 @@ for(j=1;j<NVis[NIF-1];j++){
 
 sprintf(message,"Found %i scans for IF %i\n",NScan[NIF-1],IFN);
 fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
+
+// what are the times?
+for(j=0;j<NScan[NIF-1];j++)
+    printf("  scan %d time is %f\n", j, ScanTimes[j]);
 
 free(DiffTimes);
 
@@ -1345,7 +1364,7 @@ for (i=0; i<NIF; i++){ // IF loop
     };
   };
 
-//printf("\n\nPEAK 1st: %.2e, %.2e / %i, %i\n",Peak00,Peak11,nu00[1],nu11[1]);
+printf("\n\nPEAK 1st: %.2e, %.2e / %i, %i\n",Peak00,Peak11,nu00[1],nu11[1]);
 
 // Second Quadrant:
   for (l=tf; l<NcurrVis; l++){
@@ -1364,7 +1383,7 @@ for (i=0; i<NIF; i++){ // IF loop
     };
   };
 
-//printf("PEAK 2nd: %.2e, %.2e / %i, %i\n",Peak00,Peak11,nu00[1],nu11[1]);
+printf("PEAK 2nd: %.2e, %.2e / %i, %i\n",Peak00,Peak11,nu00[1],nu11[1]);
 
 
 // Third Quadrant:
@@ -1385,7 +1404,7 @@ for (i=0; i<NIF; i++){ // IF loop
   };
 
 
-//printf("PEAK 3rd: %.2e, %.2e / %i, %i\n",Peak00,Peak11,nu00[1],nu11[1]);
+printf("PEAK 3rd: %.2e, %.2e / %i, %i\n",Peak00,Peak11,nu00[1],nu11[1]);
 
 
 // Fourth Quadrant:
@@ -1405,7 +1424,7 @@ for (i=0; i<NIF; i++){ // IF loop
     };
   };
 
-//printf("PEAK 4th: %.2e, %.2e / %i, %i\n",Peak00,Peak11,nu00[1],nu11[1]);
+printf("PEAK 4th: %.2e, %.2e / %i, %i\n",Peak00,Peak11,nu00[1],nu11[1]);
 
 
 /////////
@@ -1667,16 +1686,17 @@ for (i=0; i<NantFit; i++){
   tempSing = true;
   for (j=0; j<NantFit; j++){
      if (Hessian[i*NantFit+j]!=0.0){tempSing=false;};
-     printf("%.2e ",Hessian[i*NantFit+j]);
+     printf("%+.2e ",Hessian[i*NantFit+j]);
   };
   if (tempSing){isSingular=true;};
 printf("\n");
 };
-printf("\n");
-
+if (!isSingular) printf("\n(not Singular)\n");
+else             printf("\n(is  Singular)\n");
 
 
 // The Hessian's inverse can be reused for rates, delays and phases!
+gsl_death_by = GSL_SUCCESS;
 
 gsl_matrix_view mm = gsl_matrix_view_array (Hessian, NantFit, NantFit);
 //gsl_matrix_view inv = gsl_matrix_view_array(CovMat,NantFit,NantFit);
@@ -1688,20 +1708,42 @@ gsl_vector_view RateInd = gsl_vector_view_array(RateResVec,NantFit);
 gsl_vector_view Del00Ind = gsl_vector_view_array(DelResVec00,NantFit);
 gsl_vector_view Del11Ind = gsl_vector_view_array(DelResVec11,NantFit);
 
+printf("  RateResVec DelResVec00 DelResVec11\n");
+for (i=0; i<NantFit; i++){
+  printf(" %+.4e %+.4e %+.4e\n",
+    RateResVec[i], DelResVec00[i], DelResVec11[i]);
+}
 
 
 int s;
 
 gsl_permutation *permm = gsl_permutation_alloc (NantFit);
 
+printf("doing gsl_linalg_LU_decomp...\n");
 gsl_linalg_LU_decomp (&mm.matrix, permm, &s);
+printf("...done (%d)\n", gsl_death_by);
+
+if (gsl_death_by != GSL_SUCCESS) {
+    printf("premature exit 11\n");
+    fflush(stdout); std::cout << std::flush;
+    PyObject *ret = Py_BuildValue("i",-11);
+    return ret;
+}
 
 if(!isSingular){
+        printf("doing gsl_linalg_LU_solve 3x...\n");
 	gsl_linalg_LU_solve (&mm.matrix, permm, &RateInd.vector, xx);
 	gsl_linalg_LU_solve (&mm.matrix, permm, &Del00Ind.vector, dd0);
 	gsl_linalg_LU_solve (&mm.matrix, permm, &Del11Ind.vector, dd1);
-
 };
+gsl_permutation_free(permm);
+
+if (gsl_death_by != GSL_SUCCESS) {
+    printf("premature exit 12\n");
+    fflush(stdout); std::cout << std::flush;
+    PyObject *ret = Py_BuildValue("i",-12);
+    return ret;
+}
 
 //gsl_linalg_LU_invert (&m.matrix, perm, &inv.matrix);
 
@@ -2767,12 +2809,17 @@ for(i=0;i<Npar;i++){
   CovMat[i*Npar+i] += Lambda*(Largest);
 };
 
+gsl_death_by = GSL_SUCCESS;
 if (useCov){
   gsl_linalg_LU_decomp (&m.matrix, perm, &s);
   gsl_linalg_LU_solve(&m.matrix, perm, &v.vector, &x.vector);
 } else {
   for(i=0;i<Npar;i++){SolVec[i] = IndVec[i]/CovMat[i*Npar+i];};
 };
+if (gsl_death_by != GSL_SUCCESS) {
+    PyObject *ret = Py_BuildValue("d",-13);
+    return ret;
+}
 
 for(i=0;i<Npar;i++){
   TheorImpr += DirDer[i]*SolVec[i]*SolVec[i] - 2.*IndVec[i]*SolVec[i];

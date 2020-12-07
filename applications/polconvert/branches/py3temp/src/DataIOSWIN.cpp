@@ -380,6 +380,9 @@ void DataIOSWIN::readHeader(bool doTest, int saveSource) {
   autoCorrs = fopen(message,"wb");
 //  };
   
+// FIXME:
+// the circFile[] should perhaps be restricted to the IFs
+// that are actually needed, not all of them....
   
 // OPEN AUXILIARY BINARY FILES:
   if (doWriteCirc){
@@ -504,6 +507,7 @@ void DataIOSWIN::readHeader(bool doTest, int saveSource) {
     secs /= 86400.;
     daytemp = ((double) mjd) + secs - day0;
 
+    // printf(" mjd %d:  %lf <= (daytemp) %lf <= %lf\n", mjd, doRange[0], daytemp, doRange[1]);
     if(daytemp>=doRange[0] && daytemp<=doRange[1]){
 
 

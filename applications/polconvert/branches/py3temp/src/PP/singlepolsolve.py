@@ -93,7 +93,7 @@ def parseOptions():
         default='ZOOM', metavar='INDICES',
         help='comma-sep list of indices or index ranges (this-that, '
         'inclusive) or ZOOM to do find all zoom channels (such as is '
-        'done for the ALMA case)')
+        'done for the ALMA case); at least two indices are required')
     secondy.add_argument('-S', '--sites', dest='sites',
         default='', metavar='LIST',
         help='comma-sep list of 2-letter station codes (Xx,Yy,...) to try'
@@ -128,6 +128,9 @@ def parseOptions():
         default='', metavar='STRING',
         help='comma-sep dictionary of feed rotation angles (in degrees) '
         'keyed by SC, e.g., AA:0.0,BB:10.0')
+    secondy.add_argument('-X', '--npix', dest='npix',
+        default=50, metavar='INT', type=int,
+        help='The number of pixels for fringe search area')
     # the remaining arguments provide the list of input files
     parser.add_argument('nargs', nargs='*',
         help='List of DiFX input job files to process')
@@ -239,7 +242,7 @@ def getInputTemplate(o):
     #plotAnt = 1 + remlistone.index(remotename[0])
     plotAnt = %d
     print('linAnt is', linAnt, '('+linAntName+')', 'plotAnt is', plotAnt)
-    Range = []
+    Range = []      # restriction on input data
     aantpath = ''   # ALMA Antenna MS table
     spw = -1        # spectral window to use
     calapphs = ''   # ASDM_CALAPPPHASE table
@@ -259,8 +262,8 @@ def getInputTemplate(o):
     # IDI_conjugated is irrelevant for SWIN
     plotIF = doIF
     # timeRange = []
-    timeRange = [0,0,0,0, 14,0,0,0]   # first 14 days seen
-    npix = 50
+    timeRange = [0,0,0,0, 14,0,0,0]   # first 14 days seen for plotting
+    npix = %d
     # solveMethod may be 'gradient', 'Levenberg-Marquardt' or 'COBYLA'
     # calstokes is [I,Q,U,V] for the calibrator; I is ignored.
     #
@@ -336,12 +339,12 @@ def createCasaInput(o, joblist, caldir, workdir):
     print('  .' +verb+verb+ '.\n',
         '  ',o.nargs[0], str(joblist), caldir, workdir, '\n',
         '  ',o.label, o.zfirst, o.zfinal, o.ant, o.lin, o.remote, '\n',
-        '  ',o.xyadd, o.xydel, o.xyratio,
+        '  ',o.xyadd, o.xydel, o.xyratio, o.npix,
         '  ',str(o.exAntList), str(o.exBaseLists), o.solve, o.method, 'True')
     script = template % (verb, verb,
         o.nargs[0], str(joblist), caldir, workdir,
         o.label, o.zfirst, o.zfinal, o.ant, o.lin, o.remote,
-        o.xyadd, o.xydel, o.xyratio,
+        o.xyadd, o.xydel, o.xyratio, o.npix,
         str(o.exAntList), str(o.exBaseLists), o.solve, o.method, 'True')
     # write the file, stripping indents
     ci = open(oinput, 'w')
