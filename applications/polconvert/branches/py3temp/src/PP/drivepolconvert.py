@@ -695,6 +695,7 @@ def createCasaCommand(o, job, workdir):
     cmd[1]  = '[ -f killcasa ] && exit 0'
     cmd[2]  = 'cd ' + workdir + ' && echo "starting" > ./status || exit 1'
     cmd[3]  = 'date -u +%Y-%m-%dT%H:%M:%S > ./timing'
+    # --nocrashreport available with v 5 and later
     cmd[4]  = '%s --nologger --nogui -c %s > %s 2>&1 < /dev/null' % (
         o.casa, o.input, o.output)
     cmd[5]  = 'casarc=$?'

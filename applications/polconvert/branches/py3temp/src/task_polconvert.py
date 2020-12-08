@@ -2101,7 +2101,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 
      MAXIT = maxIter*len(fitAnts)
      relchange = 1.0
-     Gchange = 1.0
+     #Gchange = 1.0
 
      i = 0
 
@@ -2126,6 +2126,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
        ptst0 = np.copy(currP)
        currChi2 = PS.GetChi2(ptst0,LMTune,Ch0,Ch1,0)
        Chi2_0 = PS.GetChi2(ptst0,-1.0,Ch0,Ch1,0)
+       sys.stdout.write('%.3g/1 '%Chi2_0) ; sys.stdout.flush()
 
        if i==0 or currChi2<minChi2:
          minChi2 = currChi2
@@ -2142,6 +2143,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 
          Chi2_ini = PS.GetChi2(ptst0,LMTune,Ch0,Ch1,0)
          Chi2_0 = PS.GetChi2(ptst0,-1.0,Ch0,Ch1,0)
+         sys.stdout.write('%.3g/2 '%Chi2_0) ; sys.stdout.flush()
          if i>=MAXIT:
            break
 
@@ -2170,6 +2172,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
        ptst0 = np.copy(currP)
        Chi2_ini = PS.GetChi2(ptst0,LMTune,Ch0,Ch1,0)
        Chi2_0 = PS.GetChi2(ptst0,-1.0,Ch0,Ch1,0)
+       sys.stdout.write('%.3g/3 '%Chi2_0) ; sys.stdout.flush()
 
        i += 1
 
@@ -2184,21 +2187,26 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
            ptst0 = np.copy(currP)
            Chi2_ini = PS.GetChi2(ptst0,LMTune,Ch0,Ch1,0)
            Chi2_1 = PS.GetChi2(ptst0,-1.0,Ch0,Ch1,0)
+           sys.stdout.write('%.3g/4'%Chi2_1)
 
            if Chi2_1<minChi2:
              minChi2 = Chi2_1
              minGains = np.copy(ptst0)
              currP = np.copy(ptst0)
              currChi2 = Chi2_1
+             sys.stdout.write('a')
 
            if Chi2_1<Chi2_0 and i<=MAXIT:
              Chi2_0 = Chi2_1
              ptst1[:] = ptst0
              currP = np.copy(ptst0)
              currChi2 = Chi2_1
+             sys.stdout.write('b')
            else:
              break
+           sys.stdout.write(' ') ; sys.stdout.flush()
 
+         # this is not the correct expression if the 'b' path was visited
          relchange = (currChi2 - Chi2_0)/Chi2_0
          LMTune *= KFacDecr  # Come back to state of last successful decrease
 
@@ -2206,19 +2214,21 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
            break
 
 
-
-
-     if i >= MAXIT:
-        printMsg("\n WARNING! Slow converge for cross-pol gain estimate! | Chan(s): %i-%i\n     Check the outputs!\n"%(Ch0,Ch1-1))
-        printMsg("\n    Best error: %.3e in ChSq /  %.3e in gains\n"%(np.abs(relchange),Gchange))
-
      Chi2_final = PS.GetChi2(minGains,LMTune,Ch0,Ch1,1)
 
      FLIP = Chi2_final < 0.0  # Flip gains by 180 degrees.
-         
+     if FLIP: sys.stdout.write(' Flipped\n')
+     else:    sys.stdout.write(' NotFlip\n')
+     printMsg("    Final error: %.3e in ChSq"%(np.abs(relchange)))
+     if i >= MAXIT:
+      if np.abs(relchange)>maxErr:
+        printMsg("    WARNING! Slow cross-pol gain convergence (%d)! | Chan(s): %i-%i !"%(i,Ch0,Ch1-1))
+      else:
+        printMsg("    Warning: too many iterations (%d) why is that?"%i)
+     #printMsg("\n    Final error: %.3e in ChSq / %.3e in gains\n"%(np.abs(relchange),Gchange))
 
      return [minGains,FLIP]   
-   # end of Levenberg-Marquardt minimizer of the GCPFF problem
+   # end of Levenberg-Marquardt minimizer of the GCPFF problem   LMMin
 
 
 
@@ -2244,6 +2254,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 #    printMsg("Using 5 argument method of PolGainSolve")
      #MySolve = PS.PolGainSolve(doSolveD,solint,selAnts,lAnts,FlagBas1,FlagBas2)
     MySolve = PS.PolGainSolve(doSolveD,solint,selAnts,lAnts,[FlagBas1,FlagBas2])
+    printMsg(PS.__doc__ + ('\nInitialization rv %d'%MySolve) + '%%%\n')
 #   else:
 #    printMsg("Using 4 argument method of PolGainSolve:")
 #    printMsg("  selAnts is " + str(selAnts))
@@ -2252,7 +2263,6 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 #   printMsg('PolGainSolve finished with return: <%s>' % str(MySolve))
 
     AllFreqs = []
-    printMsg('%%%')
     for pli in doIF:
       printMsg("Reading back IF #%i"%pli)
       file1 = "POLCONVERT.FRINGE/OTHERS.FRINGE_%i"%pli
@@ -2291,7 +2301,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
        CGains['XYadd'][antcodes[ci-1]] = []
        CGains['XYratio'][antcodes[ci-1]] = []
      for plii,pli in enumerate(doIF):
-       printMsg("working %s,%s"%(str(plii),str(pli)))
+       printMsg("  working %s,%s"%(str(plii),str(pli)))
        Nchans = np.shape(AllFreqs[plii])[0]
        temp = [np.zeros(Nchans,dtype=np.complex64) for ci in fitAnts]
        BPChan = list(range(0,Nchans,ChAv))
@@ -2301,7 +2311,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
        Npar = len(fitAnts)*{True:2,False:1}[solveAmp]
        laux = [pli]
        rv = PS.SetFit(Npar,laux,fitAnts,solveAmp,solveQU,Stokes,useCov,feedRot)
-       printMsg("PS.SetFit rv %d" % rv)
+       printMsg("  PS.SetFit rv %d" % rv)
        for chran in range(len(BPChan)-1):
          if chran==0 and plii==0:
            p0 = []
@@ -2326,7 +2336,9 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
    ###
 
          if fitMethod not in scipyMethods:
+           sys.stdout.write('+') ; sys.stdout.flush()
            myfit,FLIP = LMMin(p0,BPChan[chran],BPChan[chran+1])
+           sys.stdout.write('.') ; sys.stdout.flush()
          else:
          #  if fitMethid == 'COBYLA':  
          #    mymin = spopt.minimize(PS.GetChi2,p0,args=(-1.0, BPChan[chran],BPChan[chran+1]),method=fitMethod,options={'rhobeg':0.01})
@@ -2372,6 +2384,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
  #     print 'First Chi2: ', PS.GetChi2(np.array(p0),-1.0,0,MaxChan-1,solveAmp,solveQU,Stokes,-1.0,False)
       if fitMethod not in scipyMethods: #=='Levenberg-Marquardt':
         myfit = LMMin(p0,0,MaxChan-1)
+        sys.stdout.write('.') ; sys.stdout.flush()
       else:
         mymin = spopt.minimize(PS.GetChi2,p0,args=(-1.0, 0,MaxChan-1,0),method=fitMethod)
         myfit = mymin.values()[5]
@@ -2395,27 +2408,39 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
     # end of if BP else MBD MODE:
 
     # see what we got...
-    print(CGains['XYadd'])
-    print(CGains['XYratio'])
+    #print(CGains['XYadd'])
+    #print(CGains['XYratio'])
+    #print(CGains['aPrioriXYGain'])
+    print('CGains contains: ',[(k,len(CGains[k])) for k in CGains.keys()])
 
-    if False:
+    #if False:
+    try:    # to plot something
       fig = pl.figure()
-      sub1 = fig.add_subplot(211)
       MaxG = 0.0
       color = ['r','g','b','k','m','y','c']
       symbol = ['o','^','x']
       Freq2Plot = np.concatenate(AllFreqs)/1.e9
 
+      printMsg('Working subplot 1')
+      sub1 = fig.add_subplot(211)
       for antii,anti in enumerate(CGains['XYadd'].keys()):
-        sub1.plot(Freq2Plot,np.concatenate([np.array(ll) for ll in CGains['XYadd'][anti]]),symbol[((antii)/len(color))%len(symbol)]+color[(antii)%len(color)],label='ANT. '+str(anti))
+        printMsg('antii,anti is',antii,anti)
+        sub1.plot(Freq2Plot,np.concatenate(
+            [np.array(ll) for ll in CGains['XYadd'][anti]]),
+            symbol[((antii)//len(color))%len(symbol)]+color[(antii)%len(color)],
+            label='ANT. '+str(anti))
 
+      printMsg('Working subplot 2')
       sub2 = fig.add_subplot(212,sharex=sub1)
       for antii,anti in enumerate(CGains['XYratio'].keys()):
+        printMsg('antii,anti is',antii,anti)
         toplot = np.concatenate([np.array(ll) for ll in CGains['XYratio'][anti]])
         MaxG = max(MaxG,np.max(toplot))
-        sub2.plot(Freq2Plot,toplot,symbol[((antii)/len(color))%len(symbol)]+color[(antii)%len(color)],label='ANT. '+str(anti))
+        sub2.plot(Freq2Plot,toplot,
+            symbol[((antii)//len(color))%len(symbol)]+color[(antii)%len(color)],
+            label='ANT. '+str(anti))
 
-
+      printMsg('Labelling and adjusting')
       sub1.set_ylim((-180.,180.))
       sub2.set_ylim((0.,1.1*MaxG))
       pl.setp(sub1.get_xticklabels(),'visible',False)
@@ -2432,6 +2457,9 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
       fig.suptitle('CROSS-POLARIZATION GAINS')
       pl.savefig('Cross-Gains.png')
       pl.show()
+    except Exception as ex:
+      printMsg('Sorry amigo, plots did not work:\n %s' % str(ex))
+    # end of try to plot something
 
     PS.FreeData()
     printMsg("PS Data freed\n")
@@ -2975,6 +3003,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
     printMsg(str(ex))
   ofile.close()
   printMsg('PolConvert.XYGains.dat was written with CGains' + str(CGains.keys()))
+  printMsg('Task PolConvert is Done\n\n')
   return CGains   # RETURN!
 
 

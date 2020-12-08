@@ -93,7 +93,8 @@ def parseOptions():
         default='ZOOM', metavar='INDICES',
         help='comma-sep list of indices or index ranges (this-that, '
         'inclusive) or ZOOM to do find all zoom channels (such as is '
-        'done for the ALMA case); at least two indices are required')
+        'done for the ALMA case); at least two indices are required. '
+        'Note that the underlying code currently only supports one range.')
     secondy.add_argument('-S', '--sites', dest='sites',
         default='', metavar='LIST',
         help='comma-sep list of 2-letter station codes (Xx,Yy,...) to try'
@@ -141,12 +142,13 @@ def parseInputIndices(o):
     Parse input index list into a doIFs argument string.
     Input should be a comma-sep list of indices or this-that (inclusive).
     '''
+    if o.verb: print("  Parsing '%s'"%o.indices)
     o.doIF = list()
     parts = o.indices.split(',')
     for pp in parts:
         if '-' in pp:
             this,that = pp.split('-')
-            o.doIF.append(list(range(int(this),int(this)+int(that)+1)))
+            [o.doIF.append(pi) for pi in range(int(this),int(that)+1)]
         else:
             o.doIF.append(int(pp))
     o.doIF.sort()
@@ -205,6 +207,7 @@ def getInputTemplate(o):
     # are having trouble or wish to see some of the plots).
     #
     import re
+    import sys
     %sprint('Debug data follows')
     '''
     # found this via inspect...
@@ -271,10 +274,10 @@ def getInputTemplate(o):
     # we are working read-only for the Solve case with doTest=True
     # sys.environ['POLCONVERTDEBUG'] = 'True'
     print('Running polconvert....')
-    print('IDI=',DiFXoutput, 'OUTPUTIDI=',DiFXoutput,
-        'DiFXinput=',DiFXinput, 'DiFXcalc=',DiFXcalc,
-        'doIF=',doIF,
-        'linAntIdx=',linAnt, 'Range=',Range, 'ALMAant=',aantpath, '...')
+    print('IDI=',DiFXoutput, 'OUTPUTIDI=',DiFXoutput,'\\n',
+        'DiFXinput=',DiFXinput, 'DiFXcalc=',DiFXcalc,'\\n',
+        'doIF=',doIF, 'linAntIdx=',linAnt,
+        'Range=',Range, 'ALMAant=',aantpath, '...\\n')
     CGains = polconvert(IDI=DiFXoutput, OUTPUTIDI=DiFXoutput,
             DiFXinput=DiFXinput, DiFXcalc=DiFXcalc,
             doIF=doIF,
@@ -301,22 +304,38 @@ def getInputTemplate(o):
     print('Polconvert finished')
     #
     # polconvert returns the gains and saves it in PolConvert.XYGains.dat
-    # we shall make a copy to verify that this is all working correctly.
+    # we shall make a copy and read it so as to verify that this is all
+    # working correctly.
     #
     if %s:  # gain debug
         print('Pickling CGains')
         import pickle as pk
         if sys.version_info.major < 3:
-            ofile = open(o.label + '.PolConvert.XYGains.pkl','w')
+            pname = '%s' + '.PolConvert.XYGains.pkl'
+            ofile = open(pname,'w')
         else:
-            ofile = open(o.label + '.PolConvert.XYGains.pickle','wb')
+            pname = '%s' + '.PolConvert.XYGains.pickle'
+            ofile = open(pname,'wb')
         try:
             pk.dump(CGains,ofile)
         except Exception as ex:
-            printMsg(str(ex))
+            print(str(ex))
         ofile.close()
+        if sys.version_info.major < 3:
+            ifile = open(pname,'r')
+        else:
+            ifile = open(pname,'rb')
+        try:
+            Gcopy = pk.load(ifile)
+            print([(k,len(Gcopy[k])) for k in Gcopy.keys()])
+            print('It appears we can read',pname)
+        except Exception as ex:
+            print(str(ex))
+        ifile.close()
     else:
-        print('Not pickling CGains')
+        print('Not pickling or testing CGains file')
+    print('Pickling test finished')
+    sys.exit(0)
     '''
     return template
 
@@ -340,12 +359,14 @@ def createCasaInput(o, joblist, caldir, workdir):
         '  ',o.nargs[0], str(joblist), caldir, workdir, '\n',
         '  ',o.label, o.zfirst, o.zfinal, o.ant, o.lin, o.remote, '\n',
         '  ',o.xyadd, o.xydel, o.xyratio, o.npix,
-        '  ',str(o.exAntList), str(o.exBaseLists), o.solve, o.method, 'True')
+        '  ',str(o.exAntList), str(o.exBaseLists), o.solve, o.method, '\n',
+        '  ','True', o.label, o.label)
     script = template % (verb, verb,
         o.nargs[0], str(joblist), caldir, workdir,
         o.label, o.zfirst, o.zfinal, o.ant, o.lin, o.remote,
         o.xyadd, o.xydel, o.xyratio, o.npix,
-        str(o.exAntList), str(o.exBaseLists), o.solve, o.method, 'True')
+        str(o.exAntList), str(o.exBaseLists), o.solve, o.method,
+        'True', o.label, o.label)
     # write the file, stripping indents
     ci = open(oinput, 'w')
     for line in script.split('\n'):

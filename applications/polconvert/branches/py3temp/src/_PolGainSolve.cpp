@@ -184,7 +184,7 @@ PyMODINIT_FUNC init_PolGainSolve(void)
    int NBas, NantFit, Npar;
    int npix = 0;
    double **Frequencies, ***Rates, ***Delays00, ***Delays11; 
-   double *Tm;
+   double *Tm = 0;
    int *doIF, *antFit; 
    
    double *feedAngle;
@@ -245,7 +245,8 @@ static PyObject *GetNScan(PyObject *self, PyObject *args){
 static PyObject *PolGainSolve(PyObject *self, PyObject *args){
 
   // truncate for first call
-  logFile = fopen("PolConvert.GainSolve.log","w");
+  //logFile = fopen("PolConvert.GainSolve.log","w");
+  if (!logFile) logFile = fopen("PolConvert.GainSolve.log","a");
   PyObject *calant, *linant, *solints, *flagBas;;
 
   if (!PyArg_ParseTuple(args, "dOOOO",&RelWeight, &solints, &calant,
@@ -429,6 +430,10 @@ static PyObject *FreeData(PyObject *self, PyObject *args) {
 
 int i,j; 
 
+if (!logFile) logFile = fopen("PolConvert.GainSolve.log","a");
+sprintf(message,"Freeing Data NIF = %d\n", NIF);
+fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
+
 for(i=0;i<NIF;i++){
   for(j=0;j<NVis[i]+1;j++){
     free(RR[i][j]);free(RL[i][j]);
@@ -451,9 +456,12 @@ return ret;
 
 };
 
+sprintf(message,"Closing Logfile\n");
+fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
+fclose(logFile);
+
 PyObject *ret = Py_BuildValue("i",1);
 return ret;
-
 
 };
 
@@ -1904,11 +1912,26 @@ return ret;
 
 static PyObject *SetFit(PyObject *self, PyObject *args) {
 
-  int i, j, k;
+  int i, j, k, oldNpar = Npar;
   bool foundit;
 
+  if (!logFile) logFile = fopen("PolConvert.GainSolve.log","a");
+  sprintf(message,"Entered SetFit with NBas %d oldNpar %d\n\n", NBas, oldNpar);
+  fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
 
+  PyObject *IFlist, *antList, *calstokes, *ret, *feedPy;
+  if (!PyArg_ParseTuple(args, "iOOiiOiO",
+    &Npar, &IFlist, &antList, &solveAmp, &solveQU, &calstokes, &useCov, &feedPy)){
+     sprintf(message,"Failed SetFit! Check inputs!\n"); 
+     fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
+     fclose(logFile);
+     ret = Py_BuildValue("i",-1);
+    return ret;
+  };
 
+if (Tm) {
+  sprintf(message,"Clearing previous allocation objects\n");
+  fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
   delete[] Tm;
   delete[] doIF;
   delete[] antFit;
@@ -1919,14 +1942,17 @@ static PyObject *SetFit(PyObject *self, PyObject *args) {
   delete[] G2;
   delete[] G1nu;
   delete[] G2nu;
-  for(i=0;i<Npar+1;i++){delete[] DStokes[i];};
+  for(i=0;i<oldNpar+1;i++){delete[] DStokes[i];};
   delete[] DStokes;
   delete[] DirDer;
   delete[] MBD1;
   delete[] MBD2;
   delete[] DerIdx;
   delete[] AvVis;
+}
 //  delete[] feedAngle;
+  sprintf(message,"Allocation objects cleared\n");
+  fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
 
   Tm = new double[NBas];
 
@@ -1934,20 +1960,7 @@ static PyObject *SetFit(PyObject *self, PyObject *args) {
   T1 = Times[0][NVis[0]-1];
   DT = (T1-T0)/TAvg;
 
-  PyObject *IFlist, *antList, *calstokes, *ret, *feedPy;
-
-  if (!logFile) logFile = fopen("PolConvert.GainSolve.log","a");
-if (!PyArg_ParseTuple(args, "iOOiiOiO", &Npar, &IFlist, &antList, &solveAmp, &solveQU, &calstokes, &useCov, &feedPy)){
-     sprintf(message,"Failed SetFit! Check inputs!\n"); 
-     fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);  
-     fclose(logFile);
-     ret = Py_BuildValue("i",-1);
-    return ret;
-};
-
-
   feedAngle = (double *)PyArray_DATA(feedPy);
-
 
   NIFComp = (int) PyList_Size(IFlist);
   doIF = new int[NIFComp];
@@ -2845,8 +2858,9 @@ for(i=0;i<Npar;i++){
   delete[] AvPA2;
 
   
-  sprintf(message, "Chisq Ret %g (%ld)\n", Chi2, chisqcount);
-  fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
+//sprintf(message, "Chisq Ret %g (%ld)\n", Chi2, chisqcount);
+//fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
+  std::cout << std::flush;
 
   return ret;
 
