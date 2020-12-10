@@ -181,7 +181,7 @@ PyMODINIT_FUNC init_PolGainSolve(void)
    int solveAmp, useCov, solveQU;
    int *LinBasNum, NLinBas;
    int NIF, NIFComp;
-   int NBas, NantFit, Npar;
+   int NBas, NantFit, Npar = -1;
    int npix = 0;
    double **Frequencies, ***Rates, ***Delays00, ***Delays11; 
    double *Tm = 0;
@@ -1046,6 +1046,8 @@ if (!PyArg_ParseTuple(args, "i", &i)){
     PyObject *ret = Py_BuildValue("i",-1);
     return ret;
 };
+sprintf(message,"Locating IFNum as %d (aka IF %d)\n", i, i+1);
+fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
 
 k=-1;
 for (j=0; j<NIF; j++){
@@ -1433,6 +1435,7 @@ printf("PEAK 3rd: %.2e, %.2e / %i, %i\n",Peak00,Peak11,nu00[1],nu11[1]);
   };
 
 printf("PEAK 4th: %.2e, %.2e / %i, %i\n",Peak00,Peak11,nu00[1],nu11[1]);
+fflush(stdout);
 
 
 /////////
@@ -1918,6 +1921,7 @@ static PyObject *SetFit(PyObject *self, PyObject *args) {
   if (!logFile) logFile = fopen("PolConvert.GainSolve.log","a");
   sprintf(message,"Entered SetFit with NBas %d oldNpar %d\n\n", NBas, oldNpar);
   fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
+  std::cout << std::flush;
 
   PyObject *IFlist, *antList, *calstokes, *ret, *feedPy;
   if (!PyArg_ParseTuple(args, "iOOiiOiO",

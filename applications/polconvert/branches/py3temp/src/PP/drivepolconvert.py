@@ -568,6 +568,9 @@ def getInputTemplate(o):
     # the interactive CASA prompts (which you should do if you
     # are having trouble or wish to see some of the plots).
     #
+    import os
+    import sys
+    print('Debug data follows')
     '''
     # found this via inspect...
     for key,val in o._get_kwargs():
@@ -576,8 +579,6 @@ def getInputTemplate(o):
         else:   # str(val) is acceptable to print
             template += ('\n    print("debug: %12s = ", %s )' % (key,val))
     template += '''
-    import os
-    import sys
     %simport pylab as pl
     %spl.ioff()
     #
@@ -930,7 +931,9 @@ def executeCasaParallel(o):
 # enter here to do the work
 #
 if __name__ == '__main__':
+    argv = ' '.join(sys.argv)
     opts = parseOptions()
+    opts.argv = argv
     checkOptions(opts)
     if opts.prep:
         runPrePolconvert(opts)

@@ -2369,7 +2369,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
        printMsg("Done with BP mode\n")
 
 # MBD MODE:
-    else:
+    else:   # not BP MODE
       printMsg("\n Estimate antenna cross-pol gains: MBD mode\n")
       p0 = []
       for ci in fitAnts:
@@ -2380,7 +2380,12 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
       for ci in fitAnts:
         p0 += [0.0] 
       laux = list(doIF)
-      PS.SetFit(Npar,laux,fitAnts,solveAmp,solveQU,Stokes,useCov)
+      ### this line was missing:
+      Npar = len(fitAnts)*{True:2,False:1}[solveAmp]
+      ### ^^^^ line was missing,
+      ###PS.SetFit(Npar,laux,fitAnts,solveAmp,solveQU,Stokes,useCov)
+      ### wrong number of arguments
+      PS.SetFit(Npar,laux,fitAnts,solveAmp,solveQU,Stokes,useCov,feedRot)
  #     print 'First Chi2: ', PS.GetChi2(np.array(p0),-1.0,0,MaxChan-1,solveAmp,solveQU,Stokes,-1.0,False)
       if fitMethod not in scipyMethods: #=='Levenberg-Marquardt':
         myfit = LMMin(p0,0,MaxChan-1)
@@ -2405,7 +2410,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
         CGains['XYadd'][antcodes[calant-1]].append(np.copy(-180./np.pi*np.angle(CrossGain)))
         CGains['XYratio'][antcodes[calant-1]].append(cp.copy(1./np.abs(CrossGain)))
       printMsg("Done with MBD mode\n")
-    # end of if BP else MBD MODE:
+    # end of if BP else MBD MODE: not BP MODE
 
     # see what we got...
     #print(CGains['XYadd'])

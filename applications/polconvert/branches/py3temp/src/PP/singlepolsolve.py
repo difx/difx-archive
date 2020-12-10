@@ -132,6 +132,10 @@ def parseOptions():
     secondy.add_argument('-X', '--npix', dest='npix',
         default=50, metavar='INT', type=int,
         help='The number of pixels for fringe search area')
+    secondy.add_argument('-b', '--bpmode', dest='bpmode', #solint
+        default='1,1', metavar='LIST',
+        help='comma-sep list of "solint" values; 0,...for MBD mode, '
+            'C,... for BP mode (with average of C channels')
     # the remaining arguments provide the list of input files
     parser.add_argument('nargs', nargs='*',
         help='List of DiFX input job files to process')
@@ -296,7 +300,7 @@ def getInputTemplate(o):
             plotAnt=plotAnt,
             excludeAnts=%s, excludeBaselines=%s,
             doSolve=%f,
-            solint=[1,1],
+            solint=%s,
             doTest=True, npix=npix,
             solveAmp=True,
             solveMethod='%s', calstokes=[1.,0.,0.,0.], calfield=-1
@@ -359,13 +363,15 @@ def createCasaInput(o, joblist, caldir, workdir):
         '  ',o.nargs[0], str(joblist), caldir, workdir, '\n',
         '  ',o.label, o.zfirst, o.zfinal, o.ant, o.lin, o.remote, '\n',
         '  ',o.xyadd, o.xydel, o.xyratio, o.npix,
-        '  ',str(o.exAntList), str(o.exBaseLists), o.solve, o.method, '\n',
+        '  ',str(o.exAntList), str(o.exBaseLists), '\n',
+        '  ',o.solve, str(o.solint), o.method, '\n',
         '  ','True', o.label, o.label)
     script = template % (verb, verb,
         o.nargs[0], str(joblist), caldir, workdir,
         o.label, o.zfirst, o.zfinal, o.ant, o.lin, o.remote,
         o.xyadd, o.xydel, o.xyratio, o.npix,
-        str(o.exAntList), str(o.exBaseLists), o.solve, o.method,
+        str(o.exAntList), str(o.exBaseLists),
+        o.solve, str(o.solint), o.method,
         'True', o.label, o.label)
     # write the file, stripping indents
     ci = open(oinput, 'w')
@@ -401,6 +407,17 @@ def methodChecks(o):
         return
     else:
         raise Exception('Unsupported solution method:  ' + o.method)
+
+def solintChecks(o):
+    '''
+    The solint parameter is complicated...  Here we expect o.bpmode
+    to contain a comma-sep list which we convert to o.solint and pass
+    to PolConvert (eventually with some sanity checks).
+    '''
+    o.solint = o.bpmode.split(',')
+    if ((type(o.solint) is not list) or
+        not (len(o.solint) == 2 or len(o.solint) == 3)):
+            raise Exception('Solint must be a list of 2 or 3 values')
 
 def checkAntBase(o):
     '''
@@ -438,6 +455,7 @@ def checkOptions(o):
     '''
     compatChecks(o)
     methodChecks(o)
+    solintChecks(o)
     dpc.inputRelatedChecks(o)
     dpc.runRelatedChecks(o)
 
@@ -445,7 +463,9 @@ def checkOptions(o):
 # enter here to do the work
 #
 if __name__ == '__main__':
+    argv = ' '.join(sys.argv)
     opts = parseOptions()
+    opts.argv = argv
     checkOptions(opts)
     if opts.prep:
         runPrePolconvert(opts)
