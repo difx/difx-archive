@@ -60,9 +60,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 #define Py_TPFLAGS_HAVE_CLASS Py_TPFLAGS_BASETYPE
 #define PyString_AS_STRING(x) PyUnicode_AS_STRING(x)
 #define _PyLong_FromSsize_t(x) PyLong_FromSsize_t(x)
+// For PyArray_FromDimsAndData -> PyArray_SimpleNewFromData
 #define INTEGER long
+#define INTEGERCAST  (const npy_intp*)
 #else
+// For PyArray_FromDimsAndData -> PyArray_SimpleNewFromData
 #define INTEGER int
+#define INTEGERCAST (long int *)
 #endif
 
 // and after some hacking
@@ -159,7 +163,7 @@ PyMODINIT_FUNC PyInit__PolGainSolve(void)
 PyMODINIT_FUNC init_PolGainSolve(void)
 {
     PyObject *m = Py_InitModule3("_PolGainSolve", module_methods, module_docstring);import_array();
-    gsl_dflt = gsl_set_error_handler(gsl_death);
+    (void)gsl_set_error_handler(gsl_death);
     if (m == NULL)
         return;
 }
@@ -732,6 +736,7 @@ cplx32f AuxRR, AuxRL, AuxLR, AuxLL;
 
 i=0;
 while(!MPfile.eof() && MPfile.peek() >= 0){
+  // MPfile timestamp is here
   MPfile.read(reinterpret_cast<char*>(&AuxT), sizeof(double));
   MPfile.read(reinterpret_cast<char*>(&AuxA1), sizeof(int));
   MPfile.read(reinterpret_cast<char*>(&AuxA2), sizeof(int));
@@ -850,6 +855,7 @@ printf("Reached MP eof\n");
 
 while(!CPfile.eof() && CPfile.peek() >= 0){
 
+  // CPfile timestamp is here
   CPfile.read(reinterpret_cast<char*>(&AuxT), sizeof(double));
   CPfile.read(reinterpret_cast<char*>(&AuxA1), sizeof(int));
   CPfile.read(reinterpret_cast<char*>(&AuxA2), sizeof(int));
@@ -1054,6 +1060,8 @@ for (j=0; j<NIF; j++){
   if(IFNum[j] == i){k=j;break;};
 };
 if(k<0){
+    sprintf(message,"IF %d not found\n", i);
+    fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
     PyObject *ret = Py_BuildValue("i",-2);
     return ret;
 };
@@ -1071,8 +1079,11 @@ for (j=0; j<Nchan[k]; j++){
 // Use PyArray_NewFromDescr and PyArray_SimpleNew instead. (gh-14100)
 // PyArrayObject *out_Freq = (PyArrayObject *) PyArray_FromDimsAndData(1,dims,PyArray_DOUBLE, (char *) copyFreq);
 PyArrayObject *out_Freq = (PyArrayObject *)PyArray_SimpleNewFromData(
-    1, (const npy_intp*)dims, NPY_DOUBLE, copyFreq);
+    1, INTEGERCAST dims, NPY_DOUBLE, copyFreq);
 PyArray_ENABLEFLAGS(out_Freq, NPY_ARRAY_OWNDATA);
+sprintf(message,"IF %d with %d chans\n", i, Nchan[k]);
+fprintf(logFile,"%s",message); std::cout<<message; fflush(logFile);
+std::cout << std::flush;
 return PyArray_Return(out_Freq);
 };
 
@@ -1758,6 +1769,27 @@ if (gsl_death_by != GSL_SUCCESS) {
 
 //gsl_linalg_LU_invert (&m.matrix, perm, &inv.matrix);
 
+// shut down any nans
+int nancounter = 0;
+for (i=0; i<NantFit; i++){
+  if (!std::isnormal(gsl_vector_get(xx,i))) {
+    gsl_vector_set(xx,i,0.0);
+    nancounter++;
+  }
+  if (!std::isnormal(gsl_vector_get(dd0,i))) {
+    gsl_vector_set(dd0,i,0.0);
+    nancounter++;
+  }
+  if (!std::isnormal(gsl_vector_get(dd1,i))) {
+    gsl_vector_set(dd1,i,0.0);
+    nancounter++;
+  }
+}
+printf("%d nans were zeroed\n", nancounter);
+for (i=0; i<NantFit; i++){
+   printf(" %+.4e %+.4e %+.4e\n",
+    gsl_vector_get(xx,i), gsl_vector_get(dd0,i), gsl_vector_get(dd1,i));
+}
 
 // Derive the rates as CovMat*RateVec and delays as CovMat*DelVec:
 

@@ -513,7 +513,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
      if check:
        pl.figure()
        pl.plot(180./np.pi*phases)
-       pl.show()
+    #  pl.show()
     #   raw_input('CHECK')
 
 
@@ -530,7 +530,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
      if check:
        pl.figure()
        pl.plot(180./np.pi*phases[:,0])
-       pl.show()
+    #  pl.show()
     #   raw_input('CHECK')
 
 
@@ -2009,7 +2009,8 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 
   tac = time.time()
 
-  printMsg('PolConvert took %.1f seconds.'%(tac-tic))
+  printMsg('PolConvert took %.1f seconds.\n\n'%(tac-tic))
+
 
 
 
@@ -2253,8 +2254,9 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 #   if (len(FlagBas1) > 0 or len(FlagBas1) > 0):
 #    printMsg("Using 5 argument method of PolGainSolve")
      #MySolve = PS.PolGainSolve(doSolveD,solint,selAnts,lAnts,FlagBas1,FlagBas2)
+    printMsg('\n%%% initializing PolGainSolve\n')
     MySolve = PS.PolGainSolve(doSolveD,solint,selAnts,lAnts,[FlagBas1,FlagBas2])
-    printMsg(PS.__doc__ + ('\nInitialization rv %d'%MySolve) + '%%%\n')
+    printMsg(PS.__doc__ + ('\nInitialization rv %d\n'%MySolve) + '%%%\n')
 #   else:
 #    printMsg("Using 4 argument method of PolGainSolve:")
 #    printMsg("  selAnts is " + str(selAnts))
@@ -2461,7 +2463,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 
       fig.suptitle('CROSS-POLARIZATION GAINS')
       pl.savefig('Cross-Gains.png')
-      pl.show()
+     #pl.show()
     except Exception as ex:
       printMsg('Sorry amigo, plots did not work:\n %s' % str(ex))
     # end of try to plot something

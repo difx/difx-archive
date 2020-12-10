@@ -596,7 +596,9 @@ void DataIOSWIN::readHeader(bool doTest, int saveSource) {
 
     };
 
-    fwrite(&daytemp,sizeof(double),1,circFile[fridx]);
+    // CPfile timestamp is here
+    //fwrite(&daytemp,sizeof(double),1,circFile[fridx]);
+    fwrite(&daytemp2,sizeof(double),1,circFile[fridx]);
     fwrite(&ant1,sizeof(int),1,circFile[fridx]);
     fwrite(&ant2,sizeof(int),1,circFile[fridx]);
     fwrite(&AuxPA1,sizeof(double),1,circFile[fridx]);
@@ -1038,6 +1040,7 @@ void DataIOSWIN::applyMatrix(std::complex<float> *M[2][2], bool swap, bool print
    if (print && canPlot) {
      if (currConj){
      if (k==0){
+       // MPfile timestamp is here
        fwrite(&Records[currVis].Time,sizeof(double),1,plotFile);
        fwrite(&Records[currVis].Antennas[0],sizeof(int),1,plotFile);
        fwrite(&Records[currVis].Antennas[1],sizeof(int),1,plotFile);

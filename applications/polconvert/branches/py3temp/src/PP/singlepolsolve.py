@@ -311,8 +311,9 @@ def getInputTemplate(o):
     # we shall make a copy and read it so as to verify that this is all
     # working correctly.
     #
+    ok = False
     if %s:  # gain debug
-        print('Pickling CGains')
+        print('Pickling CGains as a test')
         import pickle as pk
         if sys.version_info.major < 3:
             pname = '%s' + '.PolConvert.XYGains.pkl'
@@ -333,11 +334,15 @@ def getInputTemplate(o):
             Gcopy = pk.load(ifile)
             print([(k,len(Gcopy[k])) for k in Gcopy.keys()])
             print('It appears we can read',pname)
+            ok = True
         except Exception as ex:
             print(str(ex))
         ifile.close()
+        if ok: print('Pickling test is a PASS')
+        else:  print('Pickling test is a FAIL')
     else:
         print('Not pickling or testing CGains file')
+        print('Pickling test is a SKIP')
     print('Pickling test finished')
     sys.exit(0)
     '''
