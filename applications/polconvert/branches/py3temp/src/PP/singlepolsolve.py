@@ -147,6 +147,8 @@ def parseInputIndices(o):
     Input should be a comma-sep list of indices or this-that (inclusive).
     '''
     if o.verb: print("  Parsing '%s'"%o.indices)
+    if len(o.indices) == 0:
+        raise Exception('Some range of IFs needs to be supplied')
     o.doIF = list()
     parts = o.indices.split(',')
     for pp in parts:
