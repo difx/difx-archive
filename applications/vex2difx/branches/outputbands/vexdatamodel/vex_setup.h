@@ -49,13 +49,15 @@ public:
 	bool hasUniqueRecordChans() const;		// true if each channel's recordChan parameter is unique
 	void assignRecordChans();
 	double firstTuningForIF(const std::string &ifName) const;	// returns Hz
+	double averageTuningForIF(const std::string &ifName) const;	// returns Hz
 	double dataRateMbps() const;
 	void setPhaseCalInterval(float phaseCalIntervalMHz);
 	void setPhaseCalBase(float phaseCalBaseMHz);
 	void selectTones(enum ToneSelection selection, double guardBandMHz);
 	bool usesFormat(enum VexStream::DataFormat format) const;
 	size_t nStream() const { return streams.size(); }
-	size_t nRecordChan() const;
+	size_t nRecordChan() const;		/* number of channels presumed to have been recorded, per vex file */
+	size_t nPresentChan() const;		/* number of channels thought to be present in the actual data (c.f. threadsAbsent) */
 	unsigned int getBits() const;
 	unsigned int getMinBits() const;
 	unsigned int getMaxBits() const;

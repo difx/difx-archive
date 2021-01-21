@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <set>
 #include "vex_setup.h"
+#include <difxio/difx_input.h>
 
 float VexSetup::phaseCalIntervalMHz() const
 {
@@ -93,6 +94,30 @@ double VexSetup::firstTuningForIF(const std::string &ifName) const	// return Hz
 	}
 
 	return tune;
+}
+
+double VexSetup::averageTuningForIF(const std::string &ifName) const      // return Hz
+{
+	double sum = 0.0;
+	int n = 0;
+
+	for(std::vector<VexChannel>::const_iterator ch=channels.begin(); ch != channels.end(); ++ch)
+	{
+		if(ch->ifName == ifName)
+		{
+			sum += ch->centerFreq();
+			++n;
+		}
+	}
+
+	if(n == 0)
+	{
+		return 0;
+	}
+	else
+	{
+		return sum/n;
+	}
 }
 
 double VexSetup::dataRateMbps() const
@@ -220,6 +245,18 @@ size_t VexSetup::nRecordChan() const
 	for(std::vector<VexStream>::const_iterator it = streams.begin(); it != streams.end(); ++it)
 	{
 		rc += it->nRecordChan;
+	}
+
+	return rc;
+}
+
+size_t VexSetup::nPresentChan() const
+{
+	size_t rc = 0;
+
+	for(std::vector<VexStream>::const_iterator it = streams.begin(); it != streams.end(); ++it)
+	{
+		rc += it->nPresentChan();
 	}
 
 	return rc;
@@ -398,6 +435,12 @@ int VexSetup::getPolarizations() const
 			break;
 		case 'Y':
 			rv |= DIFXIO_POL_Y;
+			break;
+		case 'H':
+			rv |= DIFXIO_POL_H;
+			break;
+		case 'V':
+			rv |= DIFXIO_POL_V;
 			break;
 		default:
 			rv |= DIFXIO_POL_ERROR;	// Error/Unknown bit

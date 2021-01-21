@@ -1295,6 +1295,60 @@ void VexData::setStreamFrameSize(const std::string &modeName, const std::string 
 	}
 }
 
+void VexData::setStreamThreadsAbsent(const std::string &modeName, const std::string &antName, int dsId, const std::set<int> &threadsAbsent)
+{
+	int modeId = getModeIdByDefName(modeName);
+
+	if(modeId >= 0)
+	{
+		VexMode &M = modes[modeId];
+		std::map<std::string,VexSetup>::iterator it = M.setups.find(antName);
+		if(it != M.setups.end())
+		{
+			it->second.streams[dsId].threadsAbsent = threadsAbsent;
+		}
+		else
+		{
+			std::cerr << "Developer error: setStreamThreadsAbsent being called with antName = " << antName << " which is not found in mode " << modeName << std::endl;
+
+			exit(EXIT_FAILURE);
+		}
+	}
+	else
+	{
+		std::cerr << "Developer error: setStreamThreadsAbsent being called with modeName = " << modeName << " which returned modeId " << modeId << std::endl;
+
+		exit(EXIT_FAILURE);
+	}
+}
+
+void VexData::setStreamThreadsIgnore(const std::string &modeName, const std::string &antName, int dsId, const std::set<int> &threadsIgnore)
+{
+	int modeId = getModeIdByDefName(modeName);
+
+	if(modeId >= 0)
+	{
+		VexMode &M = modes[modeId];
+		std::map<std::string,VexSetup>::iterator it = M.setups.find(antName);
+		if(it != M.setups.end())
+		{
+			it->second.streams[dsId].threadsIgnore = threadsIgnore;
+		}
+		else
+		{
+			std::cerr << "Developer error: setStreamThreadsIgnore being called with antName = " << antName << " which is not found in mode " << modeName << std::endl;
+
+			exit(EXIT_FAILURE);
+		}
+	}
+	else
+	{
+		std::cerr << "Developer error: setStreamThreadsIgnore being called with modeName = " << modeName << " which returned modeId " << modeId << std::endl;
+
+		exit(EXIT_FAILURE);
+	}
+}
+
 double VexData::getEarliestScanStart() const
 {
 	double start = 1000000.0;
@@ -1429,6 +1483,57 @@ int VexData::getConvertedPolarizations() const
 	}
 
 	return rv;
+}
+
+bool VexData::isSX() const
+{
+	bool hasSX = false;
+	bool hasOther = false;
+
+	for(unsigned int modeNum = 0; modeNum < nMode(); ++modeNum)
+	{
+		const VexMode *mode = getMode(modeNum);
+
+		for(std::map<std::string,VexSetup>::const_iterator ssi = mode->setups.begin(); ssi != mode->setups.end(); ++ssi)
+		{
+			const VexSetup &setup = ssi->second;
+			bool hasS, hasX, hasElse;
+
+			hasS = hasX = hasElse = false;
+
+			for(std::map<std::string,VexIF>::const_iterator it = setup.ifs.begin(); it != setup.ifs.end(); ++it)
+			{
+				const VexIF &i = it->second;
+				double averageTune;	// (Hz)
+				
+				averageTune = setup.averageTuningForIF(i.name);
+
+				if(averageTune > 2.0e9 && averageTune < 3.9e9)
+				{
+					hasS = true;
+				}
+				else if(averageTune > 7.9e9 && averageTune < 11.9e9)
+				{
+					hasX = true;
+				}
+				else
+				{
+					hasElse = true;
+				}
+			}
+
+			if(hasX && hasS && !hasElse)
+			{
+				hasSX = true;
+			}
+			else
+			{
+				hasOther = true;
+			}
+		}
+	}
+
+	return hasSX & (!hasOther);
 }
 
 std::ostream& operator << (std::ostream &os, const VexData &x)

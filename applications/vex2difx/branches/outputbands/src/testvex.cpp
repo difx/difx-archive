@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2015-2016 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2021 by Walter Brisken                                  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,42 +19,55 @@
 /*===========================================================================
  * SVN properties (DO NOT CHANGE)
  *
- * $Id$
- * $HeadURL: https://svn.atnf.csiro.au/difx/applications/vex2difx/branches/multidatastream_refactor/src/vex2difx.cpp $
- * $LastChangedRevision$
- * $Author$
- * $LastChangedDate$
+ * $Id: $
+ * $HeadURL: $
+ * $LastChangedRevision: $
+ * $Author: $
+ * $LastChangedDate: $
  *
  *==========================================================================*/
 
-#ifndef __VEX_SOURCE_H__
-#define __VEX_SOURCE_H__
-
 #include <iostream>
-#include <string>
-#include <vector>
+#include <fstream>
+#include <cstring>
+#include "testvex.h"
 
-class VexSource
+int testVex(const std::string &vexFile)
 {
-public:
-	VexSource() : ra(0.0), dec(0.0), calCode(' ') {}
-	bool hasSourceName(const std::string &name) const;
-	void setSourceType(const char *t1, const char *t2);
+	const int MaxLineLength=128;
+	std::ifstream is;
+	char s[MaxLineLength];
 
-	std::string defName;			// in the "def ... ;" line in Vex
-	std::string sourceType1;
-	std::string sourceType2;
-	
-	std::vector<std::string> sourceNames;	// from source_name statements
-	double ra;		// (rad)
-	double dec;		// (rad)
-	// FIXME: add "ref_coord_frame" value here (e.g., J2000)
+	is.open(vexFile.c_str());
+	if(is.fail())
+	{
+		std::cerr << "Error: vex2difx cannot open " << vexFile << std::endl;
 
-	char calCode;
+		return -1;
+	}
 
-	static const unsigned int MAX_SRCNAME_LENGTH = 12;
-};
+	is.getline(s, MaxLineLength);
+	if(is.eof())
+	{
+		std::cerr << "Error: unexpected end of file: " << vexFile << std::endl;
 
-std::ostream& operator << (std::ostream &os, const VexSource &x);
+		return -2;
+	}
 
-#endif
+	if(strncmp(s, "$EXPER ", 7) == 0)
+	{
+		std::cerr << "Error: " << vexFile << " looks like a sked input file and is not vex formatted." << std::endl;
+
+		return -3;
+	}
+
+	if(strncmp(s, "VEX", 3) != 0)
+	{
+		std::cerr << "Error: " << vexFile << " is not a vex file." << std::endl;
+
+		return -4;
+	}
+
+	return 0;
+}
+

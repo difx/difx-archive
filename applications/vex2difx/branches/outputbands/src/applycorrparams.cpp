@@ -215,17 +215,15 @@ int applyCorrParams(VexData *V, const CorrParams &params, unsigned int &nWarn, u
 
 					A = isVDIFFormat(V->getFormat(M->defName, it->first, ds));
 					B = isVDIFFormat(tmpVS.format);
-					if(A != B)
+					if(A && !B)
 					{
-						if(A)
-						{
-							std::cerr << "Error: cannot change format from VDIF to any other non-VDIF format (antenna " << as->vexName << ") with the .v2d file.  You need to change the .vex file." << std::endl;
-						}
-						else
-						{
-							std::cerr << "Error: cannot change format to VDIF from any other non-VDIF format (antenna " << as->vexName << ") with the .v2d file.  You need to change the .vex file." << std::endl;
-						}
+						std::cerr << "Error: cannot change format from VDIF to any other non-VDIF format (antenna " << as->vexName << ") with the .v2d file.  You need to change the .vex file." << std::endl;
 						++nError;
+					}
+
+					if(B && !A)
+					{
+						std::cerr << "Note: changing from non-VDIF to VDIF format for antenna " << as->vexName << ".  Check the results carefully." << std::endl;
 					}
 
 					v = V->setFormat(M->defName, it->first, ds, DS.format);
@@ -239,6 +237,15 @@ int applyCorrParams(VexData *V, const CorrParams &params, unsigned int &nWarn, u
 				if(DS.frameSize > 0)
 				{
 					V->setStreamFrameSize(M->defName, it->first, ds, DS.frameSize);
+				}
+
+				if(!DS.threadsAbsent.empty())
+				{
+					V->setStreamThreadsAbsent(M->defName, it->first, ds, DS.threadsAbsent);
+				}
+				if(!DS.threadsIgnore.empty())
+				{
+					V->setStreamThreadsIgnore(M->defName, it->first, ds, DS.threadsIgnore);
 				}
 			}
 

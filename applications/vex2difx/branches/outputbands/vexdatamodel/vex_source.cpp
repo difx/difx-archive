@@ -48,3 +48,9 @@ std::ostream& operator << (std::ostream &os, const VexSource &x)
 
 	return os;
 }
+
+void VexSource::setSourceType(const char *t1, const char *t2)
+{
+	sourceType1 = t1 ? t1 : "";
+	sourceType2 = t2 ? t2 : "";
+}
