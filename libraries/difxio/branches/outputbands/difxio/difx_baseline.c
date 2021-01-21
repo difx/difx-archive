@@ -52,8 +52,36 @@ void DifxBaselineAllocFreqs(DifxBaseline *b, int nFreq)
 		fprintf(stderr, "Error: DifxBaselineAllocFreqs: b = 0\n");
 		return;
 	}
-
-	deleteDifxBaselineInternals(b);
+	if(b->destFq)
+	{
+		free(b->destFq);
+	}
+	if(b->nPolProd)
+	{
+		free(b->nPolProd);
+	}
+	if(b->bandA)
+	{
+		for(i = 0; i < b->nFreq; i++)
+		{
+			if(b->bandA[i])
+			{
+				free(b->bandA[i]);
+			}
+		}
+		free(b->bandA);
+	}
+	if(b->bandB)
+	{
+		for(i = 0; i < b->nFreq; i++)
+		{
+			if(b->bandB[i])
+			{
+				free(b->bandB[i]);
+			}
+		}
+		free(b->bandB);
+	}
 
 	b->nFreq = nFreq;
 	b->destFq = (int *)calloc(nFreq, sizeof(int));
