@@ -2400,6 +2400,14 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 								{
 									if(matchingFreq(zf, dd, j, freqs))
 									{
+										if(!corrSetup->correlateFreqId(dd->recFreqId[j]))
+										{
+											if(verbose > 0)
+											{
+												cout << "Info: at antenna " << dd->antennaId << ", recFreq " << j << " (global freq " << dd->recFreqId[j] << ") could provide zoom " << i << ", but is excluded on grounds of v2d freqId set." << std::endl;
+											}
+											continue;
+										}
 										matchingFreqs.push_back(j); // multiple recfreqs can provide the same zoom when recfreqs overlap (ALMA)
 									}
 								}
