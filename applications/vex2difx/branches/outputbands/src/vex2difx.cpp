@@ -508,7 +508,7 @@ static int getToneSetId(vector<vector<unsigned int> > &toneSets, const vector<un
  * convert VexSetup subbands into DS rec bands&pols, update DS rec freqs.
  *
  * @param[in] dsId Datastream ID to update/create if positive number
- * @param[in,out] &freqs A global list of freqs to update via getFreqId()
+ * @param[in,out] &freqs A global list of freqs to update via addFreqId()
  * @param[in,out] &toneSets A global vector of tone nr vectors to update via getToneSetId()
  * @param[in] setup The VEX Setup with recorded-channel details
  * @param[in] mode The VEX mode with subband details
@@ -597,7 +597,7 @@ static int setFormat(DifxInput *D, int dsId, vector<freq>& freqs, vector<vector<
 				toneSetId = getToneSetId(toneSets, ch->tones);
 			}
 			
-			fqId = getFreqId(freqs, subband.freq, subband.bandwidth, subband.sideBand, corrSetup->FFTSpecRes, corrSetup->outputSpecRes, 1, 0, toneSetId);	// 0 means not zoom band
+			fqId = addFreqId(freqs, subband.freq, subband.bandwidth, subband.sideBand, corrSetup->FFTSpecRes, corrSetup->outputSpecRes, /*decimation*/1, /*isZoom:*/0, toneSetId);	// 0 means not zoom band
 
 			// index into the difxio datastream object arrays is by "present band"
 			D->datastream[dsId].recBandFreqId[streamPresentChan] = getBand(bandMap, fqId);
@@ -1012,10 +1012,6 @@ static double populateBaselineTable(DifxInput *D, const CorrParams *P, const Cor
 									continue;
 								}
 								if(!blockedfreqids[a1].empty() && blockedfreqids[a1].find(freqId) != blockedfreqids[a1].end())
-								{
-									continue;
-								}
-								if(!blockedfreqids[a2].empty() && blockedfreqids[a2].find(freqId) != blockedfreqids[a2].end())
 								{
 									continue;
 								}
@@ -2284,7 +2280,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 		}
 
 		// collect freqs specific to each antenna (not global), and register those into the AutoBands logic
-		corrSetup->autobands.verbosity = verbose;
+		corrSetup->autobands.setVerbosity(verbose);
 		for(std::map<std::string,VexSetup>::const_iterator it = mode->setups.begin(); it != mode->setups.end(); ++it)
 		{
 			const std::string &antName = it->first;
@@ -2304,7 +2300,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 				startBand += stream.nRecordChan;
 			}
 
-			corrSetup->autobands.addRecbands(antfreqs);
+			corrSetup->autobands.addRecbands(antfreqs); // NB: adds all VEX freqs, not just freqs explicitly selected by v2d freqId=... list
 // TODO: possibly corrSetup->autobands.addUserOutputbands(...) for all freq[] where bandwidth == output bandwidth
 		}
 
@@ -2337,16 +2333,28 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 				std::cout << corrSetup->autobands;
 			}
 
+			// register explicit v2d user-specified Zooms into the autoband logic as output bands, if not yet present
+			for(std::map<std::string,VexSetup>::const_iterator it = mode->setups.begin(); it != mode->setups.end(); ++it)
+			{
+				const std::string &antName = it->first;
+				const AntennaSetup* antSetup = P->getAntennaSetup(antName);
+				if(antSetup->zoomFreqs.size() > 0)
+				{
+					cout << "Adding " << antSetup->zoomFreqs.size() << " user zoom freqs to outputbands\n";
+					corrSetup->autobands.addUserOutputbands(antSetup->zoomFreqs);
+				}
+			}
+
 			// register the outputbands so new freqId's are introduced where necessary
 			std::vector<AutoBands::Outputband>::const_iterator itOb;
 			for(itOb = corrSetup->autobands.outputbands.begin(); itOb != corrSetup->autobands.outputbands.end(); ++itOb)
 			{
 				// register outputband
-				int fqId = getFreqId(
+				int fqId = addFreqId(
 					freqs,
 					itOb->fbandstart, itOb->bandwidth, 'U',
 					corrSetup->FFTSpecRes, corrSetup->outputSpecRes,
-					decimation, 1, 0 // final zero points to the noTone pulse cal setup.
+					decimation, /*zoom:*/1, 0 // final zero points to the noTone pulse cal setup.
 				);
 				if (verbose > 0)
 				{
@@ -2387,7 +2395,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 				}
 			}
 
-			// block all recorded frequencies that do not contribute to a zoom or to an outputband, otherwise
+			// block all recorded frequencies that do not contribute to either a zoom band or to an outputband, otherwise
 			// these "unused" freqs would inadverently end up getting correlated and disrupt the uniform output bandwidth
 			for(int configds = 0; configds < config->nDatastream; ++configds)
 			{
@@ -2396,20 +2404,18 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 				for(int fq = 0; fq < D->datastream[dsid].nRecFreq; ++fq)
 				{
 					const int fqId = D->datastream[dsid].recFreqId[fq];
-					if (corrSetup->autobands.lookupDestinationFreq(freqs[fqId], freqs) < 0)
+					const int dstFqId = corrSetup->autobands.lookupDestinationFreq(freqs[fqId], freqs);
+					if (dstFqId < 0)
 					{
 						blockedfreqids[antid].insert(fqId);
 					}
+					else
+					{
+						// Update the default 1:1 destFreqid that had been set earlier in setFormat(), before outputbands had been generated
+						D->datastream[dsid].recFreqDestId[fq] = dstFqId;
+					}
 				}
 			}
-		}
-
-		// register explicit v2d user-specified Zooms into the autoband logic as output bands, if not yet present
-		for(std::map<std::string,VexSetup>::const_iterator it = mode->setups.begin(); it != mode->setups.end(); ++it)
-		{
-			const std::string &antName = it->first;
-			const AntennaSetup* antSetup = P->getAntennaSetup(antName);
-			corrSetup->autobands.addUserOutputbands(antSetup->zoomFreqs);
 		}
 
 
@@ -2471,7 +2477,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 										{
 											if(verbose > 0)
 											{
-												cout << "Info: at antenna " << dd->antennaId << ", recFreq " << j << " (global freq " << dd->recFreqId[j] << ") could provide zoom " << i << ", but is excluded on grounds of v2d freqId set." << std::endl;
+												cout << "Warning: Antenna " << antName << " datastream " << ds << " recorded freq " << j << " (global " << dd->recFreqId[j] << ") could provide zoom band " << i << ", but is excluded in the v2d freqId setting." << std::endl;
 											}
 											continue;
 										}
@@ -2483,7 +2489,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 								if(parentFreqIndices[nZoom] < 0)
 								{
 									nZoomSkip++;
-									cerr << "Warning: Cannot find a parent freq for zoom band " << i << " (" << std::fixed << std::setprecision(3) << zf.frequency << ") of datastream " << ds << " for antenna " << antName << endl;
+									cerr << "Warning: Cannot find a parent freq for zoom band " << i << " (freq@" << std::fixed << std::setprecision(3) << zf.frequency*1e-6 << " MHz) of datastream " << ds << " for antenna " << antName << endl;
 
 									continue;
 								}
@@ -2493,7 +2499,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 								{
 									minChans = zoomChans;
 								}
-								fqId = getFreqId(freqs, zf.frequency, zf.bandwidth, 'U', corrSetup->FFTSpecRes, corrSetup->outputSpecRes, decimation, 1, 0);	// final zero points to the noTone pulse cal setup.
+								fqId = addFreqId(freqs, zf.frequency, zf.bandwidth, 'U', corrSetup->FFTSpecRes, corrSetup->outputSpecRes, decimation, /*zoom:*/1, 0);	// final zero points to the noTone pulse cal setup.
 								destFqId = corrSetup->autobands.lookupDestinationFreq(freqs[fqId], freqs);
 								if (destFqId < 0)
 								{
@@ -2516,7 +2522,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 							}
 							if(nZoomSkip > 0)
 							{
-								cerr << "Warning: dropped " << nZoomSkip << " zoom bands, " << nZoom << " remain" << endl;
+								cerr << "Warning: dropped " << nZoomSkip << " zoom bands for " << antName << " datastream " << ds << ", " << nZoom << " remain" << endl;
 							}
 							dd->nZoomFreq = nZoom;
 							DifxDatastreamAllocZoomBands(dd, nZoomBands);
