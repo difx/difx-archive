@@ -80,8 +80,10 @@ inline bool operator== (const freq& lhs, const freq& rhs)
 }
 
 //freq.cpp
-int getFreqId(std::vector<freq>& freqs, const freq& newfq);
-int getFreqId(std::vector<freq>& freqs, double fq, double bw, char sb, double isr, double osr, int d, int iz, unsigned int t);
+int getFreqId(const std::vector<freq>& freqs, const freq& newfq);
+int getFreqId(const std::vector<freq>& freqs, double fq, double bw, char sb, double isr, double osr, int d, int iz, unsigned int t);
+int addFreqId(std::vector<freq>& freqs, const freq& newfq);
+int addFreqId(std::vector<freq>& freqs, double fq, double bw, char sb, double isr, double osr, int d, int iz, unsigned int t);
 std::ostream& operator << (std::ostream& os, const freq& f);
 
 #endif

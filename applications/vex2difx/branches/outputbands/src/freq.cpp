@@ -31,24 +31,45 @@
 #include <iomanip>
 
 // Returns index of requested (fq, bw, sb, ...) from freqs.
-// If not in freqs, it is added first
-int getFreqId(std::vector<freq>& freqs, double fq, double bw, char sb, double isr, double osr, int d, int iz, unsigned int t)
+// If not in freqs, returns -1
+int getFreqId(const std::vector<freq>& freqs, double fq, double bw, char sb, double isr, double osr, int d, int iz, unsigned int t)
 {
-	freq newfq(fq, bw, sb, isr, osr, d, iz, t);
-	return getFreqId(freqs, newfq);
+	freq fqinfo(fq, bw, sb, isr, osr, d, iz, t);
+	return getFreqId(freqs, fqinfo);
 }
 
 // Returns index of requested (fq, bw, sb, ...) from freqs.
 // If not in freqs, it is added first
-int getFreqId(std::vector<freq>& freqs, const freq& newfq)
+int getFreqId(const std::vector<freq>& freqs, const freq& fqinfo)
 {
 	for(std::vector<freq>::const_iterator it = freqs.begin(); it != freqs.end(); ++it)
 	{
-		if(newfq == *it)
+		if(fqinfo == *it)
 		{
 			// use iterator math to get index
 			return it - freqs.begin();
 		}
+	}
+
+	return -1;
+}
+
+// Returns index of requested (fq, bw, sb, ...) from freqs.
+// If not in freqs, it is added first
+int addFreqId(std::vector<freq>& freqs, double fq, double bw, char sb, double isr, double osr, int d, int iz, unsigned int t)
+{
+	freq newfq(fq, bw, sb, isr, osr, d, iz, t);
+	return addFreqId(freqs, newfq);
+}
+
+// Returns index of requested (fq, bw, sb, ...) from freqs.
+// If not in freqs, it is added first
+int addFreqId(std::vector<freq>& freqs, const freq& newfq)
+{
+	int id = getFreqId(freqs, newfq);
+	if(id >= 0)
+	{
+		return id;
 	}
 
 	// not in list yet, so add
