@@ -109,6 +109,11 @@ AutoBands::~AutoBands()
 {
 }
 
+void AutoBands::setVerbosity(int verbosity)
+{
+	this->verbosity = verbosity;
+}
+
 void AutoBands::clear()
 {
 	this->Nant = 0;
@@ -281,7 +286,7 @@ void AutoBands::simplify(AutoBands::Outputband& mergeable) const
 		{
 			if(verbosity > 4)
 			{
-				printf("Autobands::outputbands_merge() no   cover %.6f--%.6f\n", f0*1e-6, f1*1e-6);
+				printf("Autobands::simplify() no simple cover for %.6f--%.6f, keeping %.6f--%.6f\n", f0*1e-6, f1*1e-6, f0*1e-6, bnext->flow*1e-6);
 			}
 			merged.extend(f0, bnext->flow - f0);
 			f0 = bnext->flow;
@@ -300,10 +305,18 @@ void AutoBands::simplify(AutoBands::Outputband& mergeable) const
 	}
 
 	// Print the details if something was merged
-	if((verbosity > 1) && (merged.constituents.size() < mergeable.constituents.size()))
+	if(verbosity > 1)
 	{
-		std::cout << "Autobands::outputbands()    merged " << mergeable.constituents.size()
-			<< " sub-spans into " << merged.constituents.size() << "\n";
+		if(merged.constituents.size() < mergeable.constituents.size())
+		{
+			std::cout << "Autobands::simplify()    merged " << mergeable.constituents.size()
+				<< " sub-spans into " << merged.constituents.size() << "\n";
+		}
+		else
+		{
+			std::cout << "Autobands::simplify() not reducible, input had " << mergeable.constituents.size()
+				<< " sub-spans, output has " << merged.constituents.size() << "\n";
+		}
 	}
 
 	// Store the result
@@ -548,10 +561,13 @@ void AutoBands::addUserOutputbands(const std::vector<ZoomFreq>& bands)
 		// New outputband with a single constituent band
 		Outputband userband(bands[n].frequency, bands[n].bandwidth);
 		userband.extend(bands[n].frequency, bands[n].bandwidth);
-
 		// Add if not pre-existing
 		if (std::find(outputbands.begin(), outputbands.end(), userband) == outputbands.end())
 		{
+			if (verbosity > 1)
+			{
+				std::cout << "AutoBands::addUserOutputbands() : adding " << userband << std::endl;
+			}
 			outputbands.push_back(userband);
 		}
 	}

@@ -154,6 +154,8 @@ public:
 	int listEdgeChannels(const int bandIdx, std::deque<int>& channels, double fftSpecRes_Hz, double finalSpecRes_Hz, double maxFraction = 0) const
 	{ return listEdgeChannels(this->outputbands[bandIdx], channels, fftSpecRes_Hz, finalSpecRes_Hz, maxFraction); }
 
+	void setVerbosity(int verbosity);
+
 	//variables
 	std::vector<Band> bands;
 	std::vector<Span> spans;
@@ -161,8 +163,10 @@ public:
 	double minrecfreq, maxrecfreq;
 	unsigned int Nant;
 	double outputbandwidth;
-	int verbosity;
 	bool permitgaps;
+
+private:
+	int verbosity;
 
 private:
 
