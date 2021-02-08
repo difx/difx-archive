@@ -1,0 +1,750 @@
+=== modified file 'DataIO.cpp'
+--- DataIO.cpp	2020-10-08 13:13:55 +0000
++++ DataIO.cpp	2021-02-08 08:32:09 +0000
+@@ -105,42 +105,66 @@
+ 
+ 
+ 
+-void DataIO::getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &P1, double &P2){
++void DataIO::getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &MJD, double &P1, double &P2){
+ 
+-double V2, Bx, By; //, Bz;
+-double CH, SH, CT1, CT2, HAng, H1, H2, Elev1, Elev2;
++double V2, Bx, By, GMST; //, Bz;
++//double CDec, SDec, SRA, TLat1,TLat2, Lon1,Lon2,CH, SH;
++double CT1, CT2, HAng, H1, H2, Elev1, Elev2;
+ int ibas;
+ 
+ Elev1 = 0.0; Elev2 = 0.0;
+ 
++double days = MJD/86400.;
++double t = (days-51544.0)/36525.;
++double Hh = days - floor(days);
++double GMsec = 24110.54841 + 8640184.812866*t + 0.093104*t*t - 0.0000062*t*t*t;
++GMST = (GMsec/86400. + Hh)*2.*3.1415926535;
++
++//CDec = Geometry->SinDec[sidx];
++//SDec = Geometry->CosDec[sidx];
++//TLat1 = tan(Geometry->Lat[Ant1]);
++//TLat2 = tan(Geometry->Lat[Ant1]);
++//Lon1 = Geometry->AntLon[Ant1];
++//Lon2 = Geometry->AntLon[Ant2];
++//SRA = Geometry->RA[sidx];
++
+ 
+ // Dummy value if autocorrelation:
+ if (Ant1==Ant2){P1 = -1.e9; P2 = -1.e9; return;};
+ 
+ 
++
++
++
++
++
+ if(sidx<Geometry->NtotSou && Ant1<Geometry->NtotAnt && Ant2<Geometry->NtotAnt){
+ 
+-  V2 = Geometry->SinDec[sidx]*UVW[1] - Geometry->CosDec[sidx]*UVW[2];
++
++
++
++  
++ // V2 = Geometry->SinDec[sidx]*UVW[1] - Geometry->CosDec[sidx]*UVW[2];
+   ibas = Geometry->BasNum[Ant1][Ant2];
+ 
+ 
+-  if (ibas<0){
+-  ibas = -ibas;
+-   Bx = -Geometry->BaseLine[0][ibas];
+-   By = -Geometry->BaseLine[1][ibas];
+-//   Bz = -Geometry->BaseLine[2][ibas];
+-  } else {
+-   Bx = Geometry->BaseLine[0][ibas];
+-   By = Geometry->BaseLine[1][ibas];
+-//   Bz = Geometry->BaseLine[2][ibas];
+-  };
+-
+-  CH = (UVW[0]*By - V2*Bx); // /(By**2. + Bx**2.);
+-  SH = (UVW[0]*Bx + V2*By); // /(By**2. + Bx**2.);
++//  if (ibas<0){
++//  ibas = -ibas;
++//   Bx = -Geometry->BaseLine[0][ibas];
++//   By = -Geometry->BaseLine[1][ibas];
++////   Bz = -Geometry->BaseLine[2][ibas];
++//  } else {
++//   Bx = Geometry->BaseLine[0][ibas];
++//   By = Geometry->BaseLine[1][ibas];
++////   Bz = Geometry->BaseLine[2][ibas];
++//  };
++
++
+   CT1 = Geometry->CosDec[sidx]*tan(Geometry->Lat[Ant1]);
+   CT2 = Geometry->CosDec[sidx]*tan(Geometry->Lat[Ant2]);
+ 
+-  HAng = atan2(SH,CH);
++
++  HAng = GMST - Geometry->RA[sidx];
+   H1 = HAng + Geometry->AntLon[Ant1];
+   H2 = HAng + Geometry->AntLon[Ant2];
+ 
+@@ -150,7 +174,7 @@
+   Elev1 = asin(sin(Geometry->Lat[Ant1])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant1])*Geometry->CosDec[sidx]*cos(H1));};
+ 
+   if (Geometry->Mount[Ant2] > 3){
+-  Elev2 = asin(sin(Geometry->Lat[Ant1])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant1])*Geometry->CosDec[sidx]*cos(H1));};
++  Elev2 = asin(sin(Geometry->Lat[Ant2])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant2])*Geometry->CosDec[sidx]*cos(H2));};
+  
+ 
+   switch (Geometry->Mount[Ant1]){
+@@ -177,6 +201,8 @@
+ 
+ //  P2 = atan2(sin(H2), CT2 - Geometry->SinDec[sidx]*cos(H2));
+ 
++//if(Ant1==1){printf("%i  %i  %.16e  %.3f  %.3f  %.3f  %.3f\n",Ant1, Ant2, MJD, GMST, HAng, P1, P2);};
++
+ 
+ } else {
+ 
+
+=== modified file 'DataIO.h'
+--- DataIO.h	2020-10-08 13:13:55 +0000
++++ DataIO.h	2021-02-08 08:32:09 +0000
+@@ -47,6 +47,7 @@
+ double *BaseLine[3];
+ double *SinDec;
+ double *CosDec;
++double *RA;
+ double *AntLon;
+ int *Mount;
+ double *Lat;
+@@ -93,7 +94,7 @@
+    void getFrequencies(double* Freqarray);
+ 
+ // Compute parallactic angle.
+-  void getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &P1, double &P2);
++  void getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &MJD, double &P1, double &P2);
+ 
+ // Estimate amplitude ratios from the autocorrelations:
+   std::complex<float> getAmpRatio(int ant, int spw, int chan);
+
+=== modified file 'DataIOFITS.cpp'
+--- DataIOFITS.cpp	2020-10-08 13:13:55 +0000
++++ DataIOFITS.cpp	2021-02-08 08:32:09 +0000
+@@ -265,7 +265,7 @@
+ 
+  //     printf("READ! \n");
+ 
+-      getParAng(souidx-1,a1-1,a2-1,UVW,AuxPA1,AuxPA2);
++      getParAng(souidx-1,a1-1,a2-1,UVW,Times[il],AuxPA1,AuxPA2);
+ 
+  //     printf("COMPUTED: %.2e  %.2e \n",AuxPA1,AuxPA2);
+ 
+@@ -656,7 +656,7 @@
+        UVW[0] = (double) FUVW[0]; UVW[1] = (double) FUVW[1]; UVW[2] = (double) FUVW[2]; 
+ 
+ /////// TODO: SORT OUT a1-1 -> a1
+-       getParAng(souidx-1,a1-1,a2-1,UVW,AuxPA1,AuxPA2);
++       getParAng(souidx-1,a1-1,a2-1,UVW,Times[il],AuxPA1,AuxPA2);
+ 
+     } else if(saveSource<0 || souidx == saveSource) {
+ 
+
+=== modified file 'DataIOSWIN.cpp'
+--- DataIOSWIN.cpp	2020-10-08 13:13:55 +0000
++++ DataIOSWIN.cpp	2021-02-08 08:32:09 +0000
+@@ -524,8 +524,8 @@
+   
+   
+ // Derive the parallactic angles:
+-  getParAng(sidx,ant1-1,ant2-1,UVW,AuxPA1,AuxPA2);
+   daytemp2 = (daytemp + day0)*86400.;
++  getParAng(sidx,ant1-1,ant2-1,UVW,daytemp,AuxPA1,AuxPA2);
+ 
+   
+   
+
+=== modified file '_PolConvert.cpp'
+--- _PolConvert.cpp	2020-10-08 13:13:55 +0000
++++ _PolConvert.cpp	2021-02-08 08:32:09 +0000
+@@ -1,5 +1,4 @@
+ /*
+-
+ # Copyright (c) Ivan Marti-Vidal 2015. 
+ #               EU ALMA Regional Center. Nordic node.
+ #
+@@ -254,7 +253,7 @@
+     int *AntMountArr = (int *)PyArray_DATA(antmountObj);
+ 
+     double *SouCoordArr = (double *)PyArray_DATA(PyList_GetItem(soucoordObj,1));
+-
++    double *SouCoordRA = (double *)PyArray_DATA(PyList_GetItem(soucoordObj,0));
+     
+     Geometry->NtotSou = (int) PyArray_DIM(PyList_GetItem(soucoordObj,1),0);
+     Geometry->NtotAnt = (int) PyArray_DIM(antcoordObj,0);
+@@ -267,6 +266,7 @@
+     Geometry->BaseLine[2] = new double[Nbas+Geometry->NtotAnt+1];
+     Geometry->SinDec = new double[Geometry->NtotSou];
+     Geometry->CosDec = new double[Geometry->NtotSou];
++    Geometry->RA = new double[Geometry->NtotSou];
+     Geometry->AntLon = new double[Geometry->NtotAnt];
+     Geometry->Mount = new int[Geometry->NtotAnt];
+     Geometry->Lat = new double[Geometry->NtotAnt];
+@@ -300,8 +300,9 @@
+     };
+ 
+     for (i=0; i<Geometry->NtotSou;i++){
+-      Geometry->SinDec[i] = sin(SouCoordArr[i+Geometry->NtotSou]);
+-      Geometry->CosDec[i] = cos(SouCoordArr[i+Geometry->NtotSou]);
++      Geometry->SinDec[i] = sin(SouCoordArr[i]);
++      Geometry->CosDec[i] = cos(SouCoordArr[i]);
++      Geometry->RA[i] = SouCoordRA[i];
+ //      std::cout<< i << " "<< SouCoordArr[i]*180./3.1415926535 << "\n";
+     };
+ 
+@@ -509,8 +510,8 @@
+ // Which IFs do we convert?
+     int IFs2Conv[nIFconv];
+     for (ii=0; ii<nIFconv; ii++) {
+-      if (doAll){IFs2Conv[ii]=ii+1;} else {
+-        IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii));
++      if (doAll){IFs2Conv[ii]=ii;} else {
++        IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii)) - 1;
+       };
+     }; 
+ 
+@@ -643,12 +644,13 @@
+ 
+ // Prepare plotting files:
+     int noI = -1;
+-    for (ii=0; ii<nIFplot; ii++){
+-      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Plot[ii]+1);
++    for (ii=0; ii<nIFconv; ii++) {
++
++      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Conv[ii]+1);
+       printf("Writing %s\n", message);
+       plotFile[ii] = fopen(message,"wb");
+-      if (IFs2Plot[ii]>=0 && IFs2Plot[ii]<nnu){
+-         fwrite(&nchans[IFs2Plot[ii]],sizeof(int),1,plotFile[ii]);
++      if (IFs2Conv[ii]>=0 && IFs2Conv[ii]<nnu){
++         fwrite(&nchans[IFs2Conv[ii]],sizeof(int),1,plotFile[ii]);
+       } else {
+          fwrite(&noI,sizeof(int),1,plotFile[ii]);
+       };
+@@ -686,7 +688,7 @@
+ 
+ for (currAntIdx=0; currAntIdx<nALMA; currAntIdx++) {
+   for (im=0; im<nIFconv; im++) {
+-    ii = IFs2Conv[im] - 1;
++    ii = IFs2Conv[im];
+     for (ij=0; ij<nchans[ii]; ij++){
+       PrioriGains[currAntIdx][im][ij] *= DifXData->getAmpRatio(currAntIdx, im, ij);
+     };
+@@ -710,7 +712,7 @@
+ //  for (ii=0; ii<nnu; ii++){
+   for (im=0; im<nIFconv; im++) {
+ 
+-    ii = IFs2Conv[im] - 1;
++    ii = IFs2Conv[im];
+ 
+     bool plotIF = false;
+     int IFplot = 0;
+@@ -1109,7 +1111,7 @@
+ // Calibrate and convert to circular:
+ 
+ // Shall we write in plot file?
+-     auxB = (currT>=plRange[0] && currT<=plRange[1] && plotIF && (calField<0 || currF==calField)); //plAnt == otherAnt);
++     auxB = (currT>=plRange[0] && currT<=plRange[1] && (calField<0 || currF==calField)); //plAnt == otherAnt);
+ 
+ // Convert:
+      if(Phased){
+
+=== modified file '_PolGainSolve.cpp'
+--- _PolGainSolve.cpp	2020-11-19 15:09:07 +0000
++++ _PolGainSolve.cpp	2021-02-08 08:32:09 +0000
+@@ -1504,6 +1504,7 @@
+ 
+        if (af1>=0){
+          RateResVec[af1] += Weights[i][BNum]*(BLRates00[i][BNum] + BLRates11[i][BNum])/2.;
++        // printf("%i | %i-%i %.2e  %.2e \n",i, CalAnts[a1],CalAnts[a2], BLRates00[i][BNum],BLRates11[i][BNum]);
+          DelResVec00[af1] += Weights[i][BNum]*BLDelays00[i][BNum];
+          DelResVec11[af1] += Weights[i][BNum]*BLDelays11[i][BNum];
+          Hessian[af1*NantFit + af1] += Weights[i][BNum];
+@@ -1555,16 +1556,22 @@
+ isSingular=false;
+ for (i=0; i<NantFit; i++){
+   printf("  ");
+-  tempSing = true;
++  if (Hessian[i*NantFit+i]==0.0){isSingular=true;};
+   for (j=0; j<NantFit; j++){
+-     if (Hessian[i*NantFit+j]!=0.0){tempSing=false;};
+      printf("%.2e ",Hessian[i*NantFit+j]);
+   };
+-  if (tempSing){isSingular=true;};
+-printf("\n");
+-};
+-printf("\n");
+-
++printf("\n");
++};
++if(isSingular){printf("Possible singular matrix!\n");};
++printf("\n");
++
++printf("\n\n Residual baseline phase quantities:\n\n");
++for (i=0; i<NantFit; i++){
++  printf("  ");
++  printf(" %.2e | %.2e | %.2e\n",DelResVec00[i],DelResVec11[i],RateResVec[i]);
++};
++
++printf("\n");
+ 
+ 
+ // The Hessian's inverse can be reused for rates, delays and phases!
+@@ -1588,6 +1595,7 @@
+ gsl_linalg_LU_decomp (&mm.matrix, permm, &s);
+ 
+ if(!isSingular){
++printf("Globalizing solutions\n");
+ 	gsl_linalg_LU_solve (&mm.matrix, permm, &RateInd.vector, xx);
+ 	gsl_linalg_LU_solve (&mm.matrix, permm, &Del00Ind.vector, dd0);
+ 	gsl_linalg_LU_solve (&mm.matrix, permm, &Del11Ind.vector, dd1);
+@@ -2076,6 +2084,7 @@
+ 
+   for(k=0;k<NBas;k++){Tm[k]=Times[currIF][0];};
+ 
++ // printf("NVis: %i\n",NVis[currIF]); fflush(stdout);
+ 
+   for (k=0; k<NVis[currIF]; k++){
+ 
+@@ -2228,6 +2237,9 @@
+ 
+     if(BNum>=0){
+ 
++    //  printf("Fitting for %i %i\n",a1,a2); fflush(stdout);
++
++
+     AvVis[BNum] += 1;
+ 
+     FeedFactor1 = std::polar(1.0, feedAngle[a1-1])*PA1[currIF][k]; 
+
+=== modified file '_getAntInfo.cpp'
+--- _getAntInfo.cpp	2020-10-08 13:13:55 +0000
++++ _getAntInfo.cpp	2021-02-08 08:32:09 +0000
+@@ -41,17 +41,22 @@
+     "Returns antenna coordinates";
+ static char getMounts_docstring[] =
+     "Returns the mount types";
++//static char getNames_docstring[] = 
++//    "Returns the antenna names (codes)";
+ 
+ /* Available functions */
+ static PyObject *getAntInfo(PyObject *self, PyObject *args);
+ static PyObject *getCoords(PyObject *self, PyObject *args);
+ static PyObject *getMounts(PyObject *self, PyObject *args);
++//static PyObject *getNames(PyObject *self, PyObject *args);
++
+ 
+ /* Module specification */
+ static PyMethodDef module_methods[] = {
+     {"getAntInfo", getAntInfo, METH_VARARGS, getAntInfo_docstring},
+     {"getCoords", getCoords, METH_VARARGS, getCoords_docstring},
+-    {"getMounts", getMounts, METH_VARARGS, getMounts_docstring}
++    {"getMounts", getMounts, METH_VARARGS, getMounts_docstring} //,
++//    {"getNames", getNames, METH_VARARGS, getNames_docstring},
+ };
+ 
+ 
+@@ -165,11 +170,10 @@
+   };
+ 
+ 
+-
+   fits_close_file(ifile, &status);
+ 
+   if(status){
+-    printf("\n\nPROBLEM LOSING FITS-IDI!  ERR: %i\n\n",status);
++    printf("\n\nPROBLEM CLOSING FITS-IDI!  ERR: %i\n\n",status);
+     return Py_BuildValue("i",3);
+   };
+ 
+@@ -179,30 +183,51 @@
+ };
+ 
+ 
++
++
++
++
++
++
+ static PyObject *getCoords(PyObject *self, PyObject *args){
+ 
+ // Build numpy array:
+ 
+ PyObject *CoordArr;
+-long CD[2] = {Nants,3};
+-
+-Py_INCREF(CoordArr);
+-CoordArr = PyArray_SimpleNewFromData(2, &CD[0], NPY_DOUBLE, (void*) Coords);
++int nd = 2;
++npy_intp* CD = new npy_intp[nd];
++
++CD[0] = Nants; CD[1] = 3; // = {Nants,3};
++
++//Py_INCREF(CoordArr);
++CoordArr = PyArray_SimpleNewFromData(nd, CD, NPY_DOUBLE, (void*) Coords);
++
++
+ 
+ return CoordArr;
+ 
+ };
+ 
+ 
++
++
++
++
++
++
++
+ static PyObject *getMounts(PyObject *self, PyObject *args){
+ 
++
+ // Build numpy array:
+ PyObject *MountArr;
+ 
+-long MD[1] = {Nants};
++int nd = 1;
++npy_intp* MD = new npy_intp[nd];
++MD[0] = Nants;
+ 
+-Py_INCREF(MountArr);
+-MountArr = PyArray_SimpleNewFromData(1, &MD[0], NPY_INT, (void*) Mounts);
++//Py_INCREF(MountArr);
++MountArr = PyArray_SimpleNewFromData(nd, MD, NPY_INT, (void*) Mounts);
+ 
+ return MountArr;
+ 
+
+=== modified file 'task_polconvert.py'
+--- task_polconvert.py	2020-11-19 15:09:07 +0000
++++ task_polconvert.py	2021-02-08 08:32:09 +0000
+@@ -115,39 +115,79 @@
+ 
+ if __name__=='__main__':
+ 
+- 
+-  taskname           = "polconvert"
+-  IDI                =  "bm494e-0-b1_1200.difx"
+-  OUTPUTIDI          =  "1200_POLCONVERT.difx"
+-  DiFXinput          =  "bm494e-0-b1_1200.input"
+-  DiFXcalc           =  "bm494e-0-b1_1200.calc"
+-  doIF               =  [35, 36, 37, 38]
++  IDI                =  "DATA/POLCONVERT_CALIB_SCANS"
++  OUTPUTIDI          =  "DATA/e17e11_POL_CALIBRATE_BLIND"
++  DiFXinput          =  "DATA/e17e11_9000.input"
++  DiFXcalc           =  "DATA/e17e11_9000.calc"
++  doIF               =  [34, 35, 36] #, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64]
+   linAntIdx          =  [1]
+   Range              =  []
+-  ALMAant            =  "APP_DERIVERABLES/SPECLINE_0.concatenated.ms.ANTENNA"
+-  spw                =  0
+-  calAPP             =  "APP_DERIVERABLES/SPECLINE_0.concatenated.ms.calappphase"
++  ALMAant            =  ""
++  spw                =  -1
++  calAPP             =  ""
+   calAPPTime         =  [0.0, 5.0]
+   APPrefant          =  ""
+-  gains              =  [['APP_DERIVERABLES/SPECLINE_0.concatenated.ms.bandpass-zphs', 'APP_DERIVERABLES/SPECLINE_0.concatenated.ms.flux_inf.APP', 'APP_DERIVERABLES/SPECLINE_0.concatenated.ms.phase_int.APP.XYsmooth', 'APP_DERIVERABLES/SPECLINE_0.calibrated.ms.XY0.APP', 'APP_DERIVERABLES/SPECLINE_0.calibrated.ms.Gxyamp.ALMA']]
++  gains              =  [['NONE']]
+   interpolation      =  []
+-  gainmode           =  [['G', 'T', 'G', 'G', 'G']]
++  gainmode           =  [[]]
+   XYavgTime          =  0.0
+-  dterms             =  ['APP_DERIVERABLES/SPECLINE_0.calibrated.ms.Df0gen.ALMA']
+-  amp_norm           =  0.03
++  dterms             =  ['NONE']
++  amp_norm           =  1.0
+   XYadd              =  {}
+   XYdel              =  {}
+   XYratio            =  {}
+-  usePcal            =  [False]
++  usePcal            =  [False, False, False, False, False, False]
+   swapXY             =  [False]
+   swapRL             =  False
+   feedRotation       =  []
+   IDI_conjugated     =  False
+-  plotIF             =  []
++  plotIF             =  [34, 35, 36] #, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64]
+   plotRange          =  [0, 0, 0, 0, 2, 0, 0, 0]
+   plotAnt            =  2
+   excludeAnts        =  []
+-  doSolve            =  -1
++  excludeBaselines    =  []
++  doSolve            =  0
++  solint             =  [128, 1]
++  doTest             =  False
++  npix               =  50
++  solveAmp           =  True
++  solveMethod        =  "gradient"
++  calstokes          =  [1.0, 0.0, 0.0, 0.0]
++  calfield           =  -1
++
++
++  IDI                =  "ep121a_1_1.ori.IDI1"
++  OUTPUTIDI          =  "PTEST.IDI"
++  DiFXinput          =  ""
++  DiFXcalc           =  ""
++  doIF               =  []
++  linAntIdx          =  [7]
++  Range              =  [0,20,0,0,0,20,5,0]
++  ALMAant            =  ""
++  spw                =  -1
++  calAPP             =  ""
++  calAPPTime         =  [0.0, 5.0]
++  APPrefant          =  ""
++  gains              =  [['NONE']]
++  interpolation      =  []
++  gainmode           =  []
++  XYavgTime          =  0.0
++  dterms             =  ['NONE']
++  amp_norm           =  0.01
++  XYadd              =  {}
++  XYdel              =  {}
++  XYratio            =  {}
++  usePcal            =  []
++  swapXY             =  [False]
++  swapRL             =  False
++  feedRotation       =  []
++  IDI_conjugated     =  False
++  plotIF             =  [1,2,3,4]
++  plotRange          =  [0,20,0,0,0,20,5,0]
++  plotAnt            =  3
++  excludeAnts        =  ['SR']
++  excludeBaselines    =  []
++  doSolve            =  0.5
+   solint             =  [1, 1]
+   doTest             =  True
+   npix               =  50
+@@ -157,6 +197,8 @@
+   calfield           =  -1
+ 
+ 
++ 
++
+ #
+ #
+ #
+@@ -684,15 +726,14 @@
+     printError("ERROR! OUTPUTIDI should be a string!")
+ 
+   if type(plotIF) is int:
+-    plotIF = [plotIF]
++    if plotIF >0:
++      plotIF = [plotIF]
++    else:
++      plotIF = []
+   for pli in plotIF:
+     if type(pli) is not int:
+       printError("ERROR! plotIF should be an integer or a list of integers!")
+ 
+-  try:
+-    plotAnt = int(plotAnt)
+-  except:
+-    printError("ERROR! plotAnt should be an integer!")
+ 
+ 
+   try:
+@@ -821,9 +862,6 @@
+     printError("Bad format for calAPPTime. Should be a list of 2 floats!")
+ 
+ 
+-  if plotAnt in linAntIdx:
+-    printMsg("WARNING: Plotting will involve autocorrelations. \nThis has not been fully tested!") 
+-
+ #########################################
+ 
+ 
+@@ -1002,6 +1040,7 @@
+       if decappUnit=='DEGREES':
+         soucoords[1] *= np.pi/180.
+ 
++      antcodes = [ff[:2] for ff in ffile['ANTENNA'].data['ANNAME']]
+       ffile.close()
+ 
+ # THESE LINES FAIL IF ORBPARM IS PRESENT IN ARRAY GEOMETRY!
+@@ -1015,7 +1054,7 @@
+       else:
+         antcoords = gA.getCoords()
+         antmounts = gA.getMounts()
+-        antcodes = ['%02i'%i for i in range(1,len(antmounts)+1)]
++    #    antcodes = ['%02i'%i for i in range(1,len(antmounts)+1)]
+     except:
+       printMsg('WARNING! This FITS-IDI file has missing information!\nPolConvert may not calibrate properly.')
+   else:
+@@ -1026,6 +1065,8 @@
+ ######
+ 
+ 
++
++
+ ######
+ # IF THIS IS A SWIN DATASET, READ THE INPUT FILE INTO 
+ # A METADATA LIST:
+@@ -1091,6 +1132,7 @@
+  
+ 
+   else:
++
+ # READ FREQUENCY INFO TO HELP SELECTING THE SPW AUTOMATICALLY:
+     import pyfits as pf
+     fitsf = pf.open(IDI)
+@@ -1100,12 +1142,25 @@
+     IFchan = nch
+     Nr = fitsf['FREQUENCY'].header['NO_BAND']
+     sgn = {True:1.0,False:-1.0}[bw>0.0]
+-    FrInfo = {'FREQ (MHZ)':[nu0/1.e6], 'BW (MHZ)':[bw*nch/1.e6], 'SIGN':[sgn]}
++    FrInfo = {'FREQ (MHZ)':[], 'BW (MHZ)':[], 'SIGN':[], 'NUM CHANNELS':[]}
++    if sgn:
++      FrInfo['SIDEBAND'] = ['U' for i in range(Nr)]
++    else:
++      FrInfo['SIDEBAND'] = ['L' for i in range(Nr)]
++
++    metadata = []
+     for i in range(Nr):
+-      FrInfo['FREQ (MHZ)'] += [(nu0 + bw*nch/1.e6)/1.e6]
++      FrInfo['FREQ (MHZ)'] += [(nu0 + i*bw*nch)/1.e6]
+       FrInfo['BW (MHZ)'] += [bw*nch/1.e6]
+       FrInfo['SIGN'] += [sgn]
+       FrInfo['NUM CHANNELS'] += [int(nch)]
++      freqs = nu0 + np.linspace((sgn-1.)/2.,(sgn+1.)/2.,nch,endpoint=False)*bw
++      metadata.append(freqs)
++
++    FrInfo['CHANS TO AVG'] = [1 for i in range(Nr)]
++    FrInfo['OVERSAMPLE FAC.'] = [1 for i in range(Nr)] 
++    FrInfo['DECIMATION FAC.']=[1 for i in range(Nr)]
++
+ 
+     if len(doIF)==0:
+      doIF = range(1,1+fitsf['FREQUENCY'].header['NO_BAND'])
+@@ -1114,19 +1169,44 @@
+ 
+ 
+ 
++
+ # ANTENNAS TO PARTICIPATE IN THE GAIN ESTIMATES:
+   nTotAnt = len(antcoords)
+ 
+   calAnts = []
+   for exA in antcodes:
++    #print exA, excludeAnts, exA in excludeAnts
+     if exA not in excludeAnts:
+       calAnts.append(antcodes.index(exA)+1) ### = [i+1 for i in range(len(antcoords)) if i+1 not in excludeAnts]
+ 
+ 
++  try:
++    plotAnt = int(plotAnt)
++  except:
++    if plotAnt not in antcodes:
++      printError("Reference antenna %s is not found in metadata!\n"%str(plotAnt))
++    else:
++      plotAnt = antcodes.index(plotAnt)+1 
++
++  for i in range(len(linAntIdx)):
++    try:  
++      linAntIdx[i] = int(linAntIdx[i])
++    except:
++      if linAntIdx[i] not in antcodes:
++        linAntIdx[i] = antcodes.index(linAntIdx[i])+1
++        
++
++  if plotAnt in linAntIdx:
++    printMsg("WARNING: Plotting will involve autocorrelations. \nThis has not been fully tested!") 
++
++
++
++
++
+   FlagBas1 = []
+   FlagBas2 = []
+   for fbi in excludeBaselines:
+-    print fbi, antcodes
++   # print fbi, antcodes
+     if fbi[0] in antcodes and fbi[1] in antcodes:
+       FlagBas1.append(antcodes.index(fbi[0])+1) ### = np.array([int(i[0]+1) for i in excludeBaselines])
+       FlagBas2.append(antcodes.index(fbi[1])+1) ### = np.array([int(i[1]+1) for i in excludeBaselines])
+@@ -1158,7 +1238,6 @@
+ 
+ 
+ 
+-
+ #######################
+ ##### GET SPECTRAL WINDOW AUTOMATICALLY:
+   if isPhased and spw < 0:
+@@ -1333,6 +1412,7 @@
+    except:
+      printError("Bad time range format for plotRange!")
+ 
++
+   if len(Range) == 0:
+     Ran = np.array([0.,1.e20])
+   else:
+@@ -1843,6 +1923,7 @@
+ 
+   printMsg("\n###\n### Done with PolConvert (status %d).\n###" % (didit))
+ 
++ # raw_input('HOLD')
+ 
+   if didit != 0:
+     printError("\n\n ERROR IN POLCONVERT!\n\n")
+@@ -2033,7 +2114,7 @@
+ 
+        i += 1
+ 
+-       while Chi2_0>currChi2: 
++       while Chi2_0>=currChi2: 
+ 
+          i += 1     
+          LMTune *= KFacRaise
+@@ -2044,7 +2125,10 @@
+          if i>=MAXIT:
+            break
+ 
+-       relchange = (currChi2 - Chi2_0)/Chi2_0
++       if Chi2_0 >0.0:
++         relchange = (currChi2 - Chi2_0)/Chi2_0
++       else:
++         printError("\n\n  Problem in PolGainSolve.\n")         
+ 
+ # No improvement:
+        if currChi2<minChi2:
+@@ -2113,7 +2197,7 @@
+ 
+      Chi2_final = PS.GetChi2(minGains,LMTune,Ch0,Ch1,1)
+ 
+-     FLIP = Chi2_final < 0.0  # Flip gains by 180 degrees.
++     FLIP = False # Chi2_final < 0.0  # Flip gains by 180 degrees.
+          
+ 
+      return [minGains,FLIP]   
+@@ -2295,7 +2379,7 @@
+     sub2.set_ylim((0.,2.5))
+ 
+ 
+-    sub2.legend(numpoints=1)
++    sub1.legend(numpoints=1)
+     sub1.set_ylabel('Cross-Phase (deg.)')
+     sub2.set_ylabel('Cross-Amp (Norm.)')
+     sub2.set_xlabel('Frequency (GHz)')
+@@ -2775,8 +2859,9 @@
+   ofile.close()
+   printMsg('PolConvert.XYGains.dat was written with CGains' + str(CGains.keys()))
+ 
+-  #raw_input('HOLD')
+-
++
++
++ # raw_input('HOLD')
+   return CGains   # RETURN!
+ 
+ 
+
