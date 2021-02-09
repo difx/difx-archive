@@ -51,7 +51,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 __version__ = "1.8.1"
-date = 'Oct 11 2020'     
+date = 'Feb 09 2021'     
 
 
 ################
@@ -112,15 +112,24 @@ import sys
 import pickle as pk
 
 if sys.version_info.major < 3:
+  try:
     from taskinit import *
     ms = gentools(['ms'])[0]
     tb = gentools(['tb'])[0]
+  except Exception as ex:
+    print('unable to load casa tools in python2\n\n')
+    raise ex
 else:
+  try:
     # from taskutil import *
     from casatools import ms as ms_casa
     from casatools import table as tb_casa
     ms = ms_casa()
     tb = tb_casa()
+  except Exception as ex:
+    print('unable to load casa tools in python3\n\n')
+    raise ex
+    
 
 #########################################################
 ###########################
@@ -134,25 +143,41 @@ else:
 
 if __name__=='__main__':
 
+##z not changed yet
+  print('setting up variables')
+
+  # grep name= polconvert.xml | cut -d\" -f 4 | tr \\012 ,
+  global IDI,OUTPUTIDI,DiFXinput,DiFXcalc,doIF,linAntIdx,Range,ALMAant
+  global spw,calAPP,calAPPTime,APPrefant,gains,interpolation,gainmode
+  global XYavgTime,dterms,amp_norm,XYadd,XYdel,XYratio,usePcal,swapXY
+  global swapRL,feedRotation,IDI_conjugated,plotIF,plotRange,plotAnt
+  global excludeAnts,excludeBaselines,doSolve,solint,doTest,npix,solveAmp
+  global solveMethod,calstokes,calfield
+
   # set things that the task machinery should set 
   taskname           = "polconvert"
-  IDI                =  "bm494e-0-b1_1200.difx"
-  OUTPUTIDI          =  "1200_POLCONVERT.difx"
-  DiFXinput          =  "bm494e-0-b1_1200.input"
-  DiFXcalc           =  "bm494e-0-b1_1200.calc"
-  doIF               =  [35, 36, 37, 38]
+  IDI                =  "no-such-dir.difx"
+  OUTPUTIDI          =  "no-such-dir.difx"
+  DiFXinput          =  "no-such-file.input"
+  DiFXcalc           =  "no-such-file.calc"
+  doIF               =  [6660,6661]
   linAntIdx          =  [1]
   Range              =  []
-  ALMAant            =  "APP_DERIVERABLES/SPECLINE_0.concatenated.ms.ANTENNA"
+  ALMAant            =  "no-such-dir/label.concatenated.ms.ANTENNA"
   spw                =  0
-  calAPP             =  "APP_DERIVERABLES/SPECLINE_0.concatenated.ms.calappphase"
+  calAPP             =  "no-such-dir/label.concatenated.ms.calappphase"
   calAPPTime         =  [0.0, 5.0]
   APPrefant          =  ""
-  gains              =  [['APP_DERIVERABLES/SPECLINE_0.concatenated.ms.bandpass-zphs', 'APP_DERIVERABLES/SPECLINE_0.concatenated.ms.flux_inf.APP', 'APP_DERIVERABLES/SPECLINE_0.concatenated.ms.phase_int.APP.XYsmooth', 'APP_DERIVERABLES/SPECLINE_0.calibrated.ms.XY0.APP', 'APP_DERIVERABLES/SPECLINE_0.calibrated.ms.Gxyamp.ALMA']]
+  gains              =  [[
+    'no-such-dir/label.concatenated.ms.bandpass-zphs',
+    'no-such-dir/label.concatenated.ms.flux_inf.APP',
+    'no-such-dir/label.concatenated.ms.phase_int.APP.XYsmooth',
+    'no-such-dir/label.calibrated.ms.XY0.APP',
+    'no-such-dir/label.calibrated.ms.Gxyamp.ALMA']]
   interpolation      =  []
   gainmode           =  [['G', 'T', 'G', 'G', 'G']]
   XYavgTime          =  0.0
-  dterms             =  ['APP_DERIVERABLES/SPECLINE_0.calibrated.ms.Df0gen.ALMA']
+  dterms             =  ['no-such-dir/label.calibrated.ms.Df0gen.ALMA']
   amp_norm           =  0.03
   XYadd              =  {}
   XYdel              =  {}
@@ -166,6 +191,7 @@ if __name__=='__main__':
   plotRange          =  [0, 0, 0, 0, 2, 0, 0, 0]
   plotAnt            =  2
   excludeAnts        =  []
+  excludeBaselines   =  []
   doSolve            =  -1
   solint             =  [1, 1]
   doTest             =  True
@@ -174,6 +200,22 @@ if __name__=='__main__':
   solveMethod        =  "gradient"
   calstokes          =  [1.0, 0.0, 0.0, 0.0]
   calfield           =  -1
+
+  try:
+    # rename polconvert.last to polconvert.test to use it
+    pctest = open('polconvert.test')
+    changes = pctest.readlines()
+    pctest.close()
+    exec('\n'.join(changes))
+    print('updated defaults from polconvert.test')
+  except Exception as ex:
+    print('you cannot run this stand-alone without a polconvert.test\n' +
+          'file that re-assigns the variables.  You can use a previous\n' +
+          'polconvert.last if you copy/rename it to polconvert.test\n')
+    raise ex
+
+##z no changes above, yet
+
 #
 #
 #
@@ -714,15 +756,21 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
     printError("ERROR! OUTPUTIDI should be a string!")
 
   if type(plotIF) is int:
-    plotIF = [plotIF]
+##z
+#   plotIF = [plotIF]
+    if plotIF >0:
+      plotIF = [plotIF]
+    else:
+      plotIF = []
   for pli in plotIF:
     if type(pli) is not int:
       printError("ERROR! plotIF should be an integer or a list of integers!")
 
-  try:
-    plotAnt = int(plotAnt)
-  except:
-    printError("ERROR! plotAnt should be an integer!")
+##z
+# try:
+#   plotAnt = int(plotAnt)
+# except:
+#   printError("ERROR! plotAnt should be an integer!")
 
 
   try:
@@ -857,9 +905,9 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
   except:
     printError("Bad format for calAPPTime. Should be a list of 2 floats!")
 
-
-  if plotAnt in linAntIdx:
-    printMsg("WARNING: Plotting will involve autocorrelations. \nThis has not been fully tested!") 
+##z
+# if plotAnt in linAntIdx:
+#   printMsg("WARNING: Plotting will involve autocorrelations. \nThis has not been fully tested!") 
 
   printMsg("XYadd is %s"%str(XYadd))
   printMsg("XYdel is %s"%str(XYdel))
@@ -1044,6 +1092,8 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
       if decappUnit=='DEGREES':
         soucoords[1] *= np.pi/180.
 
+##z
+      antcodes = [ff[:2] for ff in ffile['ANTENNA'].data['ANNAME']]
       ffile.close()
 
 # THESE LINES FAIL IF ORBPARM IS PRESENT IN ARRAY GEOMETRY!
@@ -1057,7 +1107,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
       else:
         antcoords = gA.getCoords()
         antmounts = gA.getMounts()
-        antcodes = ['%02i'%i for i in range(1,len(antmounts)+1)]
+##z #   antcodes = ['%02i'%i for i in range(1,len(antmounts)+1)]
     except:
       printMsg('WARNING! This FITS-IDI file has missing information!\nPolConvert may not calibrate properly.')
   else:
@@ -1066,6 +1116,8 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 
 
 ######
+
+
 
 
 ######
@@ -1140,6 +1192,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
  
 
   else:
+
 # READ FREQUENCY INFO TO HELP SELECTING THE SPW AUTOMATICALLY:
     import pyfits as pf
     fitsf = pf.open(IDI)
@@ -1149,17 +1202,35 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
     IFchan = nch
     Nr = fitsf['FREQUENCY'].header['NO_BAND']
     sgn = {True:1.0,False:-1.0}[bw>0.0]
-    FrInfo = {'FREQ (MHZ)':[nu0/1.e6], 'BW (MHZ)':[bw*nch/1.e6], 'SIGN':[sgn]}
+##z
+##z FrInfo = {'FREQ (MHZ)':[nu0/1.e6], 'BW (MHZ)':[bw*nch/1.e6], 'SIGN':[sgn]}
+    FrInfo = {'FREQ (MHZ)':[], 'BW (MHZ)':[], 'SIGN':[], 'NUM CHANNELS':[]}
+    if sgn:
+      FrInfo['SIDEBAND'] = ['U' for i in range(Nr)]
+    else:
+      FrInfo['SIDEBAND'] = ['L' for i in range(Nr)]
+
+    metadata = []
+##z
     for i in range(Nr):
-      FrInfo['FREQ (MHZ)'] += [(nu0 + bw*nch/1.e6)/1.e6]
+##z   FrInfo['FREQ (MHZ)'] += [(nu0 + bw*nch/1.e6)/1.e6]
+      FrInfo['FREQ (MHZ)'] += [(nu0 + i*bw*nch)/1.e6]
       FrInfo['BW (MHZ)'] += [bw*nch/1.e6]
       FrInfo['SIGN'] += [sgn]
       FrInfo['NUM CHANNELS'] += [int(nch)]
+      freqs = nu0 + np.linspace((sgn-1.)/2.,(sgn+1.)/2.,nch,endpoint=False)*bw
+      metadata.append(freqs)
+
+    FrInfo['CHANS TO AVG'] = [1 for i in range(Nr)]
+    FrInfo['OVERSAMPLE FAC.'] = [1 for i in range(Nr)]
+    FrInfo['DECIMATION FAC.']=[1 for i in range(Nr)]
+
 
     if len(doIF)==0:
      doIF = list(range(1,1+fitsf['FREQUENCY'].header['NO_BAND']))
 
     fitsf.close()
+
 
 
 
@@ -1169,16 +1240,41 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
   calAnts = []
   for exA in antcodes:
     if exA not in excludeAnts:
+##z   #print exA, excludeAnts, exA in excludeAnts
       calAnts.append(antcodes.index(exA)+1)
       ### = [i+1 for i in range(len(antcoords)) if i+1 not in excludeAnts]
     else:
       printMsg("Excluding antenna %s"%str(exA))
 
+##z following section
+  try:
+    plotAnt = int(plotAnt)
+  except:
+    if plotAnt not in antcodes:
+      printError("Reference antenna %s is not found in metadata!"%str(plotAnt))
+    else:
+      plotAnt = antcodes.index(plotAnt)+1
+
+  for i in range(len(linAntIdx)):
+    try:
+      linAntIdx[i] = int(linAntIdx[i])
+    except:
+      if linAntIdx[i] not in antcodes:
+        linAntIdx[i] = antcodes.index(linAntIdx[i])+1
+
+
+  if plotAnt in linAntIdx:
+    printMsg(
+        "WARNING: Plotting will involve autocorrelations. \nThis has not been fully tested!")
+
+
+
+
 
   FlagBas1 = []
   FlagBas2 = []
   for fbi in excludeBaselines:
-    print(fbi, antcodes)
+##z # print(fbi, antcodes)
     printMsg("Excluding baseline %s"%str(fbi))
     if fbi[0] in antcodes and fbi[1] in antcodes:
       FlagBas1.append(antcodes.index(fbi[0])+1) ### = np.array([int(i[0]+1) for i in excludeBaselines])
@@ -1204,7 +1300,6 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
     printError("feedRotation must have %i entries!"%nTotAnt)
   else:
     feedRot = np.pi/180.*np.array(feedRotation, dtype=np.float)  
-
 
 
 
@@ -1400,6 +1495,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
      if len(plotIF)==0: plotIF = list(doIF)
    except:
      printError("Bad time range format for plotRange!")
+
 
   if len(Range) == 0:
     Ran = np.array([0.,1.e20])
@@ -1935,6 +2031,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 
   printMsg("\n###\n### Done with PolConvert (status %d).\n###" % (didit))
 
+##z # raw_input('HOLD')
 
   if didit != 0:
     printError("\n\n ERROR IN POLCONVERT!\n\n")
@@ -2136,8 +2233,8 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 
        i += 1
 
-       while Chi2_0>currChi2: 
-
+##z    while Chi2_0>currChi2: 
+       while Chi2_0>=currChi2:
          i += 1     
          LMTune *= KFacRaise
          ptst0 = np.copy(currP)
@@ -2148,7 +2245,12 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
          if i>=MAXIT:
            break
 
-       relchange = (currChi2 - Chi2_0)/Chi2_0
+##z    relchange = (currChi2 - Chi2_0)/Chi2_0
+       if Chi2_0 >0.0:
+         relchange = (currChi2 - Chi2_0)/Chi2_0
+       else:
+         printError("\n\n  Problem in PolGainSolve.\n")         
+
 
 # No improvement:
        if currChi2<minChi2:
@@ -2217,7 +2319,10 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 
      Chi2_final = PS.GetChi2(minGains,LMTune,Ch0,Ch1,1)
 
-     FLIP = Chi2_final < 0.0  # Flip gains by 180 degrees.
+##z  FLIP = Chi2_final < 0.0  # Flip gains by 180 degrees.
+     FLIP = False # Chi2_final < 0.0  # Flip gains by 180 degrees.
+
+# GBC debugging:
      if FLIP: sys.stdout.write(' Flipped\n')
      else:    sys.stdout.write(' NotFlip\n')
      printMsg("    Final error: %.3e in ChSq"%(np.abs(relchange)))
@@ -2456,7 +2561,8 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
       sub2.set_xlim((np.min(Freq2Plot) - Dnu*0.1,np.max(Freq2Plot) + Dnu*0.45))
       sub2.set_ylim((0.,2.5))
 
-      sub2.legend(numpoints=1)
+##z   sub2.legend(numpoints=1)
+      sub1.legend(numpoints=1)
       sub1.set_ylabel('Cross-Phase (deg.)')
       sub2.set_ylabel('Cross-Amp (Norm.)')
       sub2.set_xlabel('Frequency (GHz)')
@@ -3010,15 +3116,23 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
     printMsg(str(ex))
   ofile.close()
   printMsg('PolConvert.XYGains.dat was written with CGains' + str(CGains.keys()))
+
+# raw_input('HOLD')
+
   printMsg('Task PolConvert is Done\n\n')
   return CGains   # RETURN!
 
 
 if __name__=='__main__':
 
-  polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx, Range, ALMAant, spw, calAPP, calAPPTime, APPrefant, 
-             gains, interpolation, gainmode,   XYavgTime, dterms, amp_norm, XYadd, XYdel, XYratio, swapXY, swapRL, 
-             IDI_conjugated, plotIF, plotRange, plotAnt,excludeAnts,doSolve,solint,doTest,npix,solveAmp,solveMethod, calstokes, calfield)
-  
-  
-  
+  print('calling polconvert')
+  polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
+    Range, ALMAant, spw, calAPP, calAPPTime, APPrefant, gains,
+    interpolation, gainmode, XYavgTime, dterms, amp_norm, XYadd, XYdel,
+    XYratio, usePcal, swapXY, swapRL, feedRotation, IDI_conjugated, plotIF,
+    plotRange, plotAnt,excludeAnts,excludeBaselines,doSolve,solint,doTest,
+    npix,solveAmp,solveMethod, calstokes, calfield)
+
+#
+#eof
+#

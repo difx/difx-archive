@@ -1,5 +1,4 @@
 /*
-
 # Copyright (c) Ivan Marti-Vidal 2015-2020. 
 #               EU ALMA Regional Center. Nordic node.
 #               Observatori Astronomic, Universitat de Valencia
@@ -316,7 +315,6 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
   double *AntCoordArr = (double *)PyArray_DATA(antcoordObj);
   int *AntMountArr = (int *)PyArray_DATA(antmountObj);
   double *SouCoordArr = (double *)PyArray_DATA(PyList_GetItem(soucoordObj,1));
-    
   Geometry->NtotSou = (int) PyArray_DIM(PyList_GetItem(soucoordObj,1),0);
   Geometry->NtotAnt = (int) PyArray_DIM(antcoordObj,0);
 
@@ -328,6 +326,8 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
   Geometry->BaseLine[2] = new double[Nbas+Geometry->NtotAnt+1];
   Geometry->SinDec = new double[Geometry->NtotSou];
   Geometry->CosDec = new double[Geometry->NtotSou];
+//z:
+  Geometry->RA = new double[Geometry->NtotSou];
   Geometry->AntLon = new double[Geometry->NtotAnt];
   Geometry->Mount = new int[Geometry->NtotAnt];
   Geometry->Lat = new double[Geometry->NtotAnt];
@@ -364,8 +364,11 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
   };
 
   for (i=0; i<Geometry->NtotSou;i++){
-      Geometry->SinDec[i] = sin(SouCoordArr[i+Geometry->NtotSou]);
-      Geometry->CosDec[i] = cos(SouCoordArr[i+Geometry->NtotSou]);
+//z      Geometry->SinDec[i] = sin(SouCoordArr[i+Geometry->NtotSou]);
+//z      Geometry->CosDec[i] = cos(SouCoordArr[i+Geometry->NtotSou]);
+        Geometry->SinDec[i] = sin(SouCoordArr[i]);
+        Geometry->CosDec[i] = cos(SouCoordArr[i]);
+        Geometry->RA[i] = SouCoordRA[i];
 //      std::cout<< i << " "<< SouCoordArr[i]*180./3.1415926535 << "\n";
   };
 
@@ -588,8 +591,10 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
 // Which IFs do we convert?
   int IFs2Conv[nIFconv];
   for (ii=0; ii<nIFconv; ii++) {
-      if (doAll){IFs2Conv[ii]=ii+1;} else {
-        IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii));
+//z      if (doAll){IFs2Conv[ii]=ii+1;} else {
+//z        IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii));
+      if (doAll){IFs2Conv[ii]=ii;} else {
+        IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii)) - 1;
       };
   }; 
 
@@ -719,12 +724,16 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
 
 // Prepare plotting files:
   int noI = -1;
-  for (ii=0; ii<nIFplot; ii++){
-      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Plot[ii]+1);
+//z  for (ii=0; ii<nIFplot; ii++){
+//z      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Plot[ii]+1);
+  for (ii=0; ii<nIFconv; ii++) {
+      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Conv[ii]+1);
       printf("Writing %s\n", message);
       plotFile[ii] = fopen(message,"wb");
-      if (IFs2Plot[ii]>=0 && IFs2Plot[ii]<nnu){
-         fwrite(&nchans[IFs2Plot[ii]],sizeof(int),1,plotFile[ii]);
+//z      if (IFs2Plot[ii]>=0 && IFs2Plot[ii]<nnu){
+//z         fwrite(&nchans[IFs2Plot[ii]],sizeof(int),1,plotFile[ii]);
+      if (IFs2Conv[ii]>=0 && IFs2Conv[ii]<nnu){
+         fwrite(&nchans[IFs2Conv[ii]],sizeof(int),1,plotFile[ii]);
       } else {
          fwrite(&noI,sizeof(int),1,plotFile[ii]);
       };
@@ -758,7 +767,8 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
 
   for (currAntIdx=0; currAntIdx<nALMA; currAntIdx++) {
       for (im=0; im<nIFconv; im++) {
-        ii = IFs2Conv[im] - 1;
+//z     ii = IFs2Conv[im] - 1;
+        ii = IFs2Conv[im];
         for (ij=0; ij<nchans[ii]; ij++){
           PrioriGains[currAntIdx][im][ij] *=
             DifXData->getAmpRatio(currAntIdx, im, ij);
@@ -780,7 +790,8 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
 //  for (ii=0; ii<nnu; ii++) open-brace
   for (im=0; im<nIFconv; im++) {
 
-    ii = IFs2Conv[im] - 1;
+//z    ii = IFs2Conv[im] - 1;
+    ii = IFs2Conv[im];
 
     bool plotIF = false;
     int IFplot = 0;
@@ -1246,9 +1257,14 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
 
 // Shall we write in plot file?  auxB -> auxB2 to avoid confusion
         //indent level within time range
-        auxB2 = (currT>=plRange[0] && currT<=plRange[1] &&
-                plotIF && (calField<0 || currF==calField));
+//z note auxB -> auxB2
+//z     auxB2 = (currT>=plRange[0] && currT<=plRange[1] &&
+//z             plotIF && (calField<0 || currF==calField));
                 //plAnt == otherAnt);
+        auxB2 = (currT>=plRange[0] && currT<=plRange[1] &&
+                (calField<0 || currF==calField));
+                //plAnt == otherAnt);
+//z QUESTION: so why does plotIF disappear here?
 
         //indent level within time range
 // Convert:

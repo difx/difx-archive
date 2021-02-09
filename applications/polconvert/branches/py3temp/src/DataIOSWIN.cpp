@@ -530,8 +530,9 @@ void DataIOSWIN::readHeader(bool doTest, int saveSource) {
   
   
 // Derive the parallactic angles:
-  getParAng(sidx,ant1-1,ant2-1,UVW,AuxPA1,AuxPA2);
+//z getParAng(sidx,ant1-1,ant2-1,UVW,AuxPA1,AuxPA2);
   daytemp2 = (daytemp + day0)*86400.;
+  getParAng(sidx,ant1-1,ant2-1,UVW,daytemp,AuxPA1,AuxPA2);
 
   
   

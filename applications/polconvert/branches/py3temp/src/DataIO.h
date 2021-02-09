@@ -48,6 +48,8 @@ typedef struct {
 double *BaseLine[3];
 double *SinDec;
 double *CosDec;
+//z
+double *RA;
 double *AntLon;
 int *Mount;
 double *Lat;
@@ -94,7 +96,8 @@ class DataIO {
    void getFrequencies(double* Freqarray);
 
 // Compute parallactic angle.
-  void getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &P1, double &P2);
+//z  void getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &P1, double &P2);
+   void getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &MJD, double &P1, double &P2);
 
 // Estimate amplitude ratios from the autocorrelations:
   std::complex<float> getAmpRatio(int ant, int spw, int chan);

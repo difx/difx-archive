@@ -1654,6 +1654,7 @@ for (i=0; i<NIF; i++){
 
        if (af1>=0){
          RateResVec[af1] += Weights[i][BNum]*(BLRates00[i][BNum] + BLRates11[i][BNum])/2.;
+//z      // printf("%i | %i-%i %.2e  %.2e \n",i, CalAnts[a1],CalAnts[a2], BLRates00[i][BNum],BLRates11[i][BNum]);
          DelResVec00[af1] += Weights[i][BNum]*BLDelays00[i][BNum];
          DelResVec11[af1] += Weights[i][BNum]*BLDelays11[i][BNum];
          Hessian[af1*NantFit + af1] += Weights[i][BNum];
@@ -1705,17 +1706,31 @@ bool isSingular, tempSing;
 isSingular=false;
 for (i=0; i<NantFit; i++){
   printf("  ");
-  tempSing = true;
+//z  tempSing = true;
+  if (Hessian[i*NantFit+i]==0.0){isSingular=true;};
   for (j=0; j<NantFit; j++){
-     if (Hessian[i*NantFit+j]!=0.0){tempSing=false;};
+//z     if (Hessian[i*NantFit+j]!=0.0){tempSing=false;};
      printf("%+.2e ",Hessian[i*NantFit+j]);
   };
-  if (tempSing){isSingular=true;};
+//z  if (tempSing){isSingular=true;};
+//z printf("\n");
+//z };
 printf("\n");
 };
+if(isSingular){printf("Possible singular matrix!\n");};
+printf("\n");
+
+printf("\n\n Residual baseline phase quantities:\n\n");
+for (i=0; i<NantFit; i++){
+  printf("  ");
+  printf(" %.2e | %.2e | %.2e\n",DelResVec00[i],DelResVec11[i],RateResVec[i]);
+};
+
+// GBC added these which may now be redundant
 if (!isSingular) printf("\n(not Singular)\n");
 else             printf("\n(is  Singular)\n");
 
+printf("\n");
 
 // The Hessian's inverse can be reused for rates, delays and phases!
 gsl_death_by = GSL_SUCCESS;
@@ -1753,6 +1768,8 @@ if (gsl_death_by != GSL_SUCCESS) {
 }
 
 if(!isSingular){
+//z     printf("Globalizing solutions\n");
+        printf("Globalizing solutions: ");
         printf("doing gsl_linalg_LU_solve 3x...\n");
 	gsl_linalg_LU_solve (&mm.matrix, permm, &RateInd.vector, xx);
 	gsl_linalg_LU_solve (&mm.matrix, permm, &Del00Ind.vector, dd0);
@@ -2274,6 +2291,8 @@ for (i=0; i<NIFComp; i++){
 
   for(k=0;k<NBas;k++){Tm[k]=Times[currIF][0];};
 
+//z
+// printf("NVis: %i\n",NVis[currIF]); fflush(stdout);
 
   for (k=0; k<NVis[currIF]; k++){
 
@@ -2435,6 +2454,9 @@ for (i=0; i<NIFComp; i++){
 
 
     if(BNum>=0){
+
+//z
+    //  printf("Fitting for %i %i\n",a1,a2); fflush(stdout);
 
     AvVis[BNum] += 1;
 

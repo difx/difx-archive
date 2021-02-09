@@ -72,17 +72,25 @@ static char getCoords_docstring[] =
     "Returns antenna coordinates";
 static char getMounts_docstring[] =
     "Returns the mount types";
+//z
+//static char getNames_docstring[] = 
+//    "Returns the antenna names (codes)";
 
 /* Available functions */
 static PyObject *getAntInfo(PyObject *self, PyObject *args);
 static PyObject *getCoords(PyObject *self, PyObject *args);
 static PyObject *getMounts(PyObject *self, PyObject *args);
+//z
+//static PyObject *getNames(PyObject *self, PyObject *args);
+
 
 /* Module specification */
 static PyMethodDef module_methods[] = {
     {"getAntInfo", getAntInfo, METH_VARARGS, getAntInfo_docstring},
     {"getCoords", getCoords, METH_VARARGS, getCoords_docstring},
-    {"getMounts", getMounts, METH_VARARGS, getMounts_docstring},
+//z {"getMounts", getMounts, METH_VARARGS, getMounts_docstring},
+    {"getMounts", getMounts, METH_VARARGS, getMounts_docstring} //,
+//  {"getNames", getNames, METH_VARARGS, getNames_docstring},
     {NULL, NULL, 0, NULL}   /* terminated by list of NULLs, apparently */
 };
 
@@ -216,7 +224,8 @@ static PyObject *getAntInfo(PyObject *self, PyObject *args){
   fits_close_file(ifile, &status);
 
   if(status){
-    printf("\n\nPROBLEM LOSING FITS-IDI!  ERR: %i\n\n",status);
+//z printf("\n\nPROBLEM LOSING FITS-IDI!  ERR: %i\n\n",status);
+    printf("\n\nPROBLEM CLOSING FITS-IDI!  ERR: %i\n\n",status);
     return Py_BuildValue("i",3);
   };
 
@@ -226,32 +235,59 @@ static PyObject *getAntInfo(PyObject *self, PyObject *args){
 };
 
 
+
+
+
+
+
 static PyObject *getCoords(PyObject *self, PyObject *args){
 
 // Build numpy array:
 
 PyObject *CoordArr;
-long CD[2] = {Nants,3};
+//z long CD[2] = {Nants,3};
+//z
+//z GBC had already removed Py_INCREF.
+//z Py_INCREF(CoordArr); -- original code
+//z CoordArr = PyArray_SimpleNewFromData(2, &CD[0], NPY_DOUBLE, (void*) Coords);
+//z Py_INCREF(CoordArr); -- needed only if we retain it and use it
+int nd = 2;
+npy_intp* CD = new npy_intp[nd];
 
-//Py_INCREF(CoordArr); -- original code
-CoordArr = PyArray_SimpleNewFromData(2, &CD[0], NPY_DOUBLE, (void*) Coords);
-//Py_INCREF(CoordArr); -- needed only if we retain it and use it
+CD[0] = Nants; CD[1] = 3; // = {Nants,3};
+
+//Py_INCREF(CoordArr);
+CoordArr = PyArray_SimpleNewFromData(nd, CD, NPY_DOUBLE, (void*) Coords);
 
 return CoordArr;
 
 };
 
 
+
+
+
+
+
 static PyObject *getMounts(PyObject *self, PyObject *args){
+
 
 // Build numpy array:
 PyObject *MountArr;
 
-long MD[1] = {Nants};
+//z long MD[1] = {Nants};
+int nd = 1;
+npy_intp* MD = new npy_intp[nd];
+MD[0] = Nants;
 
-//Py_INCREF(MountArr); -- original code
-MountArr = PyArray_SimpleNewFromData(1, &MD[0], NPY_INT, (void*) Mounts);
-//Py_INCREF(MountArr); -- needed only if we retain it and use it
+//z GBC had already removed Py_INCREF
+//z Py_INCREF(MountArr); -- original code
+//z MountArr = PyArray_SimpleNewFromData(1, &MD[0], NPY_INT, (void*) Mounts);
+//z Py_INCREF(MountArr); -- needed only if we retain it and use it
+
+//z
+//Py_INCREF(MountArr);
+MountArr = PyArray_SimpleNewFromData(nd, MD, NPY_INT, (void*) Mounts);
 
 return MountArr;
 
