@@ -1835,7 +1835,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx, Range, ALMA
     printMsg("POLCONVERT CALLED WITH: %s"%str(PC_Params))
       
 
-  didit = PC.PolConvert(nALMATrue, doIF, plotAnt, len(allants), doIF, swapXY, ngain, NSUM, kind, gaindata, dtdata, OUTPUT, linAntIdxTrue, plRan, Ran, allantidx, nphtimes, antimes, refants, asdmtimes,  doTest, doSolve, doConj, doAmpNorm, PrioriGains, metadata, soucoords, antcoords, antmounts, isLinear,calfield,timerangesArr[int(spw)],UseAutoCorrs,DEBUG)
+  didit = PC.PolConvert(nALMATrue, plotIF, plotAnt, len(allants), doIF, swapXY, ngain, NSUM, kind, gaindata, dtdata, OUTPUT, linAntIdxTrue, plRan, Ran, allantidx, nphtimes, antimes, refants, asdmtimes,  doTest, doSolve, doConj, doAmpNorm, PrioriGains, metadata, soucoords, antcoords, antmounts, isLinear,calfield,timerangesArr[int(spw)],UseAutoCorrs,DEBUG)
 
   printMsg("\n###\n### Done with PolConvert (status %d).\n###" % (didit))
 
