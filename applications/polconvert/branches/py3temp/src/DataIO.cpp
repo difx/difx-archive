@@ -111,10 +111,11 @@ void DataIO::getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &MJD, do
 
 //z double V2, Bx, By; //, Bz;
 //z double CH, SH, CT1, CT2, HAng, H1, H2, Elev1, Elev2;
-double V2, Bx, By, GMST; //, Bz;
+//zz double V2, Bx, By, GMST; //, Bz;
+double GMST;
 //double CDec, SDec, SRA, TLat1,TLat2, Lon1,Lon2,CH, SH;
 double CT1, CT2, HAng, H1, H2, Elev1, Elev2;
-int ibas;
+//zz int ibas;
 
 Elev1 = 0.0; Elev2 = 0.0;
 
@@ -141,7 +142,7 @@ if (Ant1==Ant2){P1 = -1.e9; P2 = -1.e9; return;};
 if(sidx<Geometry->NtotSou && Ant1<Geometry->NtotAnt && Ant2<Geometry->NtotAnt){
 
 //z  V2 = Geometry->SinDec[sidx]*UVW[1] - Geometry->CosDec[sidx]*UVW[2];
-  ibas = Geometry->BasNum[Ant1][Ant2];
+//zz   ibas = Geometry->BasNum[Ant1][Ant2];
 
 //z  if (ibas<0){
 //z  ibas = -ibas;

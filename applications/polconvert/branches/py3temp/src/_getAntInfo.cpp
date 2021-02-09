@@ -89,7 +89,7 @@ static PyMethodDef module_methods[] = {
     {"getAntInfo", getAntInfo, METH_VARARGS, getAntInfo_docstring},
     {"getCoords", getCoords, METH_VARARGS, getCoords_docstring},
 //z {"getMounts", getMounts, METH_VARARGS, getMounts_docstring},
-    {"getMounts", getMounts, METH_VARARGS, getMounts_docstring} //,
+    {"getMounts", getMounts, METH_VARARGS, getMounts_docstring}, //,
 //  {"getNames", getNames, METH_VARARGS, getNames_docstring},
     {NULL, NULL, 0, NULL}   /* terminated by list of NULLs, apparently */
 };

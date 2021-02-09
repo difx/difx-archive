@@ -315,6 +315,8 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
   double *AntCoordArr = (double *)PyArray_DATA(antcoordObj);
   int *AntMountArr = (int *)PyArray_DATA(antmountObj);
   double *SouCoordArr = (double *)PyArray_DATA(PyList_GetItem(soucoordObj,1));
+//z
+  double *SouCoordRA = (double *)PyArray_DATA(PyList_GetItem(soucoordObj,0));
   Geometry->NtotSou = (int) PyArray_DIM(PyList_GetItem(soucoordObj,1),0);
   Geometry->NtotAnt = (int) PyArray_DIM(antcoordObj,0);
 
@@ -793,10 +795,12 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
 //z    ii = IFs2Conv[im] - 1;
     ii = IFs2Conv[im];
 
-    bool plotIF = false;
+//zz    bool plotIF = false;
     int IFplot = 0;
     for (ij=0; ij<nIFplot; ij++){
-      if (IFs2Plot[ij]==ii){plotIF=true;IFplot=ij; break;};
+      if (IFs2Plot[ij]==ii){
+//zz    plotIF=true;
+        IFplot=ij; break;};
     };
 
  //   if (ii >= nnu) {

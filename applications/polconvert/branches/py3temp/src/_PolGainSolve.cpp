@@ -1702,7 +1702,8 @@ for (i=0; i<NIF; i++){
 
 
 printf("\n\nHessian Globalization Matrix:\n\n");
-bool isSingular, tempSing;
+//zz bool isSingular, tempSing;
+bool isSingular;
 isSingular=false;
 for (i=0; i<NantFit; i++){
   printf("  ");
