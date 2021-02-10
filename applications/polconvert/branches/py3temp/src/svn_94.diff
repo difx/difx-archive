@@ -1,3 +1,549 @@
+Index: _PolConvert.cpp
+===================================================================
+--- _PolConvert.cpp	(revision 9901)
++++ _PolConvert.cpp	(working copy)
+@@ -1,5 +1,4 @@
+ /*
+-
+ # Copyright (c) Ivan Marti-Vidal 2015-2020. 
+ #               EU ALMA Regional Center. Nordic node.
+ #               Observatori Astronomic, Universitat de Valencia
+@@ -52,7 +51,12 @@
+ 
+ */
+  
++//z old code 1, new code 0
++#define IVAN_OLD    1
+ 
++//z straight up merge
++#define IVAN_MERGE  0
++
+ #include <Python.h>
+ 
+ // compiler warning that we use a deprecated NumPy API
+@@ -316,7 +320,8 @@
+   double *AntCoordArr = (double *)PyArray_DATA(antcoordObj);
+   int *AntMountArr = (int *)PyArray_DATA(antmountObj);
+   double *SouCoordArr = (double *)PyArray_DATA(PyList_GetItem(soucoordObj,1));
+-    
++//z
++  double *SouCoordRA = (double *)PyArray_DATA(PyList_GetItem(soucoordObj,0));
+   Geometry->NtotSou = (int) PyArray_DIM(PyList_GetItem(soucoordObj,1),0);
+   Geometry->NtotAnt = (int) PyArray_DIM(antcoordObj,0);
+ 
+@@ -328,6 +333,8 @@
+   Geometry->BaseLine[2] = new double[Nbas+Geometry->NtotAnt+1];
+   Geometry->SinDec = new double[Geometry->NtotSou];
+   Geometry->CosDec = new double[Geometry->NtotSou];
++//z:
++  Geometry->RA = new double[Geometry->NtotSou];
+   Geometry->AntLon = new double[Geometry->NtotAnt];
+   Geometry->Mount = new int[Geometry->NtotAnt];
+   Geometry->Lat = new double[Geometry->NtotAnt];
+@@ -364,8 +371,11 @@
+   };
+ 
+   for (i=0; i<Geometry->NtotSou;i++){
+-      Geometry->SinDec[i] = sin(SouCoordArr[i+Geometry->NtotSou]);
+-      Geometry->CosDec[i] = cos(SouCoordArr[i+Geometry->NtotSou]);
++//z      Geometry->SinDec[i] = sin(SouCoordArr[i+Geometry->NtotSou]);
++//z      Geometry->CosDec[i] = cos(SouCoordArr[i+Geometry->NtotSou]);
++        Geometry->SinDec[i] = sin(SouCoordArr[i]);
++        Geometry->CosDec[i] = cos(SouCoordArr[i]);
++        Geometry->RA[i] = SouCoordRA[i];
+ //      std::cout<< i << " "<< SouCoordArr[i]*180./3.1415926535 << "\n";
+   };
+ 
+@@ -587,13 +597,32 @@
+ 
+ // Which IFs do we convert?
+   int IFs2Conv[nIFconv];
++//z
++#if IVAN_OLD
++#warning "IVAN_OLD CODE selected A"
+   for (ii=0; ii<nIFconv; ii++) {
+-      if (doAll){IFs2Conv[ii]=ii+1;} else {
+-        IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii));
++    if (doAll){IFs2Conv[ii]=ii+1;} else {
++      IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii)); };
++  }
++#else // IVAN_OLD
++#warning "IVAN_NEW CODE selected A"
++  // looks like a shift by 1 here
++  for (ii=0; ii<nIFconv; ii++) {
++    if (doAll){IFs2Conv[ii]=ii;} else {
++      IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii)) - 1; };
++  }
++#endif // IVAN_OLD
++#if IVAN_MERGE
++#warning "IVAN_MERGED CODE selected A"
++  for (ii=0; ii<nIFconv; ii++) {
++//z      if (doAll){IFs2Conv[ii]=ii+1;} else {
++//z        IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii));
++      if (doAll){IFs2Conv[ii]=ii;} else {
++        IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii)) - 1;
+       };
+   }; 
++#endif // IVAN_MERGE
+ 
+-
+   int nnu = DifXData->getNfreqs();
+   int ALMARefAnt = -1;
+   // If no calAPP is used, do not look for any extra X-Y phase offset.
+@@ -719,6 +748,9 @@
+ 
+ // Prepare plotting files:
+   int noI = -1;
++//z
++#if IVAN_OLD
++#warning "IVAN_OLD CODE selected B"
+   for (ii=0; ii<nIFplot; ii++){
+       sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Plot[ii]+1);
+       printf("Writing %s\n", message);
+@@ -729,6 +761,36 @@
+          fwrite(&noI,sizeof(int),1,plotFile[ii]);
+       };
+   };
++#else // IVAN_OLD
++#warning "IVAN_NEW CODE selected B"
++  for (ii=0; ii<nIFconv; ii++) {
++      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Conv[ii]+1);
++      printf("Writing %s\n", message);
++      plotFile[ii] = fopen(message,"wb");
++      if (IFs2Conv[ii]>=0 && IFs2Conv[ii]<nnu){
++         fwrite(&nchans[IFs2Conv[ii]],sizeof(int),1,plotFile[ii]);
++      } else {
++         fwrite(&noI,sizeof(int),1,plotFile[ii]);
++      };
++  };
++#endif // IVAN_OLD
++#if IVAN_MERGE
++#warning "IVAN_MERGED CODE selected B"
++//z  for (ii=0; ii<nIFplot; ii++){
++//z      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Plot[ii]+1);
++  for (ii=0; ii<nIFconv; ii++) {
++      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Conv[ii]+1);
++      printf("Writing %s\n", message);
++      plotFile[ii] = fopen(message,"wb");
++//z      if (IFs2Plot[ii]>=0 && IFs2Plot[ii]<nnu){
++//z         fwrite(&nchans[IFs2Plot[ii]],sizeof(int),1,plotFile[ii]);
++      if (IFs2Conv[ii]>=0 && IFs2Conv[ii]<nnu){
++         fwrite(&nchans[IFs2Conv[ii]],sizeof(int),1,plotFile[ii]);
++      } else {
++         fwrite(&noI,sizeof(int),1,plotFile[ii]);
++      };
++  };
++#endif // IVAN_MERGE
+  
+ 
+   if(doNorm){
+@@ -758,7 +820,20 @@
+ 
+   for (currAntIdx=0; currAntIdx<nALMA; currAntIdx++) {
+       for (im=0; im<nIFconv; im++) {
++//z
++#if IVAN_OLD
++#warning "IVAN_OLD CODE selected C"
+         ii = IFs2Conv[im] - 1;
++#else // IVAN_OLD
++#warning "IVAN_NEW CODE selected C"
++        ii = IFs2Conv[im];
++#endif // IVAN_OLD
++#if IVAN_MERGE
++#warning "IVAN_MERGED CODE selected C"
++//z     ii = IFs2Conv[im] - 1;
++        ii = IFs2Conv[im];
++#endif // IVAN_MERGE
++//z
+         for (ij=0; ij<nchans[ii]; ij++){
+           PrioriGains[currAntIdx][im][ij] *=
+             DifXData->getAmpRatio(currAntIdx, im, ij);
+@@ -780,13 +855,49 @@
+ //  for (ii=0; ii<nnu; ii++) open-brace
+   for (im=0; im<nIFconv; im++) {
+ 
++//z
++#if IVAN_OLD
++#warning "IVAN_OLD CODE selected D"
+     ii = IFs2Conv[im] - 1;
++#else // IVAN_OLD
++#warning "IVAN_NEW CODE selected D"
++    ii = IFs2Conv[im];
++#endif // IVAN_OLD
++#if IVAN_MERGE
++#warning "IVAN_MERGED CODE selected D"
++//z ii = IFs2Conv[im] - 1;
++    ii = IFs2Conv[im];
++#endif // IVAN_MERGE
++//z
+ 
++//z
++#if IVAN_OLD
++#warning "IVAN_OLD CODE selected E"
+     bool plotIF = false;
+     int IFplot = 0;
+     for (ij=0; ij<nIFplot; ij++){
+-      if (IFs2Plot[ij]==ii){plotIF=true;IFplot=ij; break;};
++      if (IFs2Plot[ij]==ii){
++        plotIF=true;
++        IFplot=ij; break;};
+     };
++#else // IVAN_OLD
++#warning "IVAN_NEW CODE selected E"
++    int IFplot = 0;
++    for (ij=0; ij<nIFplot; ij++){
++      if (IFs2Plot[ij]==ii){
++        IFplot=ij; break;};
++#endif // IVAN_OLD
++#if IVAN_MERGE
++#warning "IVAN_MERGED CODE selected E"
++//zz    bool plotIF = false;
++    int IFplot = 0;
++    for (ij=0; ij<nIFplot; ij++){
++      if (IFs2Plot[ij]==ii){
++//zz    plotIF=true;
++        IFplot=ij; break;};
++    };
++#endif // IVAN_MERGE
++//zz
+ 
+  //   if (ii >= nnu) {
+  //     sprintf(message,"ERROR! DATA DO NOT HAVE IF #%i !!\n",ii);  
+@@ -1246,10 +1357,32 @@
+ 
+ // Shall we write in plot file?  auxB -> auxB2 to avoid confusion
+         //indent level within time range
++
++//z
++//z QUESTION: so why does plotIF disappear here?
++//z note auxB -> auxB2
++#if IVAN_OLD
++#warning "IVAN_OLD CODE selected F"
+         auxB2 = (currT>=plRange[0] && currT<=plRange[1] &&
+                 plotIF && (calField<0 || currF==calField));
+                 //plAnt == otherAnt);
++#else // IVAN_OLD
++#warning "IVAN_NEW CODE selected F"
++        auxB2 = (currT>=plRange[0] && currT<=plRange[1] &&
++                (calField<0 || currF==calField));
++                //plAnt == otherAnt);
++#endif // IVAN_OLD
++#if IVAN_MERGE
++#warning "IVAN_MERGED CODE selected F"
++//z     auxB2 = (currT>=plRange[0] && currT<=plRange[1] &&
++//z             plotIF && (calField<0 || currF==calField));
++                //plAnt == otherAnt);
++        auxB2 = (currT>=plRange[0] && currT<=plRange[1] &&
++                (calField<0 || currF==calField));
++                //plAnt == otherAnt);
++#endif // IVAN_MERGE
+ 
++
+         //indent level within time range
+ // Convert:
+         if(Phased){
+Index: _getAntInfo.cpp
+===================================================================
+--- _getAntInfo.cpp	(revision 9901)
++++ _getAntInfo.cpp	(working copy)
+@@ -72,17 +72,25 @@
+     "Returns antenna coordinates";
+ static char getMounts_docstring[] =
+     "Returns the mount types";
++//z
++//static char getNames_docstring[] = 
++//    "Returns the antenna names (codes)";
+ 
+ /* Available functions */
+ static PyObject *getAntInfo(PyObject *self, PyObject *args);
+ static PyObject *getCoords(PyObject *self, PyObject *args);
+ static PyObject *getMounts(PyObject *self, PyObject *args);
++//z
++//static PyObject *getNames(PyObject *self, PyObject *args);
+ 
++
+ /* Module specification */
+ static PyMethodDef module_methods[] = {
+     {"getAntInfo", getAntInfo, METH_VARARGS, getAntInfo_docstring},
+     {"getCoords", getCoords, METH_VARARGS, getCoords_docstring},
+-    {"getMounts", getMounts, METH_VARARGS, getMounts_docstring},
++//z {"getMounts", getMounts, METH_VARARGS, getMounts_docstring},
++    {"getMounts", getMounts, METH_VARARGS, getMounts_docstring}, //,
++//  {"getNames", getNames, METH_VARARGS, getNames_docstring},
+     {NULL, NULL, 0, NULL}   /* terminated by list of NULLs, apparently */
+ };
+ 
+@@ -216,7 +224,8 @@
+   fits_close_file(ifile, &status);
+ 
+   if(status){
+-    printf("\n\nPROBLEM LOSING FITS-IDI!  ERR: %i\n\n",status);
++//z printf("\n\nPROBLEM LOSING FITS-IDI!  ERR: %i\n\n",status);
++    printf("\n\nPROBLEM CLOSING FITS-IDI!  ERR: %i\n\n",status);
+     return Py_BuildValue("i",3);
+   };
+ 
+@@ -226,33 +235,60 @@
+ };
+ 
+ 
++
++
++
++
++
+ static PyObject *getCoords(PyObject *self, PyObject *args){
+ 
+ // Build numpy array:
+ 
+ PyObject *CoordArr;
+-long CD[2] = {Nants,3};
++//z long CD[2] = {Nants,3};
++//z
++//z GBC had already removed Py_INCREF.
++//z Py_INCREF(CoordArr); -- original code
++//z CoordArr = PyArray_SimpleNewFromData(2, &CD[0], NPY_DOUBLE, (void*) Coords);
++//z Py_INCREF(CoordArr); -- needed only if we retain it and use it
++int nd = 2;
++npy_intp* CD = new npy_intp[nd];
+ 
+-//Py_INCREF(CoordArr); -- original code
+-CoordArr = PyArray_SimpleNewFromData(2, &CD[0], NPY_DOUBLE, (void*) Coords);
+-//Py_INCREF(CoordArr); -- needed only if we retain it and use it
++CD[0] = Nants; CD[1] = 3; // = {Nants,3};
+ 
++//Py_INCREF(CoordArr);
++CoordArr = PyArray_SimpleNewFromData(nd, CD, NPY_DOUBLE, (void*) Coords);
++
+ return CoordArr;
+ 
+ };
+ 
+ 
++
++
++
++
++
+ static PyObject *getMounts(PyObject *self, PyObject *args){
+ 
++
+ // Build numpy array:
+ PyObject *MountArr;
+ 
+-long MD[1] = {Nants};
++//z long MD[1] = {Nants};
++int nd = 1;
++npy_intp* MD = new npy_intp[nd];
++MD[0] = Nants;
+ 
+-//Py_INCREF(MountArr); -- original code
+-MountArr = PyArray_SimpleNewFromData(1, &MD[0], NPY_INT, (void*) Mounts);
+-//Py_INCREF(MountArr); -- needed only if we retain it and use it
++//z GBC had already removed Py_INCREF
++//z Py_INCREF(MountArr); -- original code
++//z MountArr = PyArray_SimpleNewFromData(1, &MD[0], NPY_INT, (void*) Mounts);
++//z Py_INCREF(MountArr); -- needed only if we retain it and use it
+ 
++//z
++//Py_INCREF(MountArr);
++MountArr = PyArray_SimpleNewFromData(nd, MD, NPY_INT, (void*) Mounts);
++
+ return MountArr;
+ 
+ };
+Index: DataIO.cpp
+===================================================================
+--- DataIO.cpp	(revision 9901)
++++ DataIO.cpp	(working copy)
+@@ -106,42 +106,63 @@
+ 
+ 
+ 
+-void DataIO::getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &P1, double &P2){
++//z void DataIO::getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &P1, double &P2){
++void DataIO::getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &MJD, double &P1, double &P2){
+ 
+-double V2, Bx, By; //, Bz;
+-double CH, SH, CT1, CT2, HAng, H1, H2, Elev1, Elev2;
+-int ibas;
++//z double V2, Bx, By; //, Bz;
++//z double CH, SH, CT1, CT2, HAng, H1, H2, Elev1, Elev2;
++//zz double V2, Bx, By, GMST; //, Bz;
++double GMST;
++//double CDec, SDec, SRA, TLat1,TLat2, Lon1,Lon2,CH, SH;
++double CT1, CT2, HAng, H1, H2, Elev1, Elev2;
++//zz int ibas;
+ 
+ Elev1 = 0.0; Elev2 = 0.0;
+ 
++//z:
++double days = MJD/86400.;
++double t = (days-51544.0)/36525.;
++double Hh = days - floor(days);
++double GMsec = 24110.54841 + 8640184.812866*t + 0.093104*t*t - 0.0000062*t*t*t;
++GMST = (GMsec/86400. + Hh)*2.*3.1415926535;
++//z:
++//CDec = Geometry->SinDec[sidx];
++//SDec = Geometry->CosDec[sidx];
++//TLat1 = tan(Geometry->Lat[Ant1]);
++//TLat2 = tan(Geometry->Lat[Ant1]);
++//Lon1 = Geometry->AntLon[Ant1];
++//Lon2 = Geometry->AntLon[Ant2];
++//SRA = Geometry->RA[sidx];
+ 
+ // Dummy value if autocorrelation:
+ if (Ant1==Ant2){P1 = -1.e9; P2 = -1.e9; return;};
+ 
++//z more blank lines
+ 
+ if(sidx<Geometry->NtotSou && Ant1<Geometry->NtotAnt && Ant2<Geometry->NtotAnt){
+ 
+-  V2 = Geometry->SinDec[sidx]*UVW[1] - Geometry->CosDec[sidx]*UVW[2];
+-  ibas = Geometry->BasNum[Ant1][Ant2];
++//z  V2 = Geometry->SinDec[sidx]*UVW[1] - Geometry->CosDec[sidx]*UVW[2];
++//zz   ibas = Geometry->BasNum[Ant1][Ant2];
+ 
++//z  if (ibas<0){
++//z  ibas = -ibas;
++//z   Bx = -Geometry->BaseLine[0][ibas];
++//z   By = -Geometry->BaseLine[1][ibas];
++//z// Bz = -Geometry->BaseLine[2][ibas];
++//z  } else {
++//z   Bx = Geometry->BaseLine[0][ibas];
++//z   By = Geometry->BaseLine[1][ibas];
++//z// Bz = Geometry->BaseLine[2][ibas];
++//z  };
++//z
++//z  CH = (UVW[0]*By - V2*Bx); // /(By**2. + Bx**2.);
++//z  SH = (UVW[0]*Bx + V2*By); // /(By**2. + Bx**2.);
+ 
+-  if (ibas<0){
+-  ibas = -ibas;
+-   Bx = -Geometry->BaseLine[0][ibas];
+-   By = -Geometry->BaseLine[1][ibas];
+-//   Bz = -Geometry->BaseLine[2][ibas];
+-  } else {
+-   Bx = Geometry->BaseLine[0][ibas];
+-   By = Geometry->BaseLine[1][ibas];
+-//   Bz = Geometry->BaseLine[2][ibas];
+-  };
+-
+-  CH = (UVW[0]*By - V2*Bx); // /(By**2. + Bx**2.);
+-  SH = (UVW[0]*Bx + V2*By); // /(By**2. + Bx**2.);
+   CT1 = Geometry->CosDec[sidx]*tan(Geometry->Lat[Ant1]);
+   CT2 = Geometry->CosDec[sidx]*tan(Geometry->Lat[Ant2]);
+ 
+-  HAng = atan2(SH,CH);
++//z  HAng = atan2(SH,CH);
++  HAng = GMST - Geometry->RA[sidx];
+   H1 = HAng + Geometry->AntLon[Ant1];
+   H2 = HAng + Geometry->AntLon[Ant2];
+ 
+@@ -148,10 +169,11 @@
+   // sin(lat)*sin(dec)+cos(lat)cos(dec)cos(H)
+ 
+   if (Geometry->Mount[Ant1] > 3){
+-  Elev1 = asin(sin(Geometry->Lat[Ant1])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant1])*Geometry->CosDec[sidx]*cos(H1));};
++   Elev1 = asin(sin(Geometry->Lat[Ant1])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant1])*Geometry->CosDec[sidx]*cos(H1));};
+ 
+   if (Geometry->Mount[Ant2] > 3){
+-  Elev2 = asin(sin(Geometry->Lat[Ant1])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant1])*Geometry->CosDec[sidx]*cos(H1));};
++//z  Elev2 = asin(sin(Geometry->Lat[Ant1])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant1])*Geometry->CosDec[sidx]*cos(H1));};
++   Elev2 = asin(sin(Geometry->Lat[Ant2])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant2])*Geometry->CosDec[sidx]*cos(H2));};
+  
+ 
+   switch (Geometry->Mount[Ant1]){
+@@ -178,6 +200,8 @@
+ 
+ //  P2 = atan2(sin(H2), CT2 - Geometry->SinDec[sidx]*cos(H2));
+ 
++//z:
++//if(Ant1==1){printf("%i  %i  %.16e  %.3f  %.3f  %.3f  %.3f\n",Ant1, Ant2, MJD, GMST, HAng, P1, P2);};
+ 
+ } else {
+ 
+Index: _PolGainSolve.cpp
+===================================================================
+--- _PolGainSolve.cpp	(revision 9901)
++++ _PolGainSolve.cpp	(working copy)
+@@ -1654,6 +1654,7 @@
+ 
+        if (af1>=0){
+          RateResVec[af1] += Weights[i][BNum]*(BLRates00[i][BNum] + BLRates11[i][BNum])/2.;
++//z      // printf("%i | %i-%i %.2e  %.2e \n",i, CalAnts[a1],CalAnts[a2], BLRates00[i][BNum],BLRates11[i][BNum]);
+          DelResVec00[af1] += Weights[i][BNum]*BLDelays00[i][BNum];
+          DelResVec11[af1] += Weights[i][BNum]*BLDelays11[i][BNum];
+          Hessian[af1*NantFit + af1] += Weights[i][BNum];
+@@ -1701,21 +1702,36 @@
+ 
+ 
+ printf("\n\nHessian Globalization Matrix:\n\n");
+-bool isSingular, tempSing;
++//zz bool isSingular, tempSing;
++bool isSingular;
+ isSingular=false;
+ for (i=0; i<NantFit; i++){
+   printf("  ");
+-  tempSing = true;
++//z  tempSing = true;
++  if (Hessian[i*NantFit+i]==0.0){isSingular=true;};
+   for (j=0; j<NantFit; j++){
+-     if (Hessian[i*NantFit+j]!=0.0){tempSing=false;};
++//z     if (Hessian[i*NantFit+j]!=0.0){tempSing=false;};
+      printf("%+.2e ",Hessian[i*NantFit+j]);
+   };
+-  if (tempSing){isSingular=true;};
++//z  if (tempSing){isSingular=true;};
++//z printf("\n");
++//z };
+ printf("\n");
+ };
++if(isSingular){printf("Possible singular matrix!\n");};
++printf("\n");
++
++printf("\n\n Residual baseline phase quantities:\n\n");
++for (i=0; i<NantFit; i++){
++  printf("  ");
++  printf(" %.2e | %.2e | %.2e\n",DelResVec00[i],DelResVec11[i],RateResVec[i]);
++};
++
++// GBC added these which may now be redundant
+ if (!isSingular) printf("\n(not Singular)\n");
+ else             printf("\n(is  Singular)\n");
+ 
++printf("\n");
+ 
+ // The Hessian's inverse can be reused for rates, delays and phases!
+ gsl_death_by = GSL_SUCCESS;
+@@ -1753,6 +1769,8 @@
+ }
+ 
+ if(!isSingular){
++//z     printf("Globalizing solutions\n");
++        printf("Globalizing solutions: ");
+         printf("doing gsl_linalg_LU_solve 3x...\n");
+ 	gsl_linalg_LU_solve (&mm.matrix, permm, &RateInd.vector, xx);
+ 	gsl_linalg_LU_solve (&mm.matrix, permm, &Del00Ind.vector, dd0);
+@@ -2274,6 +2292,8 @@
+ 
+   for(k=0;k<NBas;k++){Tm[k]=Times[currIF][0];};
+ 
++//z
++// printf("NVis: %i\n",NVis[currIF]); fflush(stdout);
+ 
+   for (k=0; k<NVis[currIF]; k++){
+ 
+@@ -2436,6 +2456,9 @@
+ 
+     if(BNum>=0){
+ 
++//z
++    //  printf("Fitting for %i %i\n",a1,a2); fflush(stdout);
++
+     AvVis[BNum] += 1;
+ 
+     FeedFactor1 = std::polar(1.0, feedAngle[a1-1])*PA1[currIF][k]; 
 Index: task_polconvert.py
 ===================================================================
 --- task_polconvert.py	(revision 9901)
@@ -294,6 +840,15 @@ Index: task_polconvert.py
    if len(Range) == 0:
      Ran = np.array([0.,1.e20])
    else:
+@@ -1910,7 +2006,7 @@
+ 
+ 
+   if DEBUG:
+-    PC_Params = [nALMATrue, doIF, plotAnt, len(allants), doIF,
++    PC_Params = [nALMATrue, plotIF, plotAnt, len(allants), doIF,
+         swapXY, ngain, NSUM, kind, len(gaindata), len(dtdata), OUTPUT,
+         linAntIdxTrue, plRan, Ran, allantidx, len(nphtimes), len(antimes),
+         len(refants), len(asdmtimes),  doTest, doSolve, doConj, doAmpNorm,
 @@ -1935,6 +2031,7 @@
  
    printMsg("\n###\n### Done with PolConvert (status %d).\n###" % (didit))
@@ -350,7 +905,17 @@ Index: task_polconvert.py
        sub1.set_ylabel('Cross-Phase (deg.)')
        sub2.set_ylabel('Cross-Amp (Norm.)')
        sub2.set_xlabel('Frequency (GHz)')
-@@ -3010,6 +3116,9 @@
+@@ -2536,7 +2642,8 @@
+      if os.stat("POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i"%pli).st_size>10:
+        GoodIFs.append(pli)
+      else:
+-       printMsg("WARNING! IF %i was NOT polconverted properly\n"%pli)
++       printMsg(("WARNING! IF %i was NOT polconverted properly\n"%pli) +
++         ("POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i missing"%pli))
+ 
+ # start of GoodIFs pli loop
+    for pli in GoodIFs:
+@@ -3010,6 +3117,9 @@
      printMsg(str(ex))
    ofile.close()
    printMsg('PolConvert.XYGains.dat was written with CGains' + str(CGains.keys()))
@@ -360,7 +925,7 @@ Index: task_polconvert.py
    printMsg('Task PolConvert is Done\n\n')
    return CGains   # RETURN!
  
-@@ -3016,9 +3125,14 @@
+@@ -3016,9 +3126,14 @@
  
  if __name__=='__main__':
  
@@ -396,198 +961,6 @@ Index: DataIOSWIN.cpp
  
    
    
-Index: _PolGainSolve.cpp
-===================================================================
---- _PolGainSolve.cpp	(revision 9901)
-+++ _PolGainSolve.cpp	(working copy)
-@@ -1654,6 +1654,7 @@
- 
-        if (af1>=0){
-          RateResVec[af1] += Weights[i][BNum]*(BLRates00[i][BNum] + BLRates11[i][BNum])/2.;
-+//z      // printf("%i | %i-%i %.2e  %.2e \n",i, CalAnts[a1],CalAnts[a2], BLRates00[i][BNum],BLRates11[i][BNum]);
-          DelResVec00[af1] += Weights[i][BNum]*BLDelays00[i][BNum];
-          DelResVec11[af1] += Weights[i][BNum]*BLDelays11[i][BNum];
-          Hessian[af1*NantFit + af1] += Weights[i][BNum];
-@@ -1701,21 +1702,36 @@
- 
- 
- printf("\n\nHessian Globalization Matrix:\n\n");
--bool isSingular, tempSing;
-+//zz bool isSingular, tempSing;
-+bool isSingular;
- isSingular=false;
- for (i=0; i<NantFit; i++){
-   printf("  ");
--  tempSing = true;
-+//z  tempSing = true;
-+  if (Hessian[i*NantFit+i]==0.0){isSingular=true;};
-   for (j=0; j<NantFit; j++){
--     if (Hessian[i*NantFit+j]!=0.0){tempSing=false;};
-+//z     if (Hessian[i*NantFit+j]!=0.0){tempSing=false;};
-      printf("%+.2e ",Hessian[i*NantFit+j]);
-   };
--  if (tempSing){isSingular=true;};
-+//z  if (tempSing){isSingular=true;};
-+//z printf("\n");
-+//z };
- printf("\n");
- };
-+if(isSingular){printf("Possible singular matrix!\n");};
-+printf("\n");
-+
-+printf("\n\n Residual baseline phase quantities:\n\n");
-+for (i=0; i<NantFit; i++){
-+  printf("  ");
-+  printf(" %.2e | %.2e | %.2e\n",DelResVec00[i],DelResVec11[i],RateResVec[i]);
-+};
-+
-+// GBC added these which may now be redundant
- if (!isSingular) printf("\n(not Singular)\n");
- else             printf("\n(is  Singular)\n");
- 
-+printf("\n");
- 
- // The Hessian's inverse can be reused for rates, delays and phases!
- gsl_death_by = GSL_SUCCESS;
-@@ -1753,6 +1769,8 @@
- }
- 
- if(!isSingular){
-+//z     printf("Globalizing solutions\n");
-+        printf("Globalizing solutions: ");
-         printf("doing gsl_linalg_LU_solve 3x...\n");
- 	gsl_linalg_LU_solve (&mm.matrix, permm, &RateInd.vector, xx);
- 	gsl_linalg_LU_solve (&mm.matrix, permm, &Del00Ind.vector, dd0);
-@@ -2274,6 +2292,8 @@
- 
-   for(k=0;k<NBas;k++){Tm[k]=Times[currIF][0];};
- 
-+//z
-+// printf("NVis: %i\n",NVis[currIF]); fflush(stdout);
- 
-   for (k=0; k<NVis[currIF]; k++){
- 
-@@ -2436,6 +2456,9 @@
- 
-     if(BNum>=0){
- 
-+//z
-+    //  printf("Fitting for %i %i\n",a1,a2); fflush(stdout);
-+
-     AvVis[BNum] += 1;
- 
-     FeedFactor1 = std::polar(1.0, feedAngle[a1-1])*PA1[currIF][k]; 
-Index: DataIO.cpp
-===================================================================
---- DataIO.cpp	(revision 9901)
-+++ DataIO.cpp	(working copy)
-@@ -106,42 +106,63 @@
- 
- 
- 
--void DataIO::getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &P1, double &P2){
-+//z void DataIO::getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &P1, double &P2){
-+void DataIO::getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &MJD, double &P1, double &P2){
- 
--double V2, Bx, By; //, Bz;
--double CH, SH, CT1, CT2, HAng, H1, H2, Elev1, Elev2;
--int ibas;
-+//z double V2, Bx, By; //, Bz;
-+//z double CH, SH, CT1, CT2, HAng, H1, H2, Elev1, Elev2;
-+//zz double V2, Bx, By, GMST; //, Bz;
-+double GMST;
-+//double CDec, SDec, SRA, TLat1,TLat2, Lon1,Lon2,CH, SH;
-+double CT1, CT2, HAng, H1, H2, Elev1, Elev2;
-+//zz int ibas;
- 
- Elev1 = 0.0; Elev2 = 0.0;
- 
-+//z:
-+double days = MJD/86400.;
-+double t = (days-51544.0)/36525.;
-+double Hh = days - floor(days);
-+double GMsec = 24110.54841 + 8640184.812866*t + 0.093104*t*t - 0.0000062*t*t*t;
-+GMST = (GMsec/86400. + Hh)*2.*3.1415926535;
-+//z:
-+//CDec = Geometry->SinDec[sidx];
-+//SDec = Geometry->CosDec[sidx];
-+//TLat1 = tan(Geometry->Lat[Ant1]);
-+//TLat2 = tan(Geometry->Lat[Ant1]);
-+//Lon1 = Geometry->AntLon[Ant1];
-+//Lon2 = Geometry->AntLon[Ant2];
-+//SRA = Geometry->RA[sidx];
- 
- // Dummy value if autocorrelation:
- if (Ant1==Ant2){P1 = -1.e9; P2 = -1.e9; return;};
- 
-+//z more blank lines
- 
- if(sidx<Geometry->NtotSou && Ant1<Geometry->NtotAnt && Ant2<Geometry->NtotAnt){
- 
--  V2 = Geometry->SinDec[sidx]*UVW[1] - Geometry->CosDec[sidx]*UVW[2];
--  ibas = Geometry->BasNum[Ant1][Ant2];
-+//z  V2 = Geometry->SinDec[sidx]*UVW[1] - Geometry->CosDec[sidx]*UVW[2];
-+//zz   ibas = Geometry->BasNum[Ant1][Ant2];
- 
-+//z  if (ibas<0){
-+//z  ibas = -ibas;
-+//z   Bx = -Geometry->BaseLine[0][ibas];
-+//z   By = -Geometry->BaseLine[1][ibas];
-+//z// Bz = -Geometry->BaseLine[2][ibas];
-+//z  } else {
-+//z   Bx = Geometry->BaseLine[0][ibas];
-+//z   By = Geometry->BaseLine[1][ibas];
-+//z// Bz = Geometry->BaseLine[2][ibas];
-+//z  };
-+//z
-+//z  CH = (UVW[0]*By - V2*Bx); // /(By**2. + Bx**2.);
-+//z  SH = (UVW[0]*Bx + V2*By); // /(By**2. + Bx**2.);
- 
--  if (ibas<0){
--  ibas = -ibas;
--   Bx = -Geometry->BaseLine[0][ibas];
--   By = -Geometry->BaseLine[1][ibas];
--//   Bz = -Geometry->BaseLine[2][ibas];
--  } else {
--   Bx = Geometry->BaseLine[0][ibas];
--   By = Geometry->BaseLine[1][ibas];
--//   Bz = Geometry->BaseLine[2][ibas];
--  };
--
--  CH = (UVW[0]*By - V2*Bx); // /(By**2. + Bx**2.);
--  SH = (UVW[0]*Bx + V2*By); // /(By**2. + Bx**2.);
-   CT1 = Geometry->CosDec[sidx]*tan(Geometry->Lat[Ant1]);
-   CT2 = Geometry->CosDec[sidx]*tan(Geometry->Lat[Ant2]);
- 
--  HAng = atan2(SH,CH);
-+//z  HAng = atan2(SH,CH);
-+  HAng = GMST - Geometry->RA[sidx];
-   H1 = HAng + Geometry->AntLon[Ant1];
-   H2 = HAng + Geometry->AntLon[Ant2];
- 
-@@ -148,10 +169,11 @@
-   // sin(lat)*sin(dec)+cos(lat)cos(dec)cos(H)
- 
-   if (Geometry->Mount[Ant1] > 3){
--  Elev1 = asin(sin(Geometry->Lat[Ant1])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant1])*Geometry->CosDec[sidx]*cos(H1));};
-+   Elev1 = asin(sin(Geometry->Lat[Ant1])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant1])*Geometry->CosDec[sidx]*cos(H1));};
- 
-   if (Geometry->Mount[Ant2] > 3){
--  Elev2 = asin(sin(Geometry->Lat[Ant1])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant1])*Geometry->CosDec[sidx]*cos(H1));};
-+//z  Elev2 = asin(sin(Geometry->Lat[Ant1])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant1])*Geometry->CosDec[sidx]*cos(H1));};
-+   Elev2 = asin(sin(Geometry->Lat[Ant2])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant2])*Geometry->CosDec[sidx]*cos(H2));};
-  
- 
-   switch (Geometry->Mount[Ant1]){
-@@ -178,6 +200,8 @@
- 
- //  P2 = atan2(sin(H2), CT2 - Geometry->SinDec[sidx]*cos(H2));
- 
-+//z:
-+//if(Ant1==1){printf("%i  %i  %.16e  %.3f  %.3f  %.3f  %.3f\n",Ant1, Ant2, MJD, GMST, HAng, P1, P2);};
- 
- } else {
- 
 Index: DataIO.h
 ===================================================================
 --- DataIO.h	(revision 9901)
@@ -635,243 +1008,557 @@ Index: DataIOFITS.cpp
  
      } else if(saveSource<0 || souidx == saveSource) {
  
-Index: _PolConvert.cpp
-===================================================================
---- _PolConvert.cpp	(revision 9901)
-+++ _PolConvert.cpp	(working copy)
-@@ -1,5 +1,4 @@
- /*
--
- # Copyright (c) Ivan Marti-Vidal 2015-2020. 
- #               EU ALMA Regional Center. Nordic node.
- #               Observatori Astronomic, Universitat de Valencia
-@@ -316,7 +315,8 @@
-   double *AntCoordArr = (double *)PyArray_DATA(antcoordObj);
-   int *AntMountArr = (int *)PyArray_DATA(antmountObj);
-   double *SouCoordArr = (double *)PyArray_DATA(PyList_GetItem(soucoordObj,1));
--    
-+//z
-+  double *SouCoordRA = (double *)PyArray_DATA(PyList_GetItem(soucoordObj,0));
-   Geometry->NtotSou = (int) PyArray_DIM(PyList_GetItem(soucoordObj,1),0);
-   Geometry->NtotAnt = (int) PyArray_DIM(antcoordObj,0);
- 
-@@ -328,6 +328,8 @@
-   Geometry->BaseLine[2] = new double[Nbas+Geometry->NtotAnt+1];
-   Geometry->SinDec = new double[Geometry->NtotSou];
-   Geometry->CosDec = new double[Geometry->NtotSou];
-+//z:
-+  Geometry->RA = new double[Geometry->NtotSou];
-   Geometry->AntLon = new double[Geometry->NtotAnt];
-   Geometry->Mount = new int[Geometry->NtotAnt];
-   Geometry->Lat = new double[Geometry->NtotAnt];
-@@ -364,8 +366,11 @@
-   };
- 
-   for (i=0; i<Geometry->NtotSou;i++){
--      Geometry->SinDec[i] = sin(SouCoordArr[i+Geometry->NtotSou]);
--      Geometry->CosDec[i] = cos(SouCoordArr[i+Geometry->NtotSou]);
-+//z      Geometry->SinDec[i] = sin(SouCoordArr[i+Geometry->NtotSou]);
-+//z      Geometry->CosDec[i] = cos(SouCoordArr[i+Geometry->NtotSou]);
-+        Geometry->SinDec[i] = sin(SouCoordArr[i]);
-+        Geometry->CosDec[i] = cos(SouCoordArr[i]);
-+        Geometry->RA[i] = SouCoordRA[i];
- //      std::cout<< i << " "<< SouCoordArr[i]*180./3.1415926535 << "\n";
-   };
- 
-@@ -588,8 +593,10 @@
- // Which IFs do we convert?
-   int IFs2Conv[nIFconv];
-   for (ii=0; ii<nIFconv; ii++) {
--      if (doAll){IFs2Conv[ii]=ii+1;} else {
--        IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii));
-+//z      if (doAll){IFs2Conv[ii]=ii+1;} else {
-+//z        IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii));
-+      if (doAll){IFs2Conv[ii]=ii;} else {
-+        IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii)) - 1;
-       };
-   }; 
- 
-@@ -719,12 +726,16 @@
- 
- // Prepare plotting files:
-   int noI = -1;
--  for (ii=0; ii<nIFplot; ii++){
--      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Plot[ii]+1);
-+//z  for (ii=0; ii<nIFplot; ii++){
-+//z      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Plot[ii]+1);
-+  for (ii=0; ii<nIFconv; ii++) {
-+      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Conv[ii]+1);
-       printf("Writing %s\n", message);
-       plotFile[ii] = fopen(message,"wb");
--      if (IFs2Plot[ii]>=0 && IFs2Plot[ii]<nnu){
--         fwrite(&nchans[IFs2Plot[ii]],sizeof(int),1,plotFile[ii]);
-+//z      if (IFs2Plot[ii]>=0 && IFs2Plot[ii]<nnu){
-+//z         fwrite(&nchans[IFs2Plot[ii]],sizeof(int),1,plotFile[ii]);
-+      if (IFs2Conv[ii]>=0 && IFs2Conv[ii]<nnu){
-+         fwrite(&nchans[IFs2Conv[ii]],sizeof(int),1,plotFile[ii]);
-       } else {
-          fwrite(&noI,sizeof(int),1,plotFile[ii]);
-       };
-@@ -758,7 +769,8 @@
- 
-   for (currAntIdx=0; currAntIdx<nALMA; currAntIdx++) {
-       for (im=0; im<nIFconv; im++) {
--        ii = IFs2Conv[im] - 1;
-+//z     ii = IFs2Conv[im] - 1;
-+        ii = IFs2Conv[im];
-         for (ij=0; ij<nchans[ii]; ij++){
-           PrioriGains[currAntIdx][im][ij] *=
-             DifXData->getAmpRatio(currAntIdx, im, ij);
-@@ -780,12 +792,15 @@
- //  for (ii=0; ii<nnu; ii++) open-brace
-   for (im=0; im<nIFconv; im++) {
- 
--    ii = IFs2Conv[im] - 1;
-+//z    ii = IFs2Conv[im] - 1;
-+    ii = IFs2Conv[im];
- 
--    bool plotIF = false;
-+//zz    bool plotIF = false;
-     int IFplot = 0;
-     for (ij=0; ij<nIFplot; ij++){
--      if (IFs2Plot[ij]==ii){plotIF=true;IFplot=ij; break;};
-+      if (IFs2Plot[ij]==ii){
-+//zz    plotIF=true;
-+        IFplot=ij; break;};
-     };
- 
-  //   if (ii >= nnu) {
-@@ -1246,9 +1261,14 @@
- 
- // Shall we write in plot file?  auxB -> auxB2 to avoid confusion
-         //indent level within time range
-+//z note auxB -> auxB2
-+//z     auxB2 = (currT>=plRange[0] && currT<=plRange[1] &&
-+//z             plotIF && (calField<0 || currF==calField));
-+                //plAnt == otherAnt);
-         auxB2 = (currT>=plRange[0] && currT<=plRange[1] &&
--                plotIF && (calField<0 || currF==calField));
-+                (calField<0 || currF==calField));
-                 //plAnt == otherAnt);
-+//z QUESTION: so why does plotIF disappear here?
- 
-         //indent level within time range
- // Convert:
-Index: _getAntInfo.cpp
-===================================================================
---- _getAntInfo.cpp	(revision 9901)
-+++ _getAntInfo.cpp	(working copy)
-@@ -72,17 +72,25 @@
-     "Returns antenna coordinates";
- static char getMounts_docstring[] =
-     "Returns the mount types";
-+//z
-+//static char getNames_docstring[] = 
-+//    "Returns the antenna names (codes)";
- 
- /* Available functions */
- static PyObject *getAntInfo(PyObject *self, PyObject *args);
- static PyObject *getCoords(PyObject *self, PyObject *args);
- static PyObject *getMounts(PyObject *self, PyObject *args);
-+//z
-+//static PyObject *getNames(PyObject *self, PyObject *args);
- 
-+
- /* Module specification */
- static PyMethodDef module_methods[] = {
-     {"getAntInfo", getAntInfo, METH_VARARGS, getAntInfo_docstring},
-     {"getCoords", getCoords, METH_VARARGS, getCoords_docstring},
--    {"getMounts", getMounts, METH_VARARGS, getMounts_docstring},
-+//z {"getMounts", getMounts, METH_VARARGS, getMounts_docstring},
-+    {"getMounts", getMounts, METH_VARARGS, getMounts_docstring}, //,
-+//  {"getNames", getNames, METH_VARARGS, getNames_docstring},
-     {NULL, NULL, 0, NULL}   /* terminated by list of NULLs, apparently */
- };
- 
-@@ -216,7 +224,8 @@
-   fits_close_file(ifile, &status);
- 
-   if(status){
--    printf("\n\nPROBLEM LOSING FITS-IDI!  ERR: %i\n\n",status);
-+//z printf("\n\nPROBLEM LOSING FITS-IDI!  ERR: %i\n\n",status);
-+    printf("\n\nPROBLEM CLOSING FITS-IDI!  ERR: %i\n\n",status);
-     return Py_BuildValue("i",3);
-   };
- 
-@@ -226,33 +235,60 @@
- };
- 
- 
-+
-+
-+
-+
-+
- static PyObject *getCoords(PyObject *self, PyObject *args){
- 
- // Build numpy array:
- 
- PyObject *CoordArr;
--long CD[2] = {Nants,3};
-+//z long CD[2] = {Nants,3};
-+//z
-+//z GBC had already removed Py_INCREF.
-+//z Py_INCREF(CoordArr); -- original code
-+//z CoordArr = PyArray_SimpleNewFromData(2, &CD[0], NPY_DOUBLE, (void*) Coords);
-+//z Py_INCREF(CoordArr); -- needed only if we retain it and use it
-+int nd = 2;
-+npy_intp* CD = new npy_intp[nd];
- 
--//Py_INCREF(CoordArr); -- original code
--CoordArr = PyArray_SimpleNewFromData(2, &CD[0], NPY_DOUBLE, (void*) Coords);
--//Py_INCREF(CoordArr); -- needed only if we retain it and use it
-+CD[0] = Nants; CD[1] = 3; // = {Nants,3};
- 
-+//Py_INCREF(CoordArr);
-+CoordArr = PyArray_SimpleNewFromData(nd, CD, NPY_DOUBLE, (void*) Coords);
-+
- return CoordArr;
- 
- };
- 
- 
-+
-+
-+
-+
-+
- static PyObject *getMounts(PyObject *self, PyObject *args){
- 
-+
- // Build numpy array:
- PyObject *MountArr;
- 
--long MD[1] = {Nants};
-+//z long MD[1] = {Nants};
-+int nd = 1;
-+npy_intp* MD = new npy_intp[nd];
-+MD[0] = Nants;
- 
--//Py_INCREF(MountArr); -- original code
--MountArr = PyArray_SimpleNewFromData(1, &MD[0], NPY_INT, (void*) Mounts);
--//Py_INCREF(MountArr); -- needed only if we retain it and use it
-+//z GBC had already removed Py_INCREF
-+//z Py_INCREF(MountArr); -- original code
-+//z MountArr = PyArray_SimpleNewFromData(1, &MD[0], NPY_INT, (void*) Mounts);
-+//z Py_INCREF(MountArr); -- needed only if we retain it and use it
- 
-+//z
-+//Py_INCREF(MountArr);
-+MountArr = PyArray_SimpleNewFromData(nd, MD, NPY_INT, (void*) Mounts);
-+
- return MountArr;
- 
- };
 Index: svn_94.diff
 ===================================================================
 --- svn_94.diff	(nonexistent)
 +++ svn_94.diff	(working copy)
-@@ -0,0 +1,869 @@
+@@ -0,0 +1,1010 @@
++Index: _PolConvert.cpp
++===================================================================
++--- _PolConvert.cpp	(revision 9901)
+++++ _PolConvert.cpp	(working copy)
++@@ -1,5 +1,4 @@
++ /*
++-
++ # Copyright (c) Ivan Marti-Vidal 2015-2020. 
++ #               EU ALMA Regional Center. Nordic node.
++ #               Observatori Astronomic, Universitat de Valencia
++@@ -52,7 +51,12 @@
++ 
++ */
++  
+++//z old code 1, new code 0
+++#define IVAN_OLD    1
++ 
+++//z straight up merge
+++#define IVAN_MERGE  0
+++
++ #include <Python.h>
++ 
++ // compiler warning that we use a deprecated NumPy API
++@@ -316,7 +320,8 @@
++   double *AntCoordArr = (double *)PyArray_DATA(antcoordObj);
++   int *AntMountArr = (int *)PyArray_DATA(antmountObj);
++   double *SouCoordArr = (double *)PyArray_DATA(PyList_GetItem(soucoordObj,1));
++-    
+++//z
+++  double *SouCoordRA = (double *)PyArray_DATA(PyList_GetItem(soucoordObj,0));
++   Geometry->NtotSou = (int) PyArray_DIM(PyList_GetItem(soucoordObj,1),0);
++   Geometry->NtotAnt = (int) PyArray_DIM(antcoordObj,0);
++ 
++@@ -328,6 +333,8 @@
++   Geometry->BaseLine[2] = new double[Nbas+Geometry->NtotAnt+1];
++   Geometry->SinDec = new double[Geometry->NtotSou];
++   Geometry->CosDec = new double[Geometry->NtotSou];
+++//z:
+++  Geometry->RA = new double[Geometry->NtotSou];
++   Geometry->AntLon = new double[Geometry->NtotAnt];
++   Geometry->Mount = new int[Geometry->NtotAnt];
++   Geometry->Lat = new double[Geometry->NtotAnt];
++@@ -364,8 +371,11 @@
++   };
++ 
++   for (i=0; i<Geometry->NtotSou;i++){
++-      Geometry->SinDec[i] = sin(SouCoordArr[i+Geometry->NtotSou]);
++-      Geometry->CosDec[i] = cos(SouCoordArr[i+Geometry->NtotSou]);
+++//z      Geometry->SinDec[i] = sin(SouCoordArr[i+Geometry->NtotSou]);
+++//z      Geometry->CosDec[i] = cos(SouCoordArr[i+Geometry->NtotSou]);
+++        Geometry->SinDec[i] = sin(SouCoordArr[i]);
+++        Geometry->CosDec[i] = cos(SouCoordArr[i]);
+++        Geometry->RA[i] = SouCoordRA[i];
++ //      std::cout<< i << " "<< SouCoordArr[i]*180./3.1415926535 << "\n";
++   };
++ 
++@@ -587,13 +597,32 @@
++ 
++ // Which IFs do we convert?
++   int IFs2Conv[nIFconv];
+++//z
+++#if IVAN_OLD
+++#warning "IVAN_OLD CODE selected A"
++   for (ii=0; ii<nIFconv; ii++) {
++-      if (doAll){IFs2Conv[ii]=ii+1;} else {
++-        IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii));
+++    if (doAll){IFs2Conv[ii]=ii+1;} else {
+++      IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii)); };
+++  }
+++#else // IVAN_OLD
+++#warning "IVAN_NEW CODE selected A"
+++  // looks like a shift by 1 here
+++  for (ii=0; ii<nIFconv; ii++) {
+++    if (doAll){IFs2Conv[ii]=ii;} else {
+++      IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii)) - 1; };
+++  }
+++#endif // IVAN_OLD
+++#if IVAN_MERGE
+++#warning "IVAN_MERGED CODE selected A"
+++  for (ii=0; ii<nIFconv; ii++) {
+++//z      if (doAll){IFs2Conv[ii]=ii+1;} else {
+++//z        IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii));
+++      if (doAll){IFs2Conv[ii]=ii;} else {
+++        IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii)) - 1;
++       };
++   }; 
+++#endif // IVAN_MERGE
++ 
++-
++   int nnu = DifXData->getNfreqs();
++   int ALMARefAnt = -1;
++   // If no calAPP is used, do not look for any extra X-Y phase offset.
++@@ -719,6 +748,9 @@
++ 
++ // Prepare plotting files:
++   int noI = -1;
+++//z
+++#if IVAN_OLD
+++#warning "IVAN_OLD CODE selected B"
++   for (ii=0; ii<nIFplot; ii++){
++       sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Plot[ii]+1);
++       printf("Writing %s\n", message);
++@@ -729,6 +761,36 @@
++          fwrite(&noI,sizeof(int),1,plotFile[ii]);
++       };
++   };
+++#else // IVAN_OLD
+++#warning "IVAN_NEW CODE selected B"
+++  for (ii=0; ii<nIFconv; ii++) {
+++      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Conv[ii]+1);
+++      printf("Writing %s\n", message);
+++      plotFile[ii] = fopen(message,"wb");
+++      if (IFs2Conv[ii]>=0 && IFs2Conv[ii]<nnu){
+++         fwrite(&nchans[IFs2Conv[ii]],sizeof(int),1,plotFile[ii]);
+++      } else {
+++         fwrite(&noI,sizeof(int),1,plotFile[ii]);
+++      };
+++  };
+++#endif // IVAN_OLD
+++#if IVAN_MERGE
+++#warning "IVAN_MERGED CODE selected B"
+++//z  for (ii=0; ii<nIFplot; ii++){
+++//z      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Plot[ii]+1);
+++  for (ii=0; ii<nIFconv; ii++) {
+++      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Conv[ii]+1);
+++      printf("Writing %s\n", message);
+++      plotFile[ii] = fopen(message,"wb");
+++//z      if (IFs2Plot[ii]>=0 && IFs2Plot[ii]<nnu){
+++//z         fwrite(&nchans[IFs2Plot[ii]],sizeof(int),1,plotFile[ii]);
+++      if (IFs2Conv[ii]>=0 && IFs2Conv[ii]<nnu){
+++         fwrite(&nchans[IFs2Conv[ii]],sizeof(int),1,plotFile[ii]);
+++      } else {
+++         fwrite(&noI,sizeof(int),1,plotFile[ii]);
+++      };
+++  };
+++#endif // IVAN_MERGE
++  
++ 
++   if(doNorm){
++@@ -758,7 +820,20 @@
++ 
++   for (currAntIdx=0; currAntIdx<nALMA; currAntIdx++) {
++       for (im=0; im<nIFconv; im++) {
+++//z
+++#if IVAN_OLD
+++#warning "IVAN_OLD CODE selected C"
++         ii = IFs2Conv[im] - 1;
+++#else // IVAN_OLD
+++#warning "IVAN_NEW CODE selected C"
+++        ii = IFs2Conv[im];
+++#endif // IVAN_OLD
+++#if IVAN_MERGE
+++#warning "IVAN_MERGED CODE selected C"
+++//z     ii = IFs2Conv[im] - 1;
+++        ii = IFs2Conv[im];
+++#endif // IVAN_MERGE
+++//z
++         for (ij=0; ij<nchans[ii]; ij++){
++           PrioriGains[currAntIdx][im][ij] *=
++             DifXData->getAmpRatio(currAntIdx, im, ij);
++@@ -780,13 +855,49 @@
++ //  for (ii=0; ii<nnu; ii++) open-brace
++   for (im=0; im<nIFconv; im++) {
++ 
+++//z
+++#if IVAN_OLD
+++#warning "IVAN_OLD CODE selected D"
++     ii = IFs2Conv[im] - 1;
+++#else // IVAN_OLD
+++#warning "IVAN_NEW CODE selected D"
+++    ii = IFs2Conv[im];
+++#endif // IVAN_OLD
+++#if IVAN_MERGE
+++#warning "IVAN_MERGED CODE selected D"
+++//z ii = IFs2Conv[im] - 1;
+++    ii = IFs2Conv[im];
+++#endif // IVAN_MERGE
+++//z
++ 
+++//z
+++#if IVAN_OLD
+++#warning "IVAN_OLD CODE selected E"
++     bool plotIF = false;
++     int IFplot = 0;
++     for (ij=0; ij<nIFplot; ij++){
++-      if (IFs2Plot[ij]==ii){plotIF=true;IFplot=ij; break;};
+++      if (IFs2Plot[ij]==ii){
+++        plotIF=true;
+++        IFplot=ij; break;};
++     };
+++#else // IVAN_OLD
+++#warning "IVAN_NEW CODE selected E"
+++    int IFplot = 0;
+++    for (ij=0; ij<nIFplot; ij++){
+++      if (IFs2Plot[ij]==ii){
+++        IFplot=ij; break;};
+++#endif // IVAN_OLD
+++#if IVAN_MERGE
+++#warning "IVAN_MERGED CODE selected E"
+++//zz    bool plotIF = false;
+++    int IFplot = 0;
+++    for (ij=0; ij<nIFplot; ij++){
+++      if (IFs2Plot[ij]==ii){
+++//zz    plotIF=true;
+++        IFplot=ij; break;};
+++    };
+++#endif // IVAN_MERGE
+++//zz
++ 
++  //   if (ii >= nnu) {
++  //     sprintf(message,"ERROR! DATA DO NOT HAVE IF #%i !!\n",ii);  
++@@ -1246,10 +1357,32 @@
++ 
++ // Shall we write in plot file?  auxB -> auxB2 to avoid confusion
++         //indent level within time range
+++
+++//z
+++//z QUESTION: so why does plotIF disappear here?
+++//z note auxB -> auxB2
+++#if IVAN_OLD
+++#warning "IVAN_OLD CODE selected F"
++         auxB2 = (currT>=plRange[0] && currT<=plRange[1] &&
++                 plotIF && (calField<0 || currF==calField));
++                 //plAnt == otherAnt);
+++#else // IVAN_OLD
+++#warning "IVAN_NEW CODE selected F"
+++        auxB2 = (currT>=plRange[0] && currT<=plRange[1] &&
+++                (calField<0 || currF==calField));
+++                //plAnt == otherAnt);
+++#endif // IVAN_OLD
+++#if IVAN_MERGE
+++#warning "IVAN_MERGED CODE selected F"
+++//z     auxB2 = (currT>=plRange[0] && currT<=plRange[1] &&
+++//z             plotIF && (calField<0 || currF==calField));
+++                //plAnt == otherAnt);
+++        auxB2 = (currT>=plRange[0] && currT<=plRange[1] &&
+++                (calField<0 || currF==calField));
+++                //plAnt == otherAnt);
+++#endif // IVAN_MERGE
++ 
+++
++         //indent level within time range
++ // Convert:
++         if(Phased){
++Index: _getAntInfo.cpp
++===================================================================
++--- _getAntInfo.cpp	(revision 9901)
+++++ _getAntInfo.cpp	(working copy)
++@@ -72,17 +72,25 @@
++     "Returns antenna coordinates";
++ static char getMounts_docstring[] =
++     "Returns the mount types";
+++//z
+++//static char getNames_docstring[] = 
+++//    "Returns the antenna names (codes)";
++ 
++ /* Available functions */
++ static PyObject *getAntInfo(PyObject *self, PyObject *args);
++ static PyObject *getCoords(PyObject *self, PyObject *args);
++ static PyObject *getMounts(PyObject *self, PyObject *args);
+++//z
+++//static PyObject *getNames(PyObject *self, PyObject *args);
++ 
+++
++ /* Module specification */
++ static PyMethodDef module_methods[] = {
++     {"getAntInfo", getAntInfo, METH_VARARGS, getAntInfo_docstring},
++     {"getCoords", getCoords, METH_VARARGS, getCoords_docstring},
++-    {"getMounts", getMounts, METH_VARARGS, getMounts_docstring},
+++//z {"getMounts", getMounts, METH_VARARGS, getMounts_docstring},
+++    {"getMounts", getMounts, METH_VARARGS, getMounts_docstring}, //,
+++//  {"getNames", getNames, METH_VARARGS, getNames_docstring},
++     {NULL, NULL, 0, NULL}   /* terminated by list of NULLs, apparently */
++ };
++ 
++@@ -216,7 +224,8 @@
++   fits_close_file(ifile, &status);
++ 
++   if(status){
++-    printf("\n\nPROBLEM LOSING FITS-IDI!  ERR: %i\n\n",status);
+++//z printf("\n\nPROBLEM LOSING FITS-IDI!  ERR: %i\n\n",status);
+++    printf("\n\nPROBLEM CLOSING FITS-IDI!  ERR: %i\n\n",status);
++     return Py_BuildValue("i",3);
++   };
++ 
++@@ -226,33 +235,60 @@
++ };
++ 
++ 
+++
+++
+++
+++
+++
++ static PyObject *getCoords(PyObject *self, PyObject *args){
++ 
++ // Build numpy array:
++ 
++ PyObject *CoordArr;
++-long CD[2] = {Nants,3};
+++//z long CD[2] = {Nants,3};
+++//z
+++//z GBC had already removed Py_INCREF.
+++//z Py_INCREF(CoordArr); -- original code
+++//z CoordArr = PyArray_SimpleNewFromData(2, &CD[0], NPY_DOUBLE, (void*) Coords);
+++//z Py_INCREF(CoordArr); -- needed only if we retain it and use it
+++int nd = 2;
+++npy_intp* CD = new npy_intp[nd];
++ 
++-//Py_INCREF(CoordArr); -- original code
++-CoordArr = PyArray_SimpleNewFromData(2, &CD[0], NPY_DOUBLE, (void*) Coords);
++-//Py_INCREF(CoordArr); -- needed only if we retain it and use it
+++CD[0] = Nants; CD[1] = 3; // = {Nants,3};
++ 
+++//Py_INCREF(CoordArr);
+++CoordArr = PyArray_SimpleNewFromData(nd, CD, NPY_DOUBLE, (void*) Coords);
+++
++ return CoordArr;
++ 
++ };
++ 
++ 
+++
+++
+++
+++
+++
++ static PyObject *getMounts(PyObject *self, PyObject *args){
++ 
+++
++ // Build numpy array:
++ PyObject *MountArr;
++ 
++-long MD[1] = {Nants};
+++//z long MD[1] = {Nants};
+++int nd = 1;
+++npy_intp* MD = new npy_intp[nd];
+++MD[0] = Nants;
++ 
++-//Py_INCREF(MountArr); -- original code
++-MountArr = PyArray_SimpleNewFromData(1, &MD[0], NPY_INT, (void*) Mounts);
++-//Py_INCREF(MountArr); -- needed only if we retain it and use it
+++//z GBC had already removed Py_INCREF
+++//z Py_INCREF(MountArr); -- original code
+++//z MountArr = PyArray_SimpleNewFromData(1, &MD[0], NPY_INT, (void*) Mounts);
+++//z Py_INCREF(MountArr); -- needed only if we retain it and use it
++ 
+++//z
+++//Py_INCREF(MountArr);
+++MountArr = PyArray_SimpleNewFromData(nd, MD, NPY_INT, (void*) Mounts);
+++
++ return MountArr;
++ 
++ };
++Index: DataIO.cpp
++===================================================================
++--- DataIO.cpp	(revision 9901)
+++++ DataIO.cpp	(working copy)
++@@ -106,42 +106,63 @@
++ 
++ 
++ 
++-void DataIO::getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &P1, double &P2){
+++//z void DataIO::getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &P1, double &P2){
+++void DataIO::getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &MJD, double &P1, double &P2){
++ 
++-double V2, Bx, By; //, Bz;
++-double CH, SH, CT1, CT2, HAng, H1, H2, Elev1, Elev2;
++-int ibas;
+++//z double V2, Bx, By; //, Bz;
+++//z double CH, SH, CT1, CT2, HAng, H1, H2, Elev1, Elev2;
+++//zz double V2, Bx, By, GMST; //, Bz;
+++double GMST;
+++//double CDec, SDec, SRA, TLat1,TLat2, Lon1,Lon2,CH, SH;
+++double CT1, CT2, HAng, H1, H2, Elev1, Elev2;
+++//zz int ibas;
++ 
++ Elev1 = 0.0; Elev2 = 0.0;
++ 
+++//z:
+++double days = MJD/86400.;
+++double t = (days-51544.0)/36525.;
+++double Hh = days - floor(days);
+++double GMsec = 24110.54841 + 8640184.812866*t + 0.093104*t*t - 0.0000062*t*t*t;
+++GMST = (GMsec/86400. + Hh)*2.*3.1415926535;
+++//z:
+++//CDec = Geometry->SinDec[sidx];
+++//SDec = Geometry->CosDec[sidx];
+++//TLat1 = tan(Geometry->Lat[Ant1]);
+++//TLat2 = tan(Geometry->Lat[Ant1]);
+++//Lon1 = Geometry->AntLon[Ant1];
+++//Lon2 = Geometry->AntLon[Ant2];
+++//SRA = Geometry->RA[sidx];
++ 
++ // Dummy value if autocorrelation:
++ if (Ant1==Ant2){P1 = -1.e9; P2 = -1.e9; return;};
++ 
+++//z more blank lines
++ 
++ if(sidx<Geometry->NtotSou && Ant1<Geometry->NtotAnt && Ant2<Geometry->NtotAnt){
++ 
++-  V2 = Geometry->SinDec[sidx]*UVW[1] - Geometry->CosDec[sidx]*UVW[2];
++-  ibas = Geometry->BasNum[Ant1][Ant2];
+++//z  V2 = Geometry->SinDec[sidx]*UVW[1] - Geometry->CosDec[sidx]*UVW[2];
+++//zz   ibas = Geometry->BasNum[Ant1][Ant2];
++ 
+++//z  if (ibas<0){
+++//z  ibas = -ibas;
+++//z   Bx = -Geometry->BaseLine[0][ibas];
+++//z   By = -Geometry->BaseLine[1][ibas];
+++//z// Bz = -Geometry->BaseLine[2][ibas];
+++//z  } else {
+++//z   Bx = Geometry->BaseLine[0][ibas];
+++//z   By = Geometry->BaseLine[1][ibas];
+++//z// Bz = Geometry->BaseLine[2][ibas];
+++//z  };
+++//z
+++//z  CH = (UVW[0]*By - V2*Bx); // /(By**2. + Bx**2.);
+++//z  SH = (UVW[0]*Bx + V2*By); // /(By**2. + Bx**2.);
++ 
++-  if (ibas<0){
++-  ibas = -ibas;
++-   Bx = -Geometry->BaseLine[0][ibas];
++-   By = -Geometry->BaseLine[1][ibas];
++-//   Bz = -Geometry->BaseLine[2][ibas];
++-  } else {
++-   Bx = Geometry->BaseLine[0][ibas];
++-   By = Geometry->BaseLine[1][ibas];
++-//   Bz = Geometry->BaseLine[2][ibas];
++-  };
++-
++-  CH = (UVW[0]*By - V2*Bx); // /(By**2. + Bx**2.);
++-  SH = (UVW[0]*Bx + V2*By); // /(By**2. + Bx**2.);
++   CT1 = Geometry->CosDec[sidx]*tan(Geometry->Lat[Ant1]);
++   CT2 = Geometry->CosDec[sidx]*tan(Geometry->Lat[Ant2]);
++ 
++-  HAng = atan2(SH,CH);
+++//z  HAng = atan2(SH,CH);
+++  HAng = GMST - Geometry->RA[sidx];
++   H1 = HAng + Geometry->AntLon[Ant1];
++   H2 = HAng + Geometry->AntLon[Ant2];
++ 
++@@ -148,10 +169,11 @@
++   // sin(lat)*sin(dec)+cos(lat)cos(dec)cos(H)
++ 
++   if (Geometry->Mount[Ant1] > 3){
++-  Elev1 = asin(sin(Geometry->Lat[Ant1])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant1])*Geometry->CosDec[sidx]*cos(H1));};
+++   Elev1 = asin(sin(Geometry->Lat[Ant1])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant1])*Geometry->CosDec[sidx]*cos(H1));};
++ 
++   if (Geometry->Mount[Ant2] > 3){
++-  Elev2 = asin(sin(Geometry->Lat[Ant1])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant1])*Geometry->CosDec[sidx]*cos(H1));};
+++//z  Elev2 = asin(sin(Geometry->Lat[Ant1])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant1])*Geometry->CosDec[sidx]*cos(H1));};
+++   Elev2 = asin(sin(Geometry->Lat[Ant2])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant2])*Geometry->CosDec[sidx]*cos(H2));};
++  
++ 
++   switch (Geometry->Mount[Ant1]){
++@@ -178,6 +200,8 @@
++ 
++ //  P2 = atan2(sin(H2), CT2 - Geometry->SinDec[sidx]*cos(H2));
++ 
+++//z:
+++//if(Ant1==1){printf("%i  %i  %.16e  %.3f  %.3f  %.3f  %.3f\n",Ant1, Ant2, MJD, GMST, HAng, P1, P2);};
++ 
++ } else {
++ 
++Index: _PolGainSolve.cpp
++===================================================================
++--- _PolGainSolve.cpp	(revision 9901)
+++++ _PolGainSolve.cpp	(working copy)
++@@ -1654,6 +1654,7 @@
++ 
++        if (af1>=0){
++          RateResVec[af1] += Weights[i][BNum]*(BLRates00[i][BNum] + BLRates11[i][BNum])/2.;
+++//z      // printf("%i | %i-%i %.2e  %.2e \n",i, CalAnts[a1],CalAnts[a2], BLRates00[i][BNum],BLRates11[i][BNum]);
++          DelResVec00[af1] += Weights[i][BNum]*BLDelays00[i][BNum];
++          DelResVec11[af1] += Weights[i][BNum]*BLDelays11[i][BNum];
++          Hessian[af1*NantFit + af1] += Weights[i][BNum];
++@@ -1701,21 +1702,36 @@
++ 
++ 
++ printf("\n\nHessian Globalization Matrix:\n\n");
++-bool isSingular, tempSing;
+++//zz bool isSingular, tempSing;
+++bool isSingular;
++ isSingular=false;
++ for (i=0; i<NantFit; i++){
++   printf("  ");
++-  tempSing = true;
+++//z  tempSing = true;
+++  if (Hessian[i*NantFit+i]==0.0){isSingular=true;};
++   for (j=0; j<NantFit; j++){
++-     if (Hessian[i*NantFit+j]!=0.0){tempSing=false;};
+++//z     if (Hessian[i*NantFit+j]!=0.0){tempSing=false;};
++      printf("%+.2e ",Hessian[i*NantFit+j]);
++   };
++-  if (tempSing){isSingular=true;};
+++//z  if (tempSing){isSingular=true;};
+++//z printf("\n");
+++//z };
++ printf("\n");
++ };
+++if(isSingular){printf("Possible singular matrix!\n");};
+++printf("\n");
+++
+++printf("\n\n Residual baseline phase quantities:\n\n");
+++for (i=0; i<NantFit; i++){
+++  printf("  ");
+++  printf(" %.2e | %.2e | %.2e\n",DelResVec00[i],DelResVec11[i],RateResVec[i]);
+++};
+++
+++// GBC added these which may now be redundant
++ if (!isSingular) printf("\n(not Singular)\n");
++ else             printf("\n(is  Singular)\n");
++ 
+++printf("\n");
++ 
++ // The Hessian's inverse can be reused for rates, delays and phases!
++ gsl_death_by = GSL_SUCCESS;
++@@ -1753,6 +1769,8 @@
++ }
++ 
++ if(!isSingular){
+++//z     printf("Globalizing solutions\n");
+++        printf("Globalizing solutions: ");
++         printf("doing gsl_linalg_LU_solve 3x...\n");
++ 	gsl_linalg_LU_solve (&mm.matrix, permm, &RateInd.vector, xx);
++ 	gsl_linalg_LU_solve (&mm.matrix, permm, &Del00Ind.vector, dd0);
++@@ -2274,6 +2292,8 @@
++ 
++   for(k=0;k<NBas;k++){Tm[k]=Times[currIF][0];};
++ 
+++//z
+++// printf("NVis: %i\n",NVis[currIF]); fflush(stdout);
++ 
++   for (k=0; k<NVis[currIF]; k++){
++ 
++@@ -2436,6 +2456,9 @@
++ 
++     if(BNum>=0){
++ 
+++//z
+++    //  printf("Fitting for %i %i\n",a1,a2); fflush(stdout);
+++
++     AvVis[BNum] += 1;
++ 
++     FeedFactor1 = std::polar(1.0, feedAngle[a1-1])*PA1[currIF][k]; 
 +Index: task_polconvert.py
 +===================================================================
 +--- task_polconvert.py	(revision 9901)
@@ -1168,6 +1855,15 @@ Index: svn_94.diff
 +   if len(Range) == 0:
 +     Ran = np.array([0.,1.e20])
 +   else:
++@@ -1910,7 +2006,7 @@
++ 
++ 
++   if DEBUG:
++-    PC_Params = [nALMATrue, doIF, plotAnt, len(allants), doIF,
+++    PC_Params = [nALMATrue, plotIF, plotAnt, len(allants), doIF,
++         swapXY, ngain, NSUM, kind, len(gaindata), len(dtdata), OUTPUT,
++         linAntIdxTrue, plRan, Ran, allantidx, len(nphtimes), len(antimes),
++         len(refants), len(asdmtimes),  doTest, doSolve, doConj, doAmpNorm,
 +@@ -1935,6 +2031,7 @@
 + 
 +   printMsg("\n###\n### Done with PolConvert (status %d).\n###" % (didit))
@@ -1224,7 +1920,17 @@ Index: svn_94.diff
 +       sub1.set_ylabel('Cross-Phase (deg.)')
 +       sub2.set_ylabel('Cross-Amp (Norm.)')
 +       sub2.set_xlabel('Frequency (GHz)')
-+@@ -3010,6 +3116,9 @@
++@@ -2536,7 +2642,8 @@
++      if os.stat("POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i"%pli).st_size>10:
++        GoodIFs.append(pli)
++      else:
++-       printMsg("WARNING! IF %i was NOT polconverted properly\n"%pli)
+++       printMsg(("WARNING! IF %i was NOT polconverted properly\n"%pli) +
+++         ("POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i missing"%pli))
++ 
++ # start of GoodIFs pli loop
++    for pli in GoodIFs:
++@@ -3010,6 +3117,9 @@
 +     printMsg(str(ex))
 +   ofile.close()
 +   printMsg('PolConvert.XYGains.dat was written with CGains' + str(CGains.keys()))
@@ -1234,7 +1940,7 @@ Index: svn_94.diff
 +   printMsg('Task PolConvert is Done\n\n')
 +   return CGains   # RETURN!
 + 
-+@@ -3016,9 +3125,14 @@
++@@ -3016,9 +3126,14 @@
 + 
 + if __name__=='__main__':
 + 
@@ -1270,198 +1976,6 @@ Index: svn_94.diff
 + 
 +   
 +   
-+Index: _PolGainSolve.cpp
-+===================================================================
-+--- _PolGainSolve.cpp	(revision 9901)
-++++ _PolGainSolve.cpp	(working copy)
-+@@ -1654,6 +1654,7 @@
-+ 
-+        if (af1>=0){
-+          RateResVec[af1] += Weights[i][BNum]*(BLRates00[i][BNum] + BLRates11[i][BNum])/2.;
-++//z      // printf("%i | %i-%i %.2e  %.2e \n",i, CalAnts[a1],CalAnts[a2], BLRates00[i][BNum],BLRates11[i][BNum]);
-+          DelResVec00[af1] += Weights[i][BNum]*BLDelays00[i][BNum];
-+          DelResVec11[af1] += Weights[i][BNum]*BLDelays11[i][BNum];
-+          Hessian[af1*NantFit + af1] += Weights[i][BNum];
-+@@ -1701,21 +1702,36 @@
-+ 
-+ 
-+ printf("\n\nHessian Globalization Matrix:\n\n");
-+-bool isSingular, tempSing;
-++//zz bool isSingular, tempSing;
-++bool isSingular;
-+ isSingular=false;
-+ for (i=0; i<NantFit; i++){
-+   printf("  ");
-+-  tempSing = true;
-++//z  tempSing = true;
-++  if (Hessian[i*NantFit+i]==0.0){isSingular=true;};
-+   for (j=0; j<NantFit; j++){
-+-     if (Hessian[i*NantFit+j]!=0.0){tempSing=false;};
-++//z     if (Hessian[i*NantFit+j]!=0.0){tempSing=false;};
-+      printf("%+.2e ",Hessian[i*NantFit+j]);
-+   };
-+-  if (tempSing){isSingular=true;};
-++//z  if (tempSing){isSingular=true;};
-++//z printf("\n");
-++//z };
-+ printf("\n");
-+ };
-++if(isSingular){printf("Possible singular matrix!\n");};
-++printf("\n");
-++
-++printf("\n\n Residual baseline phase quantities:\n\n");
-++for (i=0; i<NantFit; i++){
-++  printf("  ");
-++  printf(" %.2e | %.2e | %.2e\n",DelResVec00[i],DelResVec11[i],RateResVec[i]);
-++};
-++
-++// GBC added these which may now be redundant
-+ if (!isSingular) printf("\n(not Singular)\n");
-+ else             printf("\n(is  Singular)\n");
-+ 
-++printf("\n");
-+ 
-+ // The Hessian's inverse can be reused for rates, delays and phases!
-+ gsl_death_by = GSL_SUCCESS;
-+@@ -1753,6 +1769,8 @@
-+ }
-+ 
-+ if(!isSingular){
-++//z     printf("Globalizing solutions\n");
-++        printf("Globalizing solutions: ");
-+         printf("doing gsl_linalg_LU_solve 3x...\n");
-+ 	gsl_linalg_LU_solve (&mm.matrix, permm, &RateInd.vector, xx);
-+ 	gsl_linalg_LU_solve (&mm.matrix, permm, &Del00Ind.vector, dd0);
-+@@ -2274,6 +2292,8 @@
-+ 
-+   for(k=0;k<NBas;k++){Tm[k]=Times[currIF][0];};
-+ 
-++//z
-++// printf("NVis: %i\n",NVis[currIF]); fflush(stdout);
-+ 
-+   for (k=0; k<NVis[currIF]; k++){
-+ 
-+@@ -2436,6 +2456,9 @@
-+ 
-+     if(BNum>=0){
-+ 
-++//z
-++    //  printf("Fitting for %i %i\n",a1,a2); fflush(stdout);
-++
-+     AvVis[BNum] += 1;
-+ 
-+     FeedFactor1 = std::polar(1.0, feedAngle[a1-1])*PA1[currIF][k]; 
-+Index: DataIO.cpp
-+===================================================================
-+--- DataIO.cpp	(revision 9901)
-++++ DataIO.cpp	(working copy)
-+@@ -106,42 +106,63 @@
-+ 
-+ 
-+ 
-+-void DataIO::getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &P1, double &P2){
-++//z void DataIO::getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &P1, double &P2){
-++void DataIO::getParAng(int sidx, int Ant1, int Ant2, double*UVW, double &MJD, double &P1, double &P2){
-+ 
-+-double V2, Bx, By; //, Bz;
-+-double CH, SH, CT1, CT2, HAng, H1, H2, Elev1, Elev2;
-+-int ibas;
-++//z double V2, Bx, By; //, Bz;
-++//z double CH, SH, CT1, CT2, HAng, H1, H2, Elev1, Elev2;
-++//zz double V2, Bx, By, GMST; //, Bz;
-++double GMST;
-++//double CDec, SDec, SRA, TLat1,TLat2, Lon1,Lon2,CH, SH;
-++double CT1, CT2, HAng, H1, H2, Elev1, Elev2;
-++//zz int ibas;
-+ 
-+ Elev1 = 0.0; Elev2 = 0.0;
-+ 
-++//z:
-++double days = MJD/86400.;
-++double t = (days-51544.0)/36525.;
-++double Hh = days - floor(days);
-++double GMsec = 24110.54841 + 8640184.812866*t + 0.093104*t*t - 0.0000062*t*t*t;
-++GMST = (GMsec/86400. + Hh)*2.*3.1415926535;
-++//z:
-++//CDec = Geometry->SinDec[sidx];
-++//SDec = Geometry->CosDec[sidx];
-++//TLat1 = tan(Geometry->Lat[Ant1]);
-++//TLat2 = tan(Geometry->Lat[Ant1]);
-++//Lon1 = Geometry->AntLon[Ant1];
-++//Lon2 = Geometry->AntLon[Ant2];
-++//SRA = Geometry->RA[sidx];
-+ 
-+ // Dummy value if autocorrelation:
-+ if (Ant1==Ant2){P1 = -1.e9; P2 = -1.e9; return;};
-+ 
-++//z more blank lines
-+ 
-+ if(sidx<Geometry->NtotSou && Ant1<Geometry->NtotAnt && Ant2<Geometry->NtotAnt){
-+ 
-+-  V2 = Geometry->SinDec[sidx]*UVW[1] - Geometry->CosDec[sidx]*UVW[2];
-+-  ibas = Geometry->BasNum[Ant1][Ant2];
-++//z  V2 = Geometry->SinDec[sidx]*UVW[1] - Geometry->CosDec[sidx]*UVW[2];
-++//zz   ibas = Geometry->BasNum[Ant1][Ant2];
-+ 
-++//z  if (ibas<0){
-++//z  ibas = -ibas;
-++//z   Bx = -Geometry->BaseLine[0][ibas];
-++//z   By = -Geometry->BaseLine[1][ibas];
-++//z// Bz = -Geometry->BaseLine[2][ibas];
-++//z  } else {
-++//z   Bx = Geometry->BaseLine[0][ibas];
-++//z   By = Geometry->BaseLine[1][ibas];
-++//z// Bz = Geometry->BaseLine[2][ibas];
-++//z  };
-++//z
-++//z  CH = (UVW[0]*By - V2*Bx); // /(By**2. + Bx**2.);
-++//z  SH = (UVW[0]*Bx + V2*By); // /(By**2. + Bx**2.);
-+ 
-+-  if (ibas<0){
-+-  ibas = -ibas;
-+-   Bx = -Geometry->BaseLine[0][ibas];
-+-   By = -Geometry->BaseLine[1][ibas];
-+-//   Bz = -Geometry->BaseLine[2][ibas];
-+-  } else {
-+-   Bx = Geometry->BaseLine[0][ibas];
-+-   By = Geometry->BaseLine[1][ibas];
-+-//   Bz = Geometry->BaseLine[2][ibas];
-+-  };
-+-
-+-  CH = (UVW[0]*By - V2*Bx); // /(By**2. + Bx**2.);
-+-  SH = (UVW[0]*Bx + V2*By); // /(By**2. + Bx**2.);
-+   CT1 = Geometry->CosDec[sidx]*tan(Geometry->Lat[Ant1]);
-+   CT2 = Geometry->CosDec[sidx]*tan(Geometry->Lat[Ant2]);
-+ 
-+-  HAng = atan2(SH,CH);
-++//z  HAng = atan2(SH,CH);
-++  HAng = GMST - Geometry->RA[sidx];
-+   H1 = HAng + Geometry->AntLon[Ant1];
-+   H2 = HAng + Geometry->AntLon[Ant2];
-+ 
-+@@ -148,10 +169,11 @@
-+   // sin(lat)*sin(dec)+cos(lat)cos(dec)cos(H)
-+ 
-+   if (Geometry->Mount[Ant1] > 3){
-+-  Elev1 = asin(sin(Geometry->Lat[Ant1])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant1])*Geometry->CosDec[sidx]*cos(H1));};
-++   Elev1 = asin(sin(Geometry->Lat[Ant1])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant1])*Geometry->CosDec[sidx]*cos(H1));};
-+ 
-+   if (Geometry->Mount[Ant2] > 3){
-+-  Elev2 = asin(sin(Geometry->Lat[Ant1])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant1])*Geometry->CosDec[sidx]*cos(H1));};
-++//z  Elev2 = asin(sin(Geometry->Lat[Ant1])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant1])*Geometry->CosDec[sidx]*cos(H1));};
-++   Elev2 = asin(sin(Geometry->Lat[Ant2])*Geometry->SinDec[sidx]+cos(Geometry->Lat[Ant2])*Geometry->CosDec[sidx]*cos(H2));};
-+  
-+ 
-+   switch (Geometry->Mount[Ant1]){
-+@@ -178,6 +200,8 @@
-+ 
-+ //  P2 = atan2(sin(H2), CT2 - Geometry->SinDec[sidx]*cos(H2));
-+ 
-++//z:
-++//if(Ant1==1){printf("%i  %i  %.16e  %.3f  %.3f  %.3f  %.3f\n",Ant1, Ant2, MJD, GMST, HAng, P1, P2);};
-+ 
-+ } else {
-+ 
 +Index: DataIO.h
 +===================================================================
 +--- DataIO.h	(revision 9901)
@@ -1509,235 +2023,3 @@ Index: svn_94.diff
 + 
 +     } else if(saveSource<0 || souidx == saveSource) {
 + 
-+Index: _PolConvert.cpp
-+===================================================================
-+--- _PolConvert.cpp	(revision 9901)
-++++ _PolConvert.cpp	(working copy)
-+@@ -1,5 +1,4 @@
-+ /*
-+-
-+ # Copyright (c) Ivan Marti-Vidal 2015-2020. 
-+ #               EU ALMA Regional Center. Nordic node.
-+ #               Observatori Astronomic, Universitat de Valencia
-+@@ -316,7 +315,8 @@
-+   double *AntCoordArr = (double *)PyArray_DATA(antcoordObj);
-+   int *AntMountArr = (int *)PyArray_DATA(antmountObj);
-+   double *SouCoordArr = (double *)PyArray_DATA(PyList_GetItem(soucoordObj,1));
-+-    
-++//z
-++  double *SouCoordRA = (double *)PyArray_DATA(PyList_GetItem(soucoordObj,0));
-+   Geometry->NtotSou = (int) PyArray_DIM(PyList_GetItem(soucoordObj,1),0);
-+   Geometry->NtotAnt = (int) PyArray_DIM(antcoordObj,0);
-+ 
-+@@ -328,6 +328,8 @@
-+   Geometry->BaseLine[2] = new double[Nbas+Geometry->NtotAnt+1];
-+   Geometry->SinDec = new double[Geometry->NtotSou];
-+   Geometry->CosDec = new double[Geometry->NtotSou];
-++//z:
-++  Geometry->RA = new double[Geometry->NtotSou];
-+   Geometry->AntLon = new double[Geometry->NtotAnt];
-+   Geometry->Mount = new int[Geometry->NtotAnt];
-+   Geometry->Lat = new double[Geometry->NtotAnt];
-+@@ -364,8 +366,11 @@
-+   };
-+ 
-+   for (i=0; i<Geometry->NtotSou;i++){
-+-      Geometry->SinDec[i] = sin(SouCoordArr[i+Geometry->NtotSou]);
-+-      Geometry->CosDec[i] = cos(SouCoordArr[i+Geometry->NtotSou]);
-++//z      Geometry->SinDec[i] = sin(SouCoordArr[i+Geometry->NtotSou]);
-++//z      Geometry->CosDec[i] = cos(SouCoordArr[i+Geometry->NtotSou]);
-++        Geometry->SinDec[i] = sin(SouCoordArr[i]);
-++        Geometry->CosDec[i] = cos(SouCoordArr[i]);
-++        Geometry->RA[i] = SouCoordRA[i];
-+ //      std::cout<< i << " "<< SouCoordArr[i]*180./3.1415926535 << "\n";
-+   };
-+ 
-+@@ -588,8 +593,10 @@
-+ // Which IFs do we convert?
-+   int IFs2Conv[nIFconv];
-+   for (ii=0; ii<nIFconv; ii++) {
-+-      if (doAll){IFs2Conv[ii]=ii+1;} else {
-+-        IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii));
-++//z      if (doAll){IFs2Conv[ii]=ii+1;} else {
-++//z        IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii));
-++      if (doAll){IFs2Conv[ii]=ii;} else {
-++        IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii)) - 1;
-+       };
-+   }; 
-+ 
-+@@ -719,12 +726,16 @@
-+ 
-+ // Prepare plotting files:
-+   int noI = -1;
-+-  for (ii=0; ii<nIFplot; ii++){
-+-      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Plot[ii]+1);
-++//z  for (ii=0; ii<nIFplot; ii++){
-++//z      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Plot[ii]+1);
-++  for (ii=0; ii<nIFconv; ii++) {
-++      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Conv[ii]+1);
-+       printf("Writing %s\n", message);
-+       plotFile[ii] = fopen(message,"wb");
-+-      if (IFs2Plot[ii]>=0 && IFs2Plot[ii]<nnu){
-+-         fwrite(&nchans[IFs2Plot[ii]],sizeof(int),1,plotFile[ii]);
-++//z      if (IFs2Plot[ii]>=0 && IFs2Plot[ii]<nnu){
-++//z         fwrite(&nchans[IFs2Plot[ii]],sizeof(int),1,plotFile[ii]);
-++      if (IFs2Conv[ii]>=0 && IFs2Conv[ii]<nnu){
-++         fwrite(&nchans[IFs2Conv[ii]],sizeof(int),1,plotFile[ii]);
-+       } else {
-+          fwrite(&noI,sizeof(int),1,plotFile[ii]);
-+       };
-+@@ -758,7 +769,8 @@
-+ 
-+   for (currAntIdx=0; currAntIdx<nALMA; currAntIdx++) {
-+       for (im=0; im<nIFconv; im++) {
-+-        ii = IFs2Conv[im] - 1;
-++//z     ii = IFs2Conv[im] - 1;
-++        ii = IFs2Conv[im];
-+         for (ij=0; ij<nchans[ii]; ij++){
-+           PrioriGains[currAntIdx][im][ij] *=
-+             DifXData->getAmpRatio(currAntIdx, im, ij);
-+@@ -780,12 +792,15 @@
-+ //  for (ii=0; ii<nnu; ii++) open-brace
-+   for (im=0; im<nIFconv; im++) {
-+ 
-+-    ii = IFs2Conv[im] - 1;
-++//z    ii = IFs2Conv[im] - 1;
-++    ii = IFs2Conv[im];
-+ 
-+-    bool plotIF = false;
-++//zz    bool plotIF = false;
-+     int IFplot = 0;
-+     for (ij=0; ij<nIFplot; ij++){
-+-      if (IFs2Plot[ij]==ii){plotIF=true;IFplot=ij; break;};
-++      if (IFs2Plot[ij]==ii){
-++//zz    plotIF=true;
-++        IFplot=ij; break;};
-+     };
-+ 
-+  //   if (ii >= nnu) {
-+@@ -1246,9 +1261,14 @@
-+ 
-+ // Shall we write in plot file?  auxB -> auxB2 to avoid confusion
-+         //indent level within time range
-++//z note auxB -> auxB2
-++//z     auxB2 = (currT>=plRange[0] && currT<=plRange[1] &&
-++//z             plotIF && (calField<0 || currF==calField));
-++                //plAnt == otherAnt);
-+         auxB2 = (currT>=plRange[0] && currT<=plRange[1] &&
-+-                plotIF && (calField<0 || currF==calField));
-++                (calField<0 || currF==calField));
-+                 //plAnt == otherAnt);
-++//z QUESTION: so why does plotIF disappear here?
-+ 
-+         //indent level within time range
-+ // Convert:
-+Index: _getAntInfo.cpp
-+===================================================================
-+--- _getAntInfo.cpp	(revision 9901)
-++++ _getAntInfo.cpp	(working copy)
-+@@ -72,17 +72,25 @@
-+     "Returns antenna coordinates";
-+ static char getMounts_docstring[] =
-+     "Returns the mount types";
-++//z
-++//static char getNames_docstring[] = 
-++//    "Returns the antenna names (codes)";
-+ 
-+ /* Available functions */
-+ static PyObject *getAntInfo(PyObject *self, PyObject *args);
-+ static PyObject *getCoords(PyObject *self, PyObject *args);
-+ static PyObject *getMounts(PyObject *self, PyObject *args);
-++//z
-++//static PyObject *getNames(PyObject *self, PyObject *args);
-+ 
-++
-+ /* Module specification */
-+ static PyMethodDef module_methods[] = {
-+     {"getAntInfo", getAntInfo, METH_VARARGS, getAntInfo_docstring},
-+     {"getCoords", getCoords, METH_VARARGS, getCoords_docstring},
-+-    {"getMounts", getMounts, METH_VARARGS, getMounts_docstring},
-++//z {"getMounts", getMounts, METH_VARARGS, getMounts_docstring},
-++    {"getMounts", getMounts, METH_VARARGS, getMounts_docstring}, //,
-++//  {"getNames", getNames, METH_VARARGS, getNames_docstring},
-+     {NULL, NULL, 0, NULL}   /* terminated by list of NULLs, apparently */
-+ };
-+ 
-+@@ -216,7 +224,8 @@
-+   fits_close_file(ifile, &status);
-+ 
-+   if(status){
-+-    printf("\n\nPROBLEM LOSING FITS-IDI!  ERR: %i\n\n",status);
-++//z printf("\n\nPROBLEM LOSING FITS-IDI!  ERR: %i\n\n",status);
-++    printf("\n\nPROBLEM CLOSING FITS-IDI!  ERR: %i\n\n",status);
-+     return Py_BuildValue("i",3);
-+   };
-+ 
-+@@ -226,33 +235,60 @@
-+ };
-+ 
-+ 
-++
-++
-++
-++
-++
-+ static PyObject *getCoords(PyObject *self, PyObject *args){
-+ 
-+ // Build numpy array:
-+ 
-+ PyObject *CoordArr;
-+-long CD[2] = {Nants,3};
-++//z long CD[2] = {Nants,3};
-++//z
-++//z GBC had already removed Py_INCREF.
-++//z Py_INCREF(CoordArr); -- original code
-++//z CoordArr = PyArray_SimpleNewFromData(2, &CD[0], NPY_DOUBLE, (void*) Coords);
-++//z Py_INCREF(CoordArr); -- needed only if we retain it and use it
-++int nd = 2;
-++npy_intp* CD = new npy_intp[nd];
-+ 
-+-//Py_INCREF(CoordArr); -- original code
-+-CoordArr = PyArray_SimpleNewFromData(2, &CD[0], NPY_DOUBLE, (void*) Coords);
-+-//Py_INCREF(CoordArr); -- needed only if we retain it and use it
-++CD[0] = Nants; CD[1] = 3; // = {Nants,3};
-+ 
-++//Py_INCREF(CoordArr);
-++CoordArr = PyArray_SimpleNewFromData(nd, CD, NPY_DOUBLE, (void*) Coords);
-++
-+ return CoordArr;
-+ 
-+ };
-+ 
-+ 
-++
-++
-++
-++
-++
-+ static PyObject *getMounts(PyObject *self, PyObject *args){
-+ 
-++
-+ // Build numpy array:
-+ PyObject *MountArr;
-+ 
-+-long MD[1] = {Nants};
-++//z long MD[1] = {Nants};
-++int nd = 1;
-++npy_intp* MD = new npy_intp[nd];
-++MD[0] = Nants;
-+ 
-+-//Py_INCREF(MountArr); -- original code
-+-MountArr = PyArray_SimpleNewFromData(1, &MD[0], NPY_INT, (void*) Mounts);
-+-//Py_INCREF(MountArr); -- needed only if we retain it and use it
-++//z GBC had already removed Py_INCREF
-++//z Py_INCREF(MountArr); -- original code
-++//z MountArr = PyArray_SimpleNewFromData(1, &MD[0], NPY_INT, (void*) Mounts);
-++//z Py_INCREF(MountArr); -- needed only if we retain it and use it
-+ 
-++//z
-++//Py_INCREF(MountArr);
-++MountArr = PyArray_SimpleNewFromData(nd, MD, NPY_INT, (void*) Mounts);
-++
-+ return MountArr;
-+ 
-+ };
