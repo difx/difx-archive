@@ -2006,7 +2006,7 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
 
 
   if DEBUG:
-    PC_Params = [nALMATrue, doIF, plotAnt, len(allants), doIF,
+    PC_Params = [nALMATrue, plotIF, plotAnt, len(allants), doIF,
         swapXY, ngain, NSUM, kind, len(gaindata), len(dtdata), OUTPUT,
         linAntIdxTrue, plRan, Ran, allantidx, len(nphtimes), len(antimes),
         len(refants), len(asdmtimes),  doTest, doSolve, doConj, doAmpNorm,
@@ -2642,7 +2642,8 @@ def polconvert(IDI, OUTPUTIDI, DiFXinput, DiFXcalc, doIF, linAntIdx,
      if os.stat("POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i"%pli).st_size>10:
        GoodIFs.append(pli)
      else:
-       printMsg("WARNING! IF %i was NOT polconverted properly\n"%pli)
+       printMsg(("WARNING! IF %i was NOT polconverted properly\n"%pli) +
+         ("POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i missing"%pli))
 
 # start of GoodIFs pli loop
    for pli in GoodIFs:

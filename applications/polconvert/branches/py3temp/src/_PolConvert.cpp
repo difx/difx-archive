@@ -51,6 +51,11 @@
 
 */
  
+//z old code 1, new code 0
+#define IVAN_OLD    1
+
+//z straight up merge
+#define IVAN_MERGE  0
 
 #include <Python.h>
 
@@ -592,6 +597,23 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
 
 // Which IFs do we convert?
   int IFs2Conv[nIFconv];
+//z
+#if IVAN_OLD
+#warning "IVAN_OLD CODE selected A"
+  for (ii=0; ii<nIFconv; ii++) {
+    if (doAll){IFs2Conv[ii]=ii+1;} else {
+      IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii)); };
+  }
+#else // IVAN_OLD
+#warning "IVAN_NEW CODE selected A"
+  // looks like a shift by 1 here
+  for (ii=0; ii<nIFconv; ii++) {
+    if (doAll){IFs2Conv[ii]=ii;} else {
+      IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii)) - 1; };
+  }
+#endif // IVAN_OLD
+#if IVAN_MERGE
+#warning "IVAN_MERGED CODE selected A"
   for (ii=0; ii<nIFconv; ii++) {
 //z      if (doAll){IFs2Conv[ii]=ii+1;} else {
 //z        IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii));
@@ -599,7 +621,7 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
         IFs2Conv[ii] = (int)PyInt_AsLong(PyList_GetItem(doIF,ii)) - 1;
       };
   }; 
-
+#endif // IVAN_MERGE
 
   int nnu = DifXData->getNfreqs();
   int ALMARefAnt = -1;
@@ -726,6 +748,34 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
 
 // Prepare plotting files:
   int noI = -1;
+//z
+#if IVAN_OLD
+#warning "IVAN_OLD CODE selected B"
+  for (ii=0; ii<nIFplot; ii++){
+      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Plot[ii]+1);
+      printf("Writing %s\n", message);
+      plotFile[ii] = fopen(message,"wb");
+      if (IFs2Plot[ii]>=0 && IFs2Plot[ii]<nnu){
+         fwrite(&nchans[IFs2Plot[ii]],sizeof(int),1,plotFile[ii]);
+      } else {
+         fwrite(&noI,sizeof(int),1,plotFile[ii]);
+      };
+  };
+#else // IVAN_OLD
+#warning "IVAN_NEW CODE selected B"
+  for (ii=0; ii<nIFconv; ii++) {
+      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Conv[ii]+1);
+      printf("Writing %s\n", message);
+      plotFile[ii] = fopen(message,"wb");
+      if (IFs2Conv[ii]>=0 && IFs2Conv[ii]<nnu){
+         fwrite(&nchans[IFs2Conv[ii]],sizeof(int),1,plotFile[ii]);
+      } else {
+         fwrite(&noI,sizeof(int),1,plotFile[ii]);
+      };
+  };
+#endif // IVAN_OLD
+#if IVAN_MERGE
+#warning "IVAN_MERGED CODE selected B"
 //z  for (ii=0; ii<nIFplot; ii++){
 //z      sprintf(message,"POLCONVERT.FRINGE/POLCONVERT.FRINGE_%i",IFs2Plot[ii]+1);
   for (ii=0; ii<nIFconv; ii++) {
@@ -740,6 +790,7 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
          fwrite(&noI,sizeof(int),1,plotFile[ii]);
       };
   };
+#endif // IVAN_MERGE
  
 
   if(doNorm){
@@ -769,8 +820,20 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
 
   for (currAntIdx=0; currAntIdx<nALMA; currAntIdx++) {
       for (im=0; im<nIFconv; im++) {
+//z
+#if IVAN_OLD
+#warning "IVAN_OLD CODE selected C"
+        ii = IFs2Conv[im] - 1;
+#else // IVAN_OLD
+#warning "IVAN_NEW CODE selected C"
+        ii = IFs2Conv[im];
+#endif // IVAN_OLD
+#if IVAN_MERGE
+#warning "IVAN_MERGED CODE selected C"
 //z     ii = IFs2Conv[im] - 1;
         ii = IFs2Conv[im];
+#endif // IVAN_MERGE
+//z
         for (ij=0; ij<nchans[ii]; ij++){
           PrioriGains[currAntIdx][im][ij] *=
             DifXData->getAmpRatio(currAntIdx, im, ij);
@@ -792,9 +855,40 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
 //  for (ii=0; ii<nnu; ii++) open-brace
   for (im=0; im<nIFconv; im++) {
 
-//z    ii = IFs2Conv[im] - 1;
+//z
+#if IVAN_OLD
+#warning "IVAN_OLD CODE selected D"
+    ii = IFs2Conv[im] - 1;
+#else // IVAN_OLD
+#warning "IVAN_NEW CODE selected D"
     ii = IFs2Conv[im];
+#endif // IVAN_OLD
+#if IVAN_MERGE
+#warning "IVAN_MERGED CODE selected D"
+//z ii = IFs2Conv[im] - 1;
+    ii = IFs2Conv[im];
+#endif // IVAN_MERGE
+//z
 
+//z
+#if IVAN_OLD
+#warning "IVAN_OLD CODE selected E"
+    bool plotIF = false;
+    int IFplot = 0;
+    for (ij=0; ij<nIFplot; ij++){
+      if (IFs2Plot[ij]==ii){
+        plotIF=true;
+        IFplot=ij; break;};
+    };
+#else // IVAN_OLD
+#warning "IVAN_NEW CODE selected E"
+    int IFplot = 0;
+    for (ij=0; ij<nIFplot; ij++){
+      if (IFs2Plot[ij]==ii){
+        IFplot=ij; break;};
+#endif // IVAN_OLD
+#if IVAN_MERGE
+#warning "IVAN_MERGED CODE selected E"
 //zz    bool plotIF = false;
     int IFplot = 0;
     for (ij=0; ij<nIFplot; ij++){
@@ -802,6 +896,8 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
 //zz    plotIF=true;
         IFplot=ij; break;};
     };
+#endif // IVAN_MERGE
+//zz
 
  //   if (ii >= nnu) {
  //     sprintf(message,"ERROR! DATA DO NOT HAVE IF #%i !!\n",ii);  
@@ -1261,14 +1357,31 @@ static PyObject *PolConvert(PyObject *self, PyObject *args)
 
 // Shall we write in plot file?  auxB -> auxB2 to avoid confusion
         //indent level within time range
+
+//z
+//z QUESTION: so why does plotIF disappear here?
 //z note auxB -> auxB2
+#if IVAN_OLD
+#warning "IVAN_OLD CODE selected F"
+        auxB2 = (currT>=plRange[0] && currT<=plRange[1] &&
+                plotIF && (calField<0 || currF==calField));
+                //plAnt == otherAnt);
+#else // IVAN_OLD
+#warning "IVAN_NEW CODE selected F"
+        auxB2 = (currT>=plRange[0] && currT<=plRange[1] &&
+                (calField<0 || currF==calField));
+                //plAnt == otherAnt);
+#endif // IVAN_OLD
+#if IVAN_MERGE
+#warning "IVAN_MERGED CODE selected F"
 //z     auxB2 = (currT>=plRange[0] && currT<=plRange[1] &&
 //z             plotIF && (calField<0 || currF==calField));
                 //plAnt == otherAnt);
         auxB2 = (currT>=plRange[0] && currT<=plRange[1] &&
                 (calField<0 || currF==calField));
                 //plAnt == otherAnt);
-//z QUESTION: so why does plotIF disappear here?
+#endif // IVAN_MERGE
+
 
         //indent level within time range
 // Convert:
