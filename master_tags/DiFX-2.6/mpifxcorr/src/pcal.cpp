@@ -173,11 +173,10 @@ PCal* PCal::getNew(double bandwidth_hz, double pcal_spacing_hz, int pcal_offset_
 
     // Currently only one extraction method implemented for complex data
     if (data_type == Configuration::COMPLEX) {
-        //ToDo: could enable the implicit method soon:
-        //if ((No % Np) == 0)
-        //    return new PCalExtractorComplexImplicitShift(bandwidth_hz, pcal_spacing_hz, pcal_offset_hz, band_type);
-        //else
-        return new PCalExtractorComplex(bandwidth_hz, pcal_spacing_hz, pcal_offset_hz, band_type);
+        if ((No % Np) == 0)
+            return new PCalExtractorComplexImplicitShift(bandwidth_hz, pcal_spacing_hz, pcal_offset_hz, band_type);
+        else
+            return new PCalExtractorComplex(bandwidth_hz, pcal_spacing_hz, pcal_offset_hz, band_type);
     }
 
     // First tone in DC bin: smallest footprint extractor
@@ -1251,6 +1250,7 @@ uint64_t PCalExtractorComplexImplicitShift::getFinalPCal(cf32* out)
    if (!_finalized)
    {
         _finalized = true;
+        vectorAdd_cf32_I(/*src*/&(_cfg->pcal_complex[_N_bins]), /*srcdst*/&(_cfg->pcal_complex[0]), _N_bins);
         s = vectorDFT_CtoC_cf32(_cfg->pcal_complex, _cfg->dft_out, _cfg->dftspec, _cfg->dftworkbuf);
         if (s != vecNoErr)
             csevere << startl << "Error in DFTFwd in PCalExtractorComplexImplicitShift::getFinalPCal " << vectorGetStatusString(s) << endl;
@@ -1465,9 +1465,11 @@ uint64_t PCalExtractorDummy::getFinalPCal(cf32* out)
 
 /* Example:
 
-   g++ -m64 -DUNIT_TEST -DPCAL_DEBUG -DARCH=INTEL -Wall -O3 -I$IPPROOT/include/ -pthread -I.. \
+   $MPICXX -m64 -DUNIT_TEST -DPCAL_DEBUG -DARCH=INTEL -Wall -O3 -pthread \
+       -I$IPPROOT/ipp/include/ -I.. -I$DIFXROOT/include/ \
        pcal.cpp mathutil.cpp -o test \
-       -L$IPPROOT/sharedlib -L$IPPROOT/lib -L$IPPROOT/lib/intel64/ -lipps -lippvm -lippcore
+       -L$IPPROOT/ipp/sharedlib -L$IPPROOT/ipp/lib -L$IPPROOT/ipp/lib/intel64/ \
+       -lipps -lippvm -lippcore
 
    Usage:   ./test <auto> | < <samplecount> <bandwidthHz> <spacingHz> <offsetHz> <sampleoffset> [<class>] >
   ./test 32000 16e6 1e6 510e3 0
@@ -1480,11 +1482,19 @@ uint64_t PCalExtractorDummy::getFinalPCal(cf32* out)
 #include <stdlib.h>
 #include <cstring>
 
+struct tcase_t {
+  long bandwidth, offset, spacing;
+  Configuration::datasampling data_type;
+  Configuration::complextype band_type;
+  const char* mode;
+  const char* info;
+};
+
 void print_32f(const f32* v, const size_t len);
 void print_32fc(const cf32* v, const size_t len);
 void print_32fc_phase(const cf32* v, const size_t len);
-void compare_32fc_phase(const cf32* v, const size_t len, f32 angle, f32 step);
-void test_pcal_case(long samplecount, long bandwidth, long offset, long spacing, long sampleoffset, const char* extname);
+bool compare_32fc_phase(const cf32* v, const size_t len, f32 angle, f32 step);
+bool test_pcal_case(long samplecount, long sampleoffset, tcase_t& testcase);
 void test_pcal_auto();
 
 int main(int argc, char** argv)
@@ -1511,17 +1521,21 @@ int main(int argc, char** argv)
 
    /* Run user-specified test */
    if (argc > 2) {
+      tcase_t testcase;
       long samplecount = atof(argv[1]);
-      long bandwidth = atof(argv[2]);
-      long spacing = atof(argv[3]);
-      long offset = atof(argv[4]);
+      testcase.bandwidth = atof(argv[2]);
+      testcase.spacing = atof(argv[3]);
+      testcase.offset = atof(argv[4]);
+      testcase.data_type = Configuration::REAL;
+      testcase.band_type = Configuration::SINGLE;
       long sampleoffset = atof(argv[5]);
-      cerr << "Settings: nsamp=" << samplecount << ", BWHz=" << bandwidth << " spcHz=" << spacing
-           << ", offHz=" << offset << ", sampOff=" << sampleoffset << "\n";
+      testcase.mode = "auto";
       if (argc > 6)
-         test_pcal_case(samplecount, bandwidth, offset, spacing, sampleoffset, argv[6]);
-      else
-         test_pcal_case(samplecount, bandwidth, offset, spacing, sampleoffset, "auto");
+          testcase.mode = argv[6];
+      testcase.info = "";
+      cerr << "Settings: nsamp=" << samplecount << ", BWHz=" << testcase.bandwidth << " spcHz=" << testcase.spacing
+           << ", offHz=" << testcase.offset << ", sampOff=" << sampleoffset << "\n";
+      test_pcal_case(samplecount, sampleoffset, testcase);
    } else {
       cerr << "Running through several test cases\n";
       test_pcal_auto();
@@ -1534,61 +1548,115 @@ void test_pcal_auto()
 {
    long sampleoffset = 11;
    long samplecount  = 32e3;
-   struct tcase_t {
-      long bandwidth, offset, spacing;
-      const char* mode;
-   };
    tcase_t cases[] = {
-      // BW   1st tone  spacing
-      { 16e6,       0,      1e6,   "auto" },
-      { 16e6,       0,      1e6,   "implicit" }, // fails, could be made to work
-      {  3e6,       0,      2e6,   "auto" },
-      { 16e6,    10e3,      1e6,   "auto" },
-      { 16e6,    10e3,      3e6,   "auto" },
-      { 16e6,    10e3,      5e6,   "auto" },
-      { 16e6,       0,      5e6,   "auto" },
-      { 16e6,       0,      5e6,   "implicit" }, // fails, could be made to work (merger of implicit&trivial)
-      {  1e6,    10e3,      5e6,   "auto" },
-      {  1e6,    10e3,        0,   "auto" },
-      {  1e6,       0,        0,   "auto" },
-      {  1e6,     2e6,        0,   "auto" },
-      { 32e3,     2e6,    100e3,   "auto" },
+      // BW   1st tone  Spacing    Complex/real         Single/double sideband  Type       Description
+      { 16e6,       0,      1e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "" },
+      { 16e6,       0,      1e6,   Configuration::REAL, Configuration::SINGLE, "implicit", "(start at DC, implicit; ought to fail)" },
+      {  3e6,       0,      2e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "" },
+      {  8e6,  2.01e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS Ny-Alesund 5 MHz" },
+      {  8e6,  2.01e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS'ish but 10 MHz" },
+      { 16e6,    10e3,      1e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "" },
+      { 16e6,    10e3,      3e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "spacing 3 MHz" },
+      { 16e6,    10e3,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "" },
+      { 16e6,       0,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "" },
+      { 16e6,       0,      5e6,   Configuration::REAL, Configuration::SINGLE, "implicit", "(start at DC, implicit; ought to fail)" },
+      { 16e6,    10e3,      5e6,   Configuration::REAL, Configuration::SINGLE, "implicit", "" },
+      {  1e6,    10e3,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "" },
+      { 32e6,   990e3,      1e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS'ish LSB 10kHz offset" },
+      { 32e6,  1.01e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS-like, tuning xxxx.01 MHz" },
+      { 32e6,  2.01e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS-like, tuning xxxx.01 MHz" },
+      { 32e6,     3e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS-like but 3 MHz spacing" },
+      { 32e6,   0.6e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz USB 0.6" },
+      { 32e6,   1.6e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz USB 1.6" },
+      { 32e6,   2.6e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz USB 2.6" },
+      { 32e6,   3.6e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz USB 3.6" },
+      { 32e6,   4.6e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz USB 4.6" },
+      { 32e6,   0.4e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz LSB 0.4" },
+      { 32e6,   1.4e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz LSB 1.4" },
+      { 32e6,   2.4e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz LSB 2.4" },
+      { 32e6,   3.4e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz LSB 3.4" },
+      { 32e6,   4.4e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz LSB 4.4" },
+      { 32e6,  5.01e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.01 MHz" },
+      { 32e6,     3e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, but 3 MHz spacing" },
+      { 32e6,   0.6e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz USB 0.6" },
+      { 32e6,   1.6e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz USB 1.6" },
+      { 32e6,   2.6e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz USB 2.6" },
+      { 32e6,   3.6e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz USB 3.6" },
+      { 32e6,   4.6e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz USB 4.6" },
+      { 32e6,   5.6e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz USB 5.6" },
+      { 32e6,   6.6e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz USB 6.6" },
+      { 32e6,   7.6e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz USB 7.6" },
+      { 32e6,   8.6e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz USB 8.6" },
+      { 32e6,   9.6e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz USB 9.6" },
+      { 32e6,   0.4e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz LSB 0.4" },
+      { 32e6,   1.4e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz LSB 1.4" },
+      { 32e6,   2.4e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz LSB 2.4" },
+      { 32e6,   3.4e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz LSB 3.4" },
+      { 32e6,   4.4e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz LSB 4.4" },
+      { 32e6,   5.4e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz LSB 5.4" },
+      { 32e6,   6.4e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz LSB 6.4" },
+      { 32e6,   7.4e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz LSB 7.4" },
+      { 32e6,   8.4e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz LSB 8.4" },
+      { 32e6,   9.4e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz LSB 9.4" },
+      { 128e6,   30e6,    200e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "KVN" },
+      { 512e6,   30e6,    200e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "KVN" },
+      { 32e6,   2.6e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz USB 2.6" },
+      { 32e6,   2.4e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz LSB 2.4" },
    };
 
    /* Go through test cases; doesn't yet check PASS/FAIL automatically though! */
    int Ncases = sizeof(cases) / sizeof(struct tcase_t);
+   int failed[Ncases], Nfailed = 0;
    for (int i = 0; i < Ncases; i++) {
-      test_pcal_case(samplecount, cases[i].bandwidth, cases[i].offset, cases[i].spacing, sampleoffset, cases[i].mode);
+      cerr << "Auto case #" << i << " : " << cases[i].info << std::endl;
+      bool ok = test_pcal_case(samplecount, sampleoffset, cases[i]);
+      if (!ok)
+      {
+          failed[Nfailed] = i;
+          ++Nfailed;
+      }
+   }
+
+   cerr << "Passed " << (Ncases-Nfailed) << " cases, failed " << Nfailed << " cases." << std::endl;
+   for (int i = 0; i < Nfailed; i++)
+   {
+      cerr << "Failed case #" << failed[i] << " : " << cases[failed[i]].info << std::endl;
    }
 
    return;
 }
 
-void test_pcal_case(long samplecount, long bandwidth, long offset, long spacing, long sampleoffset, const char* extname)
+bool test_pcal_case(long samplecount, long sampleoffset, tcase_t& testcase)
 {
-   bool sloping_reference_data = true;
-   bool skip_some_data = true;
+   bool sloping_reference_data = true;  // add a phase-vs-frequency slope to be able to discern the order of tones
+   bool skip_some_data = true;  // tests the adjustSampleOffset() functionality
+   bool passed = false;
    uint64_t usedsamplecount;
-   int usecomplex = 0;  // real tests only for now
 
-   const float tone_phase_start = -90.0f;
+   const float tone_phase_start = -85.0f;
    const float tone_phase_slope = 5.0f;
 
    /* Get an extractor */
    bool using_auto = false;
    PCal* extractor;
    extractor->setMinFrequencyResolution(10e3);
-   if (!strcasecmp(extname, "trivial")) {
-      extractor = new PCalExtractorTrivial(bandwidth, spacing, sampleoffset);
-   } else if (!strcasecmp(extname, "shift")) {
-      extractor = new PCalExtractorShifting(bandwidth, spacing, offset, sampleoffset);
-   } else if (!strcasecmp(extname, "implicit")) {
-      extractor = new PCalExtractorImplicitShift(bandwidth, spacing, offset, sampleoffset);
-   } else if (!strcasecmp(extname, "dummy")) {
-      extractor = new PCalExtractorDummy(bandwidth, spacing, offset, sampleoffset);
+   if (!strcasecmp(testcase.mode, "trivial")) {
+      extractor = new PCalExtractorTrivial(testcase.bandwidth, testcase.spacing, sampleoffset);
+   } else if (!strcasecmp(testcase.mode, "shift")) {
+      if (testcase.data_type == Configuration::COMPLEX)
+          extractor = new PCalExtractorComplex(testcase.bandwidth, testcase.spacing, testcase.offset, testcase.band_type);
+      else
+          extractor = new PCalExtractorShifting(testcase.bandwidth, testcase.spacing, testcase.offset, sampleoffset);
+   } else if (!strcasecmp(testcase.mode, "implicit")) {
+      if (testcase.data_type == Configuration::COMPLEX)
+          extractor = new PCalExtractorComplexImplicitShift(testcase.bandwidth, testcase.spacing, testcase.offset, testcase.band_type);
+      else
+          extractor = new PCalExtractorImplicitShift(testcase.bandwidth, testcase.spacing, testcase.offset, sampleoffset);
+   } else if (!strcasecmp(testcase.mode, "dummy")) {
+      extractor = new PCalExtractorDummy(testcase.bandwidth, testcase.spacing, testcase.offset, sampleoffset);
    } else {
-      cerr << "Using pcal extractor factory to select suitable extractor\n";
-      extractor = PCal::getNew(bandwidth, spacing, offset, sampleoffset, usecomplex);
+      cerr << "Using pcal extractor factory to select suitable extractor (req: " << testcase.mode << ")\n";
+      extractor = PCal::getNew(testcase.bandwidth, testcase.spacing, testcase.offset, sampleoffset, testcase.data_type, testcase.band_type);
       using_auto = true;
    }
    if (!using_auto) {
@@ -1596,33 +1664,44 @@ void test_pcal_case(long samplecount, long bandwidth, long offset, long spacing,
    }
 
    /* Number of tones in the test signal bandwidth */
-   int numtones_actual = PCal::calcNumTones(bandwidth, offset, spacing);
+   int numtones_actual = PCal::calcNumTones(testcase.bandwidth, testcase.offset, testcase.spacing);
    int numtones_extracted = extractor->getLength();
    cf32* out = vectorAlloc_cf32(numtones_actual);
    cf32* ref = vectorAlloc_cf32(numtones_actual);
+   vectorZero_cf32(out, numtones_actual);
+   vectorZero_cf32(ref, numtones_actual);
 
    cerr << "Tone count: actual is " << numtones_actual
         << ", extractor keeps " << numtones_extracted << "\n";
 
    /* Make test signal with tones phases having a slope */
+   double samplingrate = (testcase.data_type == Configuration::REAL) ? 2*testcase.bandwidth : testcase.bandwidth;
    double wtone[numtones_actual];
    for (int tone=0; tone<numtones_actual; tone++) {
-       wtone[tone] = 2*M_PI * (offset + tone*spacing) / (2*bandwidth);
+       wtone[tone] = 2*M_PI * (testcase.offset + tone*testcase.spacing) / samplingrate;
    }
    float* data = vectorAlloc_f32(samplecount);
+   cf32* cplxdata = vectorAlloc_cf32(samplecount);
    for (long n=0; n<samplecount; n++) {
       data[n] = 0; //rand()*1e-9;
+      cplxdata[n].re = 0;
+      cplxdata[n].im = 0;
       for (int tone=0; tone<numtones_actual; tone++) {
-          double phi = wtone[tone] * (n+sampleoffset);
+          double phi = wtone[tone] * (n+sampleoffset) + tone_phase_start*(M_PI/180);
           if (sloping_reference_data)
               phi += tone*tone_phase_slope*(M_PI/180);
-          data[n] = data[n] + sin(phi);
+          data[n] += cos(phi);
+          cplxdata[n].re += cos(phi);
+          cplxdata[n].im += sin(phi);
       }
    }
 
    /* Extract with the chosen method */
    extractor->adjustSampleOffset(sampleoffset);
-   extractor->extractAndIntegrate(data, samplecount);
+   if (testcase.data_type == Configuration::REAL)
+       extractor->extractAndIntegrate(data, samplecount);
+   else
+       extractor->extractAndIntegrate((f32*)cplxdata, samplecount);
 
    /* Add more data with a skip? */
    if (skip_some_data) {
@@ -1630,7 +1709,10 @@ void test_pcal_case(long samplecount, long bandwidth, long offset, long spacing,
        if (samplecount > noffset) {
            //cerr << "Adding same data but skipping first +" << noffset << " samples\n";
            extractor->adjustSampleOffset(sampleoffset + noffset);
-           extractor->extractAndIntegrate(data + noffset, samplecount - noffset);
+           if (testcase.data_type == Configuration::REAL)
+               extractor->extractAndIntegrate(data + noffset, samplecount - noffset);
+           else
+               extractor->extractAndIntegrate((f32*)(cplxdata + noffset), samplecount - noffset);
        }
    }
 
@@ -1640,7 +1722,7 @@ void test_pcal_case(long samplecount, long bandwidth, long offset, long spacing,
    /* Compare extracted phase slope to expected phase slope */
    float expected_start = tone_phase_start;
    float expected_slope = (sloping_reference_data) ? tone_phase_slope : 0.0f;
-   if (offset == 0.0f && sloping_reference_data) {
+   if (testcase.offset == 0 && sloping_reference_data) {
        // if first tone at DC, skip its "phase"
        expected_start += expected_slope;
    }
@@ -1654,12 +1736,17 @@ void test_pcal_case(long samplecount, long bandwidth, long offset, long spacing,
    cerr << "final PCal data:\n";
    // print_32fc(out, numtones_extracted);
    // print_32fc_phase(out, numtones_extracted);
-   compare_32fc_phase(out, numtones_extracted, expected_start, expected_slope);
+   passed = compare_32fc_phase(out, numtones_extracted, expected_start, expected_slope);
 
    /* Comparison with the (poorer) "reference" extracted result */
    if (0) {
        extractor->clear();
-       extractor->extractAndIntegrate_reference(data, samplecount, ref, sampleoffset);
+       if (testcase.data_type == Configuration::REAL)
+           extractor->extractAndIntegrate_reference(data, samplecount, ref, sampleoffset);
+       else {
+           //extractor->extractAndIntegrate((f32*)cplxdata, samplecount);
+           cerr << "Error: extractAndIntegrate_reference: complex data not supported yet" << std::endl;
+       }
 
        cerr << "reference PCal data:\n";
        // print_32fc(ref, numtones_actual);
@@ -1670,10 +1757,11 @@ void test_pcal_case(long samplecount, long bandwidth, long offset, long spacing,
 
    /* Done */
    vectorFree(data);
+   vectorFree(cplxdata);
    vectorFree(out);
    vectorFree(ref);
    delete extractor;
-   return;
+   return passed;
 }
 
 void print_32f(const f32* v, const size_t len) {
@@ -1692,7 +1780,8 @@ void print_32fc_phase(const cf32* v, const size_t len) {
    cerr << "deg\n";
 }
 
-void compare_32fc_phase(const cf32* v, const size_t len, f32 angle, f32 step) {
+bool compare_32fc_phase(const cf32* v, const size_t len, f32 angle, f32 step)
+{
    bool pass = true;
    const float merr = 0.1;
    int num_suspicious = 0;
@@ -1719,7 +1808,8 @@ void compare_32fc_phase(const cf32* v, const size_t len, f32 angle, f32 step) {
       }
       angle += step;
    }
-   cerr << "Extracted versus expected:\n" << ((pass) ? "PASS\n" : "FAIL (or PASS but missed phase ambiguity)\n") << "\n";
+   cerr << "Extracted versus expected:\n" << ((pass) ? "PASS\n" : "\u001b[31mFAIL\u001b[0m (or PASS but missed phase ambiguity)\n") << "\n";
+   return pass;
 }
 
 #endif
