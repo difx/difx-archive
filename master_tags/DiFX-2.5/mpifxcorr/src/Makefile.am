@@ -12,7 +12,7 @@ mark5_files = \
 	vdifmark5_stubs.cpp
 endif
 
-bin_PROGRAMS = mpifxcorr neuteredmpifxcorr
+bin_PROGRAMS = mpifxcorr neuteredmpifxcorr pcaltest
 
 mpifxcorr_SOURCES = \
 	mpifxcorr.cpp \
@@ -131,3 +131,8 @@ neuteredmpifxcorr_SOURCES = \
 neuteredmpifxcorr_CXXFLAGS = -DNEUTERED_DIFX $(AM_CXXFLAGS)
 
 neuteredmpifxcorr_LDADD = libfxcorr.a
+
+pcaltest_SOURCES = pcal.cpp mathutil.cpp
+
+pcaltest_CXXFLAGS = -DUNIT_TEST -DPCAL_DEBUG
+
