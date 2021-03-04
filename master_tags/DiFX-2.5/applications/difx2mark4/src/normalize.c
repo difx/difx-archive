@@ -55,6 +55,11 @@ void normalize (struct CommandLineOptions *opts,  // array of command line optio
     nf = -1;
     while (pfb[++nf].stn[0].ant >= 0) // check for end-of-table marker
         {
+        if (nf >= MAX_FPPAIRS)
+            {
+                printf ("too many frequencies, exceeding MAX_FPPAIRS; redimension\n");
+                return;
+            }
         if (pfb[nf].stn[0].find != pfb[nf].stn[1].find)
             {
                                     // found matching channels with different freq id's

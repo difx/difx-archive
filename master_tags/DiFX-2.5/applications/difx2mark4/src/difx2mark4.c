@@ -66,6 +66,8 @@ static int usage (const char *pgm)
     fprintf (stderr, "                            (can have multiple triplets)\n");
     fprintf (stderr, "  -s or --scode <file>      Specify new VEX to mk4 station code mappings\n");
     fprintf (stderr, "                            via a file with lines of the form:   X Xx\n");
+    fprintf (stderr, "  -g <freq-groups>          include data only from these freq groups\n");
+    fprintf (stderr, "  -w <bandwidth in MHz>     include data only for this bandwidth\n");
     fprintf (stderr, "\n");
 
     return 0;
@@ -595,6 +597,16 @@ struct CommandLineOptions *parseCommandLine(int argc, char **argv)
                         if(j==4)
                             strncpy(opts->exp_no, argv[i], 4+1);
                         }
+                else if (strcmp (argv[i], "-g") == 0)
+                    {
+                    i++;
+                    strcpy (opts->fgroups, argv[i]);
+                    }
+                else if (strcmp (argv[i], "-w") == 0)
+                    {
+                    i++;
+                    strcpy (opts->bandwidth, argv[i]);
+                    }
                 else if(strcmp (argv[i], "--deltat") == 0 ||
                     strcmp (argv[i], "-t") == 0)
                     {

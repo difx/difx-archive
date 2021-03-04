@@ -30,8 +30,8 @@
 #define EXP_CODE_LEN 4
 #define NUMFILS 500                 // max number of type 1 output files
 #define MAGLIM 10000.0              // threshold magnitude for vis. rejection
-#define MAX_FPPAIRS 5000            // dimensioned for b-lines x chans x pol_prods
-#define MAX_DFRQ 100                // allowed max number of *DiFX* frequencies
+#define MAX_FPPAIRS 10000           // dimensioned for b-lines x chans x pol_prods
+#define MAX_DFRQ 200                // allowed max number of *DiFX* frequencies
 
 enum booleans {FALSE, TRUE};
 
@@ -60,6 +60,8 @@ struct CommandLineOptions
     int phaseCentre;
     double jobMatrixDeltaT; /* seconds */
     int raw;
+    char fgroups[16];
+    char bandwidth[8];
     };
 
 typedef struct 
@@ -111,6 +113,7 @@ struct fblock_tag
         int bs;                     // quantization bits/sample
         int first_time;             // true iff first entry in table of chan_id for ant 
         int zoom;                   // true iff this channel is zoom mode
+        int n_spec_chan;            // # of spectral channels output from difx
         double pcal_int;            // pcal interval (MHz)
         double freq;                // LO frequency (MHz); negative for LSB
         double bw;                  // bandwidth (MHz)
