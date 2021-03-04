@@ -1459,21 +1459,22 @@ uint64_t PCalExtractorDummy::getFinalPCal(cf32* out)
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
-// UNIT TEST (NON-AUTOMATED, MANUAL VISUAL CHECK)
+// UNIT TEST (SEMI-AUTOMATED, MANUAL VISUAL CHECK, PASS/FAIL SUMMARY AT END OF 'auto'matic RUN)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 #ifdef UNIT_TEST
 
-/* Example:
+/*
+  Compiling:
+    edit Makefile.am
+        bin_PROGRAMS = mpifxcorr neuteredmpifxcorr pcaltest
+        pcaltest_SOURCES = pcal.cpp mathutil.cpp
+        pcaltest_CXXFLAGS = -DUNIT_TEST -DPCAL_DEBUG
+    make -j
 
-   $MPICXX -m64 -DUNIT_TEST -DPCAL_DEBUG -DARCH=INTEL -Wall -O3 -pthread \
-       -I$IPPROOT/ipp/include/ -I.. -I$DIFXROOT/include/ \
-       pcal.cpp mathutil.cpp -o test \
-       -L$IPPROOT/ipp/sharedlib -L$IPPROOT/ipp/lib -L$IPPROOT/ipp/lib/intel64/ \
-       -lipps -lippvm -lippcore
-
-   Usage:   ./test <auto> | < <samplecount> <bandwidthHz> <spacingHz> <offsetHz> <sampleoffset> [<class>] >
-  ./test 32000 16e6 1e6 510e3 0
-  ./test 32000 16e6 200e6 4e6 0
+   Usage:
+     ./pcaltest <auto> | < <samplecount> <bandwidthHz> <spacingHz> <offsetHz> <sampleoffset> [<class>] >
+     ./pcaltest 32000 16e6 1e6 510e3 0
+     ./pcaltest 32000 16e6 200e6 4e6 0
 */
 
 #include <cmath>
@@ -1503,6 +1504,7 @@ int main(int argc, char** argv)
       cerr << "\nUsage:   " << argv[0] << " <auto> | < <samplecount> <bandwidthHz> <spacingHz> <offsetHz> <sampleoffset> [<class>] >\n"
            << "Example: " << argv[0] << " 32000 16e6 1e6 510e3 0 implicit\n\n"
            << "Options:\n"
+           << "           auto         : run through internal automatic set of various test cases\n\n"
            << "           samplecount  : number of test samples to generate\n"
            << "           bandwidthHz  : bandwidth of test signal (half the sampling rate)\n"
            << "           spacingHz    : spacing of PCal tones in Hz\n"
@@ -1553,8 +1555,21 @@ void test_pcal_auto()
       { 16e6,       0,      1e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "" },
       { 16e6,       0,      1e6,   Configuration::REAL, Configuration::SINGLE, "implicit", "(start at DC, implicit; ought to fail)" },
       {  3e6,       0,      2e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "" },
-      {  8e6,  2.01e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS Ny-Alesund 5 MHz" },
-      {  8e6,  2.01e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS'ish but 10 MHz" },
+      {  8e6,  0.01e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS Ny-Alesund 5 MHz, 0.01" },
+      {  8e6,  1.01e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS Ny-Alesund 5 MHz, 1.01" },
+      {  8e6,  2.01e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS Ny-Alesund 5 MHz, 2.01" },
+      {  8e6,  3.01e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS Ny-Alesund 5 MHz, 3.01" },
+      {  8e6,  4.01e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS Ny-Alesund 5 MHz, 4.01" },
+      {  8e6,  0.01e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS'ish but 10 MHz, 0.01" },
+      {  8e6,  1.01e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS'ish but 10 MHz, 1.01" },
+      {  8e6,  2.01e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS'ish but 10 MHz, 2.01" },
+      {  8e6,  3.01e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS'ish but 10 MHz, 3.01" },
+      {  8e6,  4.01e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS'ish but 10 MHz, 4.01" },
+      {  8e6,  5.01e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS'ish but 10 MHz, 5.01" },
+      {  8e6,  6.01e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS'ish but 10 MHz, 6.01" },
+      {  8e6,  7.01e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS'ish but 10 MHz, 7.01" },
+      {  8e6,  8.01e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS'ish but 10 MHz, 8.01" },
+      {  8e6,  9.01e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS'ish but 10 MHz, 9.01" },
       { 16e6,    10e3,      1e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "" },
       { 16e6,    10e3,      3e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "spacing 3 MHz" },
       { 16e6,    10e3,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "" },
@@ -1562,20 +1577,22 @@ void test_pcal_auto()
       { 16e6,       0,      5e6,   Configuration::REAL, Configuration::SINGLE, "implicit", "(start at DC, implicit; ought to fail)" },
       { 16e6,    10e3,      5e6,   Configuration::REAL, Configuration::SINGLE, "implicit", "" },
       {  1e6,    10e3,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "" },
-      { 32e6,   990e3,      1e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS'ish LSB 10kHz offset" },
-      { 32e6,  1.01e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS-like, tuning xxxx.01 MHz" },
-      { 32e6,  2.01e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS-like, tuning xxxx.01 MHz" },
+      {  8e6,   990e3,      1e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS xxxx.99 MHz LSB 10kHz offset" },
+      {  8e6,    10e3,      1e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "IVS xxxx.99 MHz USB 10kHz offset" },
+      { 32e6,  0.01e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS-like 5 MHz but tuning xxxx.01 MHz USB, 0.01" },
+      { 32e6,  1.01e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS-like 5 MHz but tuning xxxx.01 MHz USB, 1.01" },
+      { 32e6,  2.01e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS-like 5 MHz but tuning xxxx.01 MHz USB, 2.01" },
       { 32e6,     3e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS-like but 3 MHz spacing" },
-      { 32e6,   0.6e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz USB 0.6" },
-      { 32e6,   1.6e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz USB 1.6" },
-      { 32e6,   2.6e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz USB 2.6" },
-      { 32e6,   3.6e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz USB 3.6" },
-      { 32e6,   4.6e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz USB 4.6" },
-      { 32e6,   0.4e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz LSB 0.4" },
-      { 32e6,   1.4e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz LSB 1.4" },
-      { 32e6,   2.4e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz LSB 2.4" },
-      { 32e6,   3.4e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz LSB 3.4" },
-      { 32e6,   4.4e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.04 MHz LSB 4.4" },
+      { 32e6,   0.6e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.40 MHz USB 0.6" },
+      { 32e6,   1.6e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.40 MHz USB 1.6" },
+      { 32e6,   2.6e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.40 MHz USB 2.6" },
+      { 32e6,   3.6e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.40 MHz USB 3.6" },
+      { 32e6,   4.6e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.40 MHz USB 4.6" },
+      { 32e6,   0.4e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.40 MHz LSB 0.4" },
+      { 32e6,   1.4e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.40 MHz LSB 1.4" },
+      { 32e6,   2.4e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.40 MHz LSB 2.4" },
+      { 32e6,   3.4e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.40 MHz LSB 3.4" },
+      { 32e6,   4.4e6,      5e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS tuning xxxx.40 MHz LSB 4.4" },
       { 32e6,  5.01e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.01 MHz" },
       { 32e6,     3e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, but 3 MHz spacing" },
       { 32e6,   0.6e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz USB 0.6" },
@@ -1600,8 +1617,36 @@ void test_pcal_auto()
       { 32e6,   9.4e6,     10e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "VGOS Yebes 10M, tuning xxxx.40 MHz LSB 9.4" },
       { 128e6,   30e6,    200e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "KVN" },
       { 512e6,   30e6,    200e6,   Configuration::REAL, Configuration::SINGLE, "auto",     "KVN" },
+      { 32e6,   0.6e6,      5e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS 5M, complex, xxxx.40 MHz USB 0.6" },
+      { 32e6,   1.6e6,      5e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS 5M, complex, xxxx.40 MHz USB 1.6" },
+      { 32e6,   2.6e6,      5e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS 5M, complex, xxxx.40 MHz USB 2.6" },
+      { 32e6,   3.6e6,      5e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS 5M, complex, xxxx.40 MHz USB 3.6" },
+      { 32e6,   4.6e6,      5e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS 5M, complex, xxxx.40 MHz USB 4.6" },
+      { 32e6,   0.4e6,      5e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS 5M, complex, xxxx.40 MHz LSB 0.4" },
+      { 32e6,   1.4e6,      5e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS 5M, complex, xxxx.40 MHz LSB 1.4" },
+      { 32e6,   2.4e6,      5e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS 5M, complex, xxxx.40 MHz LSB 2.4" },
+      { 32e6,   3.4e6,      5e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS 5M, complex, xxxx.40 MHz LSB 3.4" },
+      { 32e6,   4.4e6,      5e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS 5M, complex, xxxx.40 MHz LSB 4.4" },
+      { 32e6,   0.6e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz USB 0.6" },
+      { 32e6,   1.6e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz USB 1.6" },
       { 32e6,   2.6e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz USB 2.6" },
+      { 32e6,   3.6e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz USB 3.6" },
+      { 32e6,   4.6e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz USB 4.6" },
+      { 32e6,   5.6e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz USB 5.6" },
+      { 32e6,   6.6e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz USB 6.6" },
+      { 32e6,   7.6e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz USB 7.6" },
+      { 32e6,   8.6e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz USB 8.6" },
+      { 32e6,   9.6e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz USB 9.6" },
+      { 32e6,   0.4e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz LSB 0.4" },
+      { 32e6,   1.4e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz LSB 1.4" },
       { 32e6,   2.4e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz LSB 2.4" },
+      { 32e6,   3.4e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz LSB 3.4" },
+      { 32e6,   4.4e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz LSB 4.4" },
+      { 32e6,   5.4e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz LSB 5.4" },
+      { 32e6,   6.4e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz LSB 6.4" },
+      { 32e6,   7.4e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz LSB 7.4" },
+      { 32e6,   8.4e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz LSB 8.4" },
+      { 32e6,   9.4e6,     10e6,   Configuration::COMPLEX, Configuration::SINGLE, "auto",  "VGOS Yebes 10M, complex, xxxx.40 MHz LSB 9.4" },
    };
 
    /* Go through test cases; doesn't yet check PASS/FAIL automatically though! */
