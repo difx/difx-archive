@@ -32,6 +32,7 @@
 #define MAGLIM 10000.0              // threshold magnitude for vis. rejection
 #define MAX_FPPAIRS 10000           // dimensioned for b-lines x chans x pol_prods
 #define MAX_DFRQ 200                // allowed max number of *DiFX* frequencies
+#define NVRMAX 8000000              // max # of vis records
 
 enum booleans {FALSE, TRUE};
 
@@ -69,6 +70,7 @@ typedef struct
     int sync;
     int version;
     int baseline;
+    int nvis;
     int mjd;
     double iat;
     int config_index;
@@ -145,9 +147,16 @@ int createType1s (DifxInput *, struct fblock_tag *, int *, int, char *, char *,
 int createType3s (DifxInput *, struct fblock_tag *, int, int, int, char *, char *, 
                   struct stations *, struct CommandLineOptions *);
                                     // get_vis.c
-int get_vis (char *, struct CommandLineOptions *, int, int, vis_record **, int *, char *);
+int get_vis (DifxInput *, char *, struct CommandLineOptions *, int *, int *, int *, 
+                 vis_record **, char *, struct fblock_tag *, int *);
+                                    // new_type1.c
+int new_type1 (DifxInput *, struct fblock_tag *, int, int, int, int, int *, double *,
+               struct stations *, char *, struct CommandLineOptions *, FILE **, 
+               int, char *, char *, char *, char *, int, int);
+                                    // write_t120.c
+void write_t120 (struct type_120 *, FILE *);
                                     // normalize.c
-void normalize (struct CommandLineOptions *, vis_record *, int, int, int, 
+void normalize (struct CommandLineOptions *, vis_record *, int, int *, int *, 
                 struct fblock_tag *);
                                     // root_id.c
 char *root_id(int, int, int, int, int);
