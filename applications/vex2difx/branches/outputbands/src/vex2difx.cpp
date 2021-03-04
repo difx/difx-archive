@@ -2301,7 +2301,6 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 			}
 
 			corrSetup->autobands.addRecbands(antfreqs); // NB: adds all VEX freqs, not just freqs explicitly selected by v2d freqId=... list
-// TODO: possibly corrSetup->autobands.addUserOutputbands(...) for all freq[] where bandwidth == output bandwidth
 		}
 
 		// invoke AutoBand logic to generate additional '1:1 / N:1 / 1:N zooms that assemble into outputbands

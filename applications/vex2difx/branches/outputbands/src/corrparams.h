@@ -229,6 +229,7 @@ class CorrSetup
 public:
 	CorrSetup(const std::string &name = "setup_default");
 	int setkv(const std::string &key, const std::string &value);
+	int setkv(const std::string &key, const std::string &value, ZoomFreq *outputbandFreq);
 	bool correlateFreqId(int freqId) const;
 	double bytesPerSecPerBLPerBand() const;
 	int checkValidity() const;

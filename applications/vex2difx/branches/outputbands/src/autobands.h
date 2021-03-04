@@ -139,11 +139,16 @@ public:
 	double getGranularity(const std::vector<double>& freqs) const;
 
 	/// Automatically build a set of outputbands and their constituent bands,
-	/// based upon previously registered (c.f. addRecbands()) recorded bands.
+	/// based upon previously registered (cf. addRecbands()) recorded bands.
+	/// If explicit outputband positions were registered (cf. addUserOutputbands())
+	/// these will attempt to be generated. Otherwise, bands are auto-generated.
 	int generateOutputbands(int Nant=0, double fstart_Hz=0.0);
 
-	/// Add user-specified outputband with a single consituent equal to a vex2difx ZoomFreq
+	/// Add user-specified outputbands with a single consituent equal to a vex2difx ZoomFreq
 	void addUserOutputbands(const std::vector<ZoomFreq>& zf);
+
+	/// Add user-specified outputband with a single consituent equal to a vex2difx ZoomFreq
+	void addUserOutputband(const ZoomFreq& zf);
 
 	/// Locate 'inputfreq' among consituents of iternal outputbands, then locate that outputband in 'allfreqs'.
 	int lookupDestinationFreq(const freq& inputfreq, const std::vector<freq>& allfreqs) const;
@@ -159,7 +164,8 @@ public:
 	//variables
 	std::vector<Band> bands;
 	std::vector<Span> spans;
-	std::vector<Outputband> outputbands;
+	std::vector<Outputband> outputbands; // auto/final
+	std::vector<Outputband> userOutputbands; // user-registered explicit bands to consider
 	double minrecfreq, maxrecfreq;
 	unsigned int Nant;
 	double outputbandwidth;
@@ -175,6 +181,12 @@ private:
 
 	/// Determine frequency spans where at least Nant antennas overlap. Populates ::spans via ::bands.
 	void analyze(int Nant=0);
+
+	/// Based on user-registered outputbands, try to fill them with parts of available recorded bands.
+	int generateOutputbandsExplicit(int Nant=0);
+
+	/// Automatically deduce "good" outputbands to fill the available spectrum
+	int generateOutputbandsAutomatic(int Nant=0, double fstart_Hz=0.0);
 
 	/// Simplify an outputband definition by merging its list of consituent bands where possible,
 	/// trimming away any overlapped portions of consituent bands.

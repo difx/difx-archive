@@ -237,6 +237,30 @@ CorrSetup::CorrSetup(const std::string &name) : corrSetupName(name)
 	minRecordedBandwidth = 0.0;
 	maxRecordedBandwidth = 0.0;
 	onlyPol = ' ';
+	autobands.clear();
+}
+
+int CorrSetup::setkv(const std::string &key, const std::string &value, ZoomFreq *outputbandFreq)
+{
+	int nWarn = 0;
+	outputbandFreq->frequency = 0;
+	outputbandFreq->bandwidth = 0;
+
+	if(key == "freq" || key == "FREQ")
+	{
+		outputbandFreq->frequency = atof(value.c_str())*1000000; //convert to Hz
+	}
+	else if(key == "bw" || key == "BW")
+	{
+		outputbandFreq->bandwidth = atof(value.c_str())*1000000; //convert to Hz
+	}
+	else
+	{
+		std::cerr << "Warning: SETUP: Unknown parameter '" << key << "'." << std::endl;
+		++nWarn;
+	}
+
+	return nWarn;
 }
 
 void CorrSetup::addRecordedBandwidth(double bw)
@@ -254,6 +278,8 @@ void CorrSetup::addRecordedBandwidth(double bw)
 
 int CorrSetup::setkv(const std::string &key, const std::string &value)
 {
+	std::string::size_type at, last, splitat;
+	std::string nestedkeyval;
 	std::stringstream ss;
 	int nWarn = 0;
 	char *ptr;
@@ -297,6 +323,46 @@ int CorrSetup::setkv(const std::string &key, const std::string &value)
 			ss >> outputBandwidth;
 			outputBandwidth *= 1e6;	// Users use MHz, vex2difx uses Hz
 		}
+	}
+	else if(key == "addOutputBand")
+	{
+		// Register explicit v2d user-specified output band into the autoband logic
+		// The syntax follows ZOOM addZoomFreq.  All parameters must be together, with @ replacing =, and separated by /
+		// e.g., addOutputBand = freq@1649.99/bw@32.0
+		// only freq is compulsory; bandwidth bw only if outputBandwidth=<x> was not specified prior to addOutputBand
+		ZoomFreq outputbandDef;
+		last = 0;
+		at = 0;
+		while(at != std::string::npos)
+		{
+			at = value.find_first_of('/', last);
+			nestedkeyval = value.substr(last, at-last);
+			splitat = nestedkeyval.find_first_of('@');
+			nWarn += setkv(nestedkeyval.substr(0, splitat), nestedkeyval.substr(splitat+1), &outputbandDef);
+			last = at+1;
+		}
+		if(outputBandwidth == 0 && outputbandDef.bandwidth == 0)
+		{
+			std::cerr << "Error: For explicit outputband placement please provide a bandwidth as part of 'addOutputBand' or in a preceding 'outputBandwidth'." << std::endl;
+
+			exit(EXIT_FAILURE);
+		}
+		if(outputBandwidth <= 0)
+		{
+			outputBandwidth = outputbandDef.bandwidth;
+		}
+		else if(outputbandDef.bandwidth == 0)
+		{
+			outputbandDef.bandwidth = outputBandwidth;
+		}
+		if(outputBandwidth != outputbandDef.bandwidth)
+		{
+			std::cerr << "Error: Bandwidth of outputBandwidth parameter (" << outputBandwidth*1e-6 << " MHz) conflicts with addOutputBand bw element (" << outputbandDef.bandwidth*1e-6 << " MHz)" << std::endl;
+
+			exit(EXIT_FAILURE);
+		}
+		outputBandwidthMode = OutputBandwidthUser;
+		autobands.addUserOutputband(outputbandDef);
 	}
 	else if(key == "FFTSpecRes" || key == "fftSpecRes")
 	{
