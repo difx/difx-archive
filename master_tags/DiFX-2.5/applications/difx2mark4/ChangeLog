@@ -7,6 +7,7 @@ Version for DiFX-2.5 series 2.5.4, adds some upstream features from DiFX 2.6.0/.
 * Trap too many channels, add -g feature to filter for freq groups (r8471); rjc 2018.8.10
 * Fixed bug in case of multiple different bandwidths (r8389); rjc 2018.7.17
 * Fixed too-many-pcal-tones bug for many tone case (r8374)
+* Permit tab characters in VEX file (r9601)
 
 Version 1.5
 ~~~~~~~~~~~
