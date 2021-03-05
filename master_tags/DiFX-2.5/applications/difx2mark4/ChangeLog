@@ -1,17 +1,11 @@
 Version 1.5.2
 ~~~~~~~~~~~~~
-Version for DiFX-2.5 series 2.5.4
-Adds some of the upstream features from DiFX 2.6.0/.2 & Trunk difx2mark4, namely:
-* support for multi-datastream entries in .difx PCAL files (r9445, r9463)
-* rjc 2020.6.26
-* fix parallactic angle bug in first t303 record (r9575)
-* rjc 2019.1.4
-* new -w feature to allow one difx pass of mixed-bandwidth data (r8623)
-* rjc 2018.9.14
-* trap too many channels, add -g feature to filter for freq groups (r8471)
-* rjc 2018.8.10
-* fixed bug in case of multiple different bandwidths (r8389)
-* rjc 2018.7.17
+Version for DiFX-2.5 series 2.5.4, adds some upstream features from DiFX 2.6.0/.2 & Trunk:
+* Support for multi-datastream entries in .difx PCAL files (r9445, r9463); rjc 2020.6.26
+* Fix parallactic angle bug in first t303 record (r9575); rjc 2019.1.4
+* New -w feature to allow one difx pass of mixed-bandwidth data (r8623); rjc 2018.9.14
+* Trap too many channels, add -g feature to filter for freq groups (r8471); rjc 2018.8.10
+* Fixed bug in case of multiple different bandwidths (r8389); rjc 2018.7.17
 * Fixed too-many-pcal-tones bug for many tone case (r8374)
 
 Version 1.5
