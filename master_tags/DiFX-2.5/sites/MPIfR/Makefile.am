@@ -1,3 +1,4 @@
-SUBDIRS = difxdb/difxarchive difxdb/difxexport
+SUBDIRS = difxdb/difxarchive difxdb/difxexport hops
+
 
 
