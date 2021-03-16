@@ -1617,6 +1617,11 @@ static int adjustSingleSpacecraftAntennaGSRecording(const DifxScan* const scan, 
     difx_strlcpy(sc_argument->station[1].site_type, antennaSiteTypeNames[antenna->sitetype], DIFX_DELAYHANDLERDISTRIBUTOR_STATION_STRING_SIZE);
     difx_strlcpy(sc_argument->station[1].axis_type, antennaMountTypeNames[antenna->mount], DIFX_DELAYHANDLERDISTRIBUTOR_STATION_STRING_SIZE);
 
+    if (strncmp(antennaMountTypeNames[antenna->mount], "SPAC", 4) != 0)
+    {
+        printf("Warning: %s:%d:adjustSingleSpacecraftAntennaGSRecording : SC station01 with name %s has unexpected axis '%s' rather than 'SPAC' or 'SPACE' (i.e., expected VEX axis_type=sp:ace, but got other).\n", __FILE__, __LINE__, antenna->calcname, antennaMountTypeNames[antenna->mount]);
+    }
+
     /* Get the spacecraft position at the true ground reception time time */
     r = calcSpacecraftAntennaPosition(D, sc_argument, spacecraftId, 1, 0.0);
     if(r < 0)
