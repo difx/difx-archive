@@ -629,10 +629,10 @@ def runDirect(fileBase, machinesPolicy, deletePolicy, makeModel, override, useLo
 
 	# spawn a logger process that will quit once this script ends
 	# this will quietly fail on systems without difxlog installed
-        cmd = ['difxlog', str(identifier), fileBase+".difxlog", "4", str(getpid())]
+	cmd = ['difxlog', str(identifier), fileBase+".difxlog", "4", str(getpid())]
 	if verbose > 1:
 		print 'Executing: %s' % ' '.join(cmd)
-        logProcess = subprocess.Popen(cmd)
+	logProcess = subprocess.Popen(cmd)
 
 	if difxLabel == None or difxLabel == '':
 		difxProgram = 'mpifxcorr'
@@ -670,10 +670,8 @@ def runDirect(fileBase, machinesPolicy, deletePolicy, makeModel, override, useLo
 		system(cmd)
 	sendMessage(fileBase, 'MpiDone', '')
 
-	# end difxlog (necessary when running startdifx with joblist)
-	if runJobList:
-            logProcess.kill()
-			
+	# end difxlog
+	logProcess.kill()
 
 	return None
 
