@@ -243,8 +243,6 @@ CorrSetup::CorrSetup(const std::string &name) : corrSetupName(name)
 int CorrSetup::setkv(const std::string &key, const std::string &value, ZoomFreq *outputbandFreq)
 {
 	int nWarn = 0;
-	outputbandFreq->frequency = 0;
-	outputbandFreq->bandwidth = 0;
 
 	if(key == "freq" || key == "FREQ")
 	{
@@ -331,6 +329,7 @@ int CorrSetup::setkv(const std::string &key, const std::string &value)
 		// e.g., addOutputBand = freq@1649.99/bw@32.0
 		// only freq is compulsory; bandwidth bw only if outputBandwidth=<x> was not specified prior to addOutputBand
 		ZoomFreq outputbandDef;
+		outputbandDef.initialise(0, 0, false, 1);
 		last = 0;
 		at = 0;
 		while(at != std::string::npos)
@@ -340,6 +339,12 @@ int CorrSetup::setkv(const std::string &key, const std::string &value)
 			splitat = nestedkeyval.find_first_of('@');
 			nWarn += setkv(nestedkeyval.substr(0, splitat), nestedkeyval.substr(splitat+1), &outputbandDef);
 			last = at+1;
+		}
+		if(outputbandDef.frequency <= 0)
+		{
+			std::cerr << "Error: Explicit outputband entry '" << value << "' parsed into unexpected frequency of " << outputbandDef.frequency << " MHz." << std::endl;
+
+			exit(EXIT_FAILURE);
 		}
 		if(outputBandwidth == 0 && outputbandDef.bandwidth == 0)
 		{

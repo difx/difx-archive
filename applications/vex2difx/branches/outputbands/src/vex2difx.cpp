@@ -2502,7 +2502,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 								destFqId = corrSetup->autobands.lookupDestinationFreq(freqs[fqId], freqs);
 								if (destFqId < 0)
 								{
-									cerr << "Error: could not look up destination frequency for zoom with freq " << fqId << endl;
+									cout << "Warning: could not look up destination frequency for zoom with freq " << fqId << ", will default to outputting the zoom as itself." << endl;
 									destFqId = fqId;
 								}
 								dd->zoomFreqId[nZoom] = fqId;
