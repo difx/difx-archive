@@ -1,5 +1,5 @@
 #
-# $Id: Makefile.am 1958 2017-08-16 19:48:05Z barrettj $
+# $Id: Makefile.am 3205 2021-03-04 17:53:07Z gbc $
 #
 
 #
@@ -42,6 +42,13 @@ else
 OMPIDIRS =
 endif
 
+# turn on DOCS stuff
+if HAVE_DOCS
+DOCSDIRS = @DOCSDIR@
+else
+DOCSDIRS =
+endif
+
 # turn on code that doesn't work, yet and a few other things
 if HAVE_DEVEL
 DEVLDIRS = @DEVLDIR@
@@ -70,7 +77,7 @@ endif
 # this is for VEX2XML
 if HAVE_VEX2XML
 VXMLDIRS = @VXMLDIR@
-TAR_VXML = v
+TAR_VXML = -v
 DCF_VXML = --enable-vex2xml
 else
 VXMLDIRS =
@@ -80,19 +87,19 @@ endif
 
 
 # this is for transitioning to a new world order
-if HAVE_HOPES
-HPESDIRS = @HPESDIR@
-TAR_HPES = chops
-DCF_HPES = --enable-hopes
+if HAVE_CHOPS
+CHOPDIRS = @CHOPDIR@
+TAR_CHOP = -chops
+DCF_CHOP = --enable-chops
 else
-HPESDIRS =
-TAR_HPES =
-DCF_HPES = --disable-hopes
+CHOPDIRS =
+TAR_CHOP =
+DCF_CHOP = --disable-chops
 endif
 
 DISTCHECK_CONFIGURE_FLAGS = \
 	$(DCF_HOPS) $(DCF_DEVL) $(DCF_DIFX) $(DCF_MARK5) \
-	$(DCF_HPES) $(DCF_VXML)
+	$(DCF_CHOP) $(DCF_VXML)
 
 
 # rev is -something
@@ -104,16 +111,18 @@ PKGVERS = $(PACKAGE)-@VERSION@
 READMEV = README-@VERSION@${vers}
 
 SUBDIRS = . $(HOPSDIRS) \
-	  $(HPESDIRS) \
+	  $(CHOPDIRS) \
 	  $(DIFXDIRS) \
 	  $(DEVLDIRS) \
 	  $(MARK5DIRS) \
 	  $(HOPSDATA) \
 	  $(VXMLDIRS) \
-	  $(OMPIDIRS)
+	  $(OMPIDIRS) \
+	  $(DOCSDIRS)
 
 EXTRA_DIST = README.txt Fink.txt MacPorts.txt svnrev.txt Copyright \
-	apt-packages.txt configure_ac ChangeLog.txt capture-log.py
+	apt-packages.txt configure_ac ChangeLog.txt capture-log.py \
+	pgplot-drivers.list README.pgplot.txt autogen.sh
 DIST_SUBDIRS = $(SUBDIRS)
 
 # m4/*.m4 macros scanned by aclocal
@@ -166,10 +175,12 @@ svnrev.txt:
 	    svn info $(srcdir) | grep Revision | cut -d' ' -f2 > svnrev.txt ||\
 	    echo 0 > svnrev.txt
 
-# for generating a Changelog (provided we have a .svn dir)
-# we commit it only if it has changed.
+# for generating a Changelog (provided we have a .svn dir and an /swc dir
+# which only exists at the Haystack correlator); we commit the new version
+# only if it has changed.
 ChangeLog.txt: svnrev.txt $(srcdir)/capture-log.py
-	-[ -d $(srcdir)/.svn ] && \
+	-[ -d $(srcdir)/.svn -a -d "/swc" ] && \
+	 [ `hostname` = 'po' -a x$USER = xgbc ] && \
 	    python $(srcdir)/capture-log.py $(srcdir) > ChangeLog.tmp && \
 	    { cmp -s $(srcdir)/ChangeLog.txt ChangeLog.tmp || \
 	      ( mv ChangeLog.tmp $(srcdir)/ChangeLog.txt && \

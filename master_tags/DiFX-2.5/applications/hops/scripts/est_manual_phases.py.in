@@ -11,37 +11,46 @@ import os
 import re
 import subprocess
 import sys
+import textwrap
 
 def parseOptions():
-    des = '''
-    This script is designed to create a fourfit control file
-    from one bright fringe.  The defaults are appropriate for
-    the EHT mixed-pol ALMA case where there are strong XL and XR
-    fringes which allow the phase offset for the reference
-    station to be measured.  The script is intended to be
-    adaptable to other applications.
-    '''
-    epi = '''
+    des = textwrap.dedent('''\
+    This script is designed to create a fourfit control file from one bright
+    fringe.  The defaults are appropriate to the normal EHTC case with the
+    polconverted ALMA products.  With the -X argument it is appropriate to
+    the pre-polconverted ALMA case (here there are strong XL and XR fringes
+    which allow the phase offset for the reference station to be measured).
+
+    The script is intended to be adaptable to other applications with some
+    appropriate choices for the optional arguments.
+    ''')
+    epi = textwrap.dedent('''\
     Typical usage requires just the name of the control file
-    to build and the root file to use:
-    est_manual_phases.py -r 3597/No0049/3C279.zlwmcz -c sample.conf
-    '''
+    to build, the root file to use, and the list of stations:
+
+    est_manual_phases.py -r 3597/No0049/3C279.zlwmcz -c sample.conf -s A,...
+    ''')
     use = '%(prog)s [options]\n'
     use += '  Version '
-    use += '$Id: est_manual_phases.py.in 1940 2017-08-03 15:13:11Z gbc $'
-    parser = argparse.ArgumentParser(epilog=epi, description=des, usage=use)
+    use += '$Id: est_manual_phases.py.in 3046 2020-09-02 14:11:29Z gbc $'
+    parser = argparse.ArgumentParser(epilog=epi, description=des, usage=use,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     required = parser.add_argument_group('required options')
     flaggers = parser.add_argument_group('flag options')
     dbugging = parser.add_argument_group('debugging options')
     optional = parser.add_argument_group('tuning options')
+    whatelse = parser.add_argument_group('finally')
     required.add_argument('-c', '--control', dest='control',
         metavar='FILE', default='', required=True,
         help='Name of fourfit control file to create/update. '
             + 'Variations of the name will be used and created in the '
-            + 'process; see the --tidy option')
+            + 'process; see the --prune option')
     required.add_argument('-r', '--rootfile', dest='rootfile',
         metavar='FILE', default='', required=True,
         help='Fourfit root file for fringe-finder scan to work with')
+    required.add_argument('-s', '--sites', dest='sites',
+        metavar='LIST', default='A,L,Z,S,R,P,J,C,X,Y', required=True,
+        help='Comma separated list of stations to process')
     #
     flaggers.add_argument('-v', '--verbose', dest='verb',
         action='store_true', default=False,
@@ -64,9 +73,6 @@ def parseOptions():
         action='store_true', default=False,
         help='Print out the defaults and exit.')
     #
-    optional.add_argument('-s', '--sites', dest='sites',
-        metavar='LIST', default='A,L,Z,S,R,P,J,C,X,Y',
-        help='Comma separated list of stations to process')
     optional.add_argument('-q', '--sequence', dest='sequence',
         metavar='LIST', default='8,1,1',
         help='Sequence of est_pc_manual directives')
@@ -79,10 +85,13 @@ def parseOptions():
     optional.add_argument('-a', '--additional', dest='additional',
         action='store_true', default=False,
         help='If set, just do the phase/delay on the site list.')
-    optional.add_argument('arguments', nargs='*',
+    #
+    whatelse.add_argument('arguments', nargs='*',
         help='Any remaining command-line arguments are treated '
             + 'as control file global directives.  Comments may be included: '
-            + '* starts a comment and @ is translated into a newline')
+            + '* starts a comment and @ is translated into a newline. '
+            + 'Note that this replaces the elements of default control '
+            + 'file that is used only if no control file exists.')
     o = parser.parse_args()
     # non-arguments to pass around in the package
     o.site = {}
@@ -234,7 +243,7 @@ def genPhaseDelay(o, ref, rem, ref_pol, rem_pol, sgn):
     cor = '%s/%s%s..%s' % (o.ffdir, ref, rem, o.stamp)
     if not os.path.exists(cor):
         if o.verb: print '  Missing datafile %s, skipping...' % cor
-        return
+        return 0
     if o.verb: print '  Using datafile %s' % cor
     for ite in range(int(o.max)):
         for seq in o.sequence.split(','):
@@ -245,7 +254,8 @@ def genPhaseDelay(o, ref, rem, ref_pol, rem_pol, sgn):
             else:     converged = executeFFact(o)
             if converged:
                 if o.verb: print '    Converged'
-                return
+                return 1
+    return 0
 
 def genPhaseOffset(o, ref, rem, ref_pol, rem_pol, sgn):
     '''
@@ -260,7 +270,7 @@ def genPhaseOffset(o, ref, rem, ref_pol, rem_pol, sgn):
     cor = '%s/%s%s..%s' % (o.ffdir, ref, rem, o.stamp)
     if not os.path.exists(cor):
         if o.verb: print '  Missing datafile %s, skipping...' % cor
-        return
+        return 0
     if o.verb: print '  Using datafile %s' % cor
     o.cmd = '%s -t -c %s -b %s%s -P %s%s %s set est_pc_manual %d' % (
         'fourfit', o.control, ref, rem, ref_pol, rem_pol, o.rootfile, sgn*64)
@@ -268,6 +278,8 @@ def genPhaseOffset(o, ref, rem, ref_pol, rem_pol, sgn):
     else:     converged = executeFFact(o)
     if converged:
         if o.verb: print '    Converged'
+        return 1
+    return 0
 
 def doTheWorkMix(o):
     '''
@@ -285,36 +297,69 @@ def doTheWorkMix(o):
     doStarters(o)
     sites = o.sites.split(',')
     mixed = sites.pop(0)
+    ok = 0
+    eok = 4 + 2 * len(sites)
     if not o.additional:
         if mixed != 'A':
             raise Exception, 'ALMA is expected to be first in the list of sites'
         fixed = sites.pop(0)
         if fixed != 'L':
             raise Exception, 'LMT is expected to be second in the list of sites'
-        genPhaseDelay(o, mixed, fixed, 'R', 'L', 1)  # step a.
-        genPhaseDelay(o, mixed, fixed, 'L', 'L', 1)  # step b.
-        genPhaseDelay(o, mixed, fixed, 'L', 'R', -1)  # step c.
-        genPhaseOffset(o, mixed, fixed, 'R', 'R', -1) # step d.
+        ok += genPhaseDelay(o, mixed, fixed, 'R', 'L', 1)  # step a.
+        ok += genPhaseDelay(o, mixed, fixed, 'L', 'L', 1)  # step b.
+        ok += genPhaseDelay(o, mixed, fixed, 'L', 'R', -1)  # step c.
+        ok += genPhaseOffset(o, mixed, fixed, 'R', 'R', -1) # step d.
     for other in sites:
-        genPhaseDelay(o, mixed, other, 'R', 'R', -1)
-        genPhaseDelay(o, mixed, other, 'R', 'L', -1)
+        ok += genPhaseDelay(o, mixed, other, 'R', 'R', -1)  # step e.
+        ok += genPhaseDelay(o, mixed, other, 'R', 'L', -1)  # step e.
+    if ok == eok:
+        print 'The %d of %d steps were completed properly'%(ok,eok)
+    else:
+        print 'Only %d of %d steps were completed properly'%(ok,eok)
 
 def doTheWorkAok(o):
     '''
     Build the control file as specified in program options.
     In the standard (EHT) path, we do the following:
     0. build a site id mk4 id mapping list
-    a. Assume the first site (ALMA) is done properly: phases/delays => 0
-       This is the default, so there is no work.
+    a. If the first site is ALMA, assume done properly: phases/delays => 0
+       This is the default, so there is no work. (pop)
     b. for every additional station/pol, use
        Ax ?? to generate x R/L phase & delay (rem)
+    c. If the first site is not ALMA, assume done properly; phases/delays
+       are not zero, but are consistent with ALMA and fourfit should be
+       generating numbers consistent with that.
+    d. for every additional station/pol, proceed to generate phases/delays
+       as normally.  However, it may be necessary to
+    e. swap baselines to find the proper ref/rem combination.
     '''
     doStarters(o)
     sites = o.sites.split(',')
     mixed = sites.pop(0)
-    for other in sites:
-        genPhaseDelay(o, mixed, other, 'R', 'R', -1)
-        genPhaseDelay(o, mixed, other, 'L', 'L', -1)
+    ok = 0
+    eok = 2 * len(sites)
+    if mixed == 'A':
+        for other in sites:
+            ok += genPhaseDelay(o, mixed, other, 'R', 'R', -1)  # step a.
+            ok += genPhaseDelay(o, mixed, other, 'L', 'L', -1)  # step a.
+        if ok == eok:
+            print 'The %d of %d steps were completed properly'%(ok,eok)
+        else:
+            print 'Only %d of %d steps were completed properly'%(ok,eok)
+    else:
+        # trust the first station
+        for other in sites:
+            ans = genPhaseDelay(o, mixed, other, 'R', 'R', -1)   # step d.
+            if ans == 0:
+                ans = genPhaseDelay(o, other,mixed, 'R', 'R', 1) # step e.
+            ok += ans
+            ans = genPhaseDelay(o, mixed, other, 'L', 'L', -1)   # step d.
+            if ans == 0:
+                ans = genPhaseDelay(o, other,mixed, 'L', 'L', 1) # step e.
+        if ok == eok:
+            print 'The %d of %d steps were completed properly'%(ok,eok)
+        else:
+            print 'Only %d of %d steps were completed properly'%(ok,eok)
 
 def pruneCF(o):
     '''
@@ -414,10 +459,10 @@ if __name__ == '__main__':
         sys.exit(0)
     try:
         if o.mixed:
-            print 'Assuming ALMA is mixed.'
+            print 'Assuming ALMA is mixed (-X option used).'
             doTheWorkMix(o)
         else:
-            print 'Assuming ALMA is fixed.'
+            print 'Assuming ALMA is fixed (-X option not used).'
             doTheWorkAok(o)
         pruneCF(o)
     except KeyboardInterrupt:
