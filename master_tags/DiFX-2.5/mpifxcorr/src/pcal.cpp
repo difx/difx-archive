@@ -1654,7 +1654,8 @@ bool compare_32fc_phase(const cf32* v, const size_t len, f32 angle, f32 step)
       }
       angle += step;
    }
-   cerr << "Extracted versus expected:\n" << ((pass) ? "PASS\n" : "\u001b[31mFAIL\u001b[0m (or PASS but missed phase ambiguity)\n") << "\n";
+   // cerr << "Extracted versus expected:\n" << ((pass) ? "PASS\n" : "\u001b[31mFAIL\u001b[0m (or PASS but missed phase ambiguity)\n") << "\n";
+   cerr << "Extracted versus expected:\n" << ((pass) ? "PASS\n" : "FAIL (or PASS but missed phase ambiguity)\n") << "\n";
    return pass;
 }
 
