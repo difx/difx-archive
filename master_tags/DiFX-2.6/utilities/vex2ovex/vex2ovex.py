@@ -54,7 +54,7 @@ def getExpname():
 			return match.group(1)
 
 	# no exper_name statement found
-	print "Error: no exper_name statement found in the vex-file"
+	print ("Error: no exper_name statement found in the vex-file")
 	sys.exit(1)
 
 def getEOPname():
@@ -64,14 +64,14 @@ def getEOPname():
         '''
 
 	# parse EOP section
-        for i in range(index["EOP"]["start"],index["EOP"]["stop"]+1):
-                match = re.match("^def\s*(.*);", content[i])
-                if match:
-                        return match.group(1)
+	for i in range(index["EOP"]["start"],index["EOP"]["stop"]+1):
+		match = re.match("^def\s*(.*);", content[i])
+		if match:
+			return match.group(1)
 
-        # no def statement found
-        print "Error: no EOP definitions found in the vex-file"
-        sys.exit(1)
+	# no def statement found
+	print ("Error: no EOP definitions found in the vex-file")
+	sys.exit(1)
 
 	
 def printGlobal(expname):
@@ -122,23 +122,24 @@ def printStation():
 			continue
 			
 		out.write(content[i])
+
 def printSite():
 	''' 
 	Prints the SITE section
 	'''
 	temp = {}
 	#determine the station to site mapping
- 	for i in range(index["STATION"]["start"],index["STATION"]["stop"]+1):
-                # new definition
-                match = re.match("^def\s*(.*);", content[i])
-                if match:
+	for i in range(index["STATION"]["start"],index["STATION"]["stop"]+1):
+		# new definition
+		match = re.match("^def\s*(.*);", content[i])
+		if match:
 			station = match.group(1)
 			temp[station] = ""
-              	match = re.match("^ref\s*\$SITE\s*=\s*(.*)\s*;", content[i])
+		match = re.match("^ref\s*\$SITE\s*=\s*(.*)\s*;", content[i])
 		if match:
 			temp[station] = match.group(1)
-			
-	station2site = {v: k for k, v in temp.iteritems()}
+
+	station2site = {v: k for k, v in temp.items()}
 			
 
 	for i in range(index["SITE"]["start"],index["SITE"]["stop"]+1):
@@ -188,12 +189,12 @@ def printFreq():
 		if match:
 			freq = float(match.group(1))
 			selFreq = 0.0
-			for key, value in bands.iteritems():
+			for key, value in bands.items():
 				if value < freq and value > selFreq:
 					selFreq = value
 					selBand = key
 			if selFreq == 0.0:
-				print "Error: Unknown frequency found in the FREQ section"
+				print ("Error: Unknown frequency found in the FREQ section")
 				sys.exit(1)
 			count += 1
 
@@ -238,6 +239,9 @@ def printPassOrder():
 	''' 
 	Prints the PASS_ORDER section
 	'''
+	if 'PASS_ORDER' not in index:
+		print ("Warning: VEX lacks PASS_ORDER section!")
+		return
 	for i in range(index["PASS_ORDER"]["start"],index["PASS_ORDER"]["stop"]+1):
 		out.write(content[i])
 
@@ -245,6 +249,9 @@ def printHeadPos():
 	''' 
 	Prints the HEAD_POS section
 	'''
+	if 'HEAD_POS' not in index:
+		print ("Warning: VEX lacks HEAD_POS section!")
+		return
 	for i in range(index["HEAD_POS"]["start"],index["HEAD_POS"]["stop"]+1):
 		out.write(content[i])
 
@@ -309,8 +316,8 @@ def parseVex():
 		# strip leading whitespaces
 		line = vexline.lstrip()
 		# skip comments or empty lines
-                if line.startswith('*') or len(line) == 0:
-                        continue
+		if line.startswith('*') or len(line) == 0:
+			continue
 
 		# append line to vex buffer
 		vexContent.append(line)
@@ -356,7 +363,7 @@ def buildCodeMap():
 			if len(token) == 0:
 				continue
 			if len(token) > 2:
-				print "Error: Illegal format of the code mapping file. See help for details about the correct format"
+				print ("Error: Illegal format of the code mapping file. See help for details about the correct format")
 				sys.exit(1)
 			codes[token[1]] = token[0]
 	else:
@@ -365,9 +372,9 @@ def buildCodeMap():
 		for key in codes:
 			codes[key] =  chr(ascii)
 			ascii += 1
-	print "Using the following station code mapping (use --codes option to change):"
-	for key,value in codes.iteritems():
-		print "%s = %s" % (key,value)
+	print ("Using the following station code mapping (use --codes option to change):")
+	for key,value in sorted(codes.items(), key=lambda x: x[1]):
+		print ("%s = %s" % (key,value))
 				
 	
 if __name__ == "__main__":
@@ -390,7 +397,7 @@ if __name__ == "__main__":
 
 	# check that output file does not exist yet
 	if os.path.exists(args.ovexfile):
-		print "Output file (%s) already exist. Delete it first" % args.ovexfile
+		print ("Output file (%s) already exist. Delete it first" % args.ovexfile)
 		sys.exit(1)
 
 	# open output file
@@ -426,4 +433,4 @@ if __name__ == "__main__":
 
 	out.close()
 
-	print "Successfully wrote %s" % args.ovexfile
+	print ("Successfully wrote %s" % args.ovexfile)
