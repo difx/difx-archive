@@ -1,3 +1,6 @@
+Version 2.5.4
+~~~~~~~~~~~~~
+* Add parameter 'exahustiveAutocorrs' from DiFX 2.6 and Trunk (r8039)
 
 Version 2.5.3
 ~~~~~~~~~~~~~
@@ -5,8 +8,7 @@ Version 2.5.3
 * Fix segfaults for scan MODE undefined in VEX
 * vexpeek --diskusage shows GByte as std::fixed, show data rate
 * vex2difx warn when antenna dropped due to missing sample_rate
-* vex2difx improved check for antenna presence in a Mode, tell when key .vex
-refs are incomplete for an antenna
+* vex2difx improved check for antenna presence in a Mode, tell when key .vex refs are incomplete for an antenna
 
 Version 2.5.0
 ~~~~~~~~~~~~~
