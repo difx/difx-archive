@@ -8,6 +8,7 @@ Version for DiFX-2.5 series 2.5.4, adds some upstream features from DiFX 2.6.0/.
 * Fixed bug in case of multiple different bandwidths (r8389); rjc 2018.7.17
 * Fixed too-many-pcal-tones bug for many tone case (r8374)
 * Permit tab characters in VEX file (r9601)
+* Propagate '-e <experiment number>' into root file fields 'exper_num' and 'corr_exp#' (r100004, r10006)
 
 Version 1.5
 ~~~~~~~~~~~
