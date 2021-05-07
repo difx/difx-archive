@@ -1767,7 +1767,7 @@ void CorrParams::defaults()
 	nThread = 0;
 	tweakIntTime = false;
 	sortAntennas = true;
-    exhaustiveAutocorrs = false;
+	exhaustiveAutocorrs = false;
 }
 
 void pathify(std::string &filename)
