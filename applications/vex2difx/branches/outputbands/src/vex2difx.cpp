@@ -2337,10 +2337,10 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 			{
 				const std::string &antName = it->first;
 				const AntennaSetup* antSetup = P->getAntennaSetup(antName);
-				if(antSetup->zoomFreqs.size() > 0)
+				if(antSetup->v2dZoomFreqs.size() > 0)
 				{
-					cout << "Adding " << antSetup->zoomFreqs.size() << " user zoom freqs to outputbands\n";
-					corrSetup->autobands.addUserOutputbands(antSetup->zoomFreqs);
+					cout << "Adding " << antSetup->v2dZoomFreqs.size() << " user zoom freqs to outputbands\n";
+					corrSetup->autobands.addUserOutputbands(antSetup->v2dZoomFreqs);
 				}
 			}
 
@@ -2376,7 +2376,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 				}
 			}
 
-			// add those zooms into the global zooms shared by all antennas
+			// update antenna's zooms to include the additional new zooms needed to construct outputbands
 			for(std::map<std::string,VexSetup>::const_iterator it = mode->setups.begin(); it != mode->setups.end(); ++it)
 			{
 				const std::string &antName = it->first;
@@ -2390,6 +2390,9 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 				AntennaSetup* antSetup = ((CorrParams*)P)->getNonConstAntennaSetup(antName);
 				if(antSetup)
 				{
+					// start from blank antenna zooms, re-add the explicit v2d zooms, then add automatic zooms related to outputbands
+					antSetup->zoomFreqs.clear();
+					std::copy(antSetup->v2dZoomFreqs.begin(), antSetup->v2dZoomFreqs.end(), std::back_inserter(antSetup->zoomFreqs));
 					antSetup->copyGlobalZoom(constituentzooms); // "copy()" but actually appends
 				}
 			}
