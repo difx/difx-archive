@@ -221,6 +221,8 @@ public:
 	std::string filelistFile;
 	bool filelistReadFail;
 
+	std::vector<ZoomFreq> v2dZoomFreqs;//List of zoom freqs for this antenna; minus any Outputbands-introduced zooms
+
 	void addDatastream(const std::string &dsName);
 };
 

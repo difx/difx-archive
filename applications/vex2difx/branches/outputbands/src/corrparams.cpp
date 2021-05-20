@@ -2623,6 +2623,9 @@ int CorrParams::load(const std::string &fileName)
 
 			it->copyGlobalZoom(*z);
 		}
+
+		it->v2dZoomFreqs.clear();
+		std::copy(it->zoomFreqs.begin(), it->zoomFreqs.end(), std::back_inserter(it->v2dZoomFreqs)); // copy zoomFreqs into v2dZoomFreqs which Outputbands won't tamper with
 	}
 
 	// populate datastream structures
