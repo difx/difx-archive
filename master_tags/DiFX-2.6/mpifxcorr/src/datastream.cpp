@@ -63,6 +63,7 @@ DataStream::DataStream(const Configuration * conf, int snum, int id, int ncores,
   activescan = 0;
   activesec = 0;
   activens = 0;
+  lastvalidsegment = 0;
   switchedpower = 0;
   switchedpowerincrement = 4;  // by default look at 1/4 of the samples
   datamuxer = 0;
