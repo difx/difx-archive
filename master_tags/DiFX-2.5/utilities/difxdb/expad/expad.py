@@ -32,7 +32,7 @@ import tkMessageBox
 import datetime
 from optparse import OptionParser
 from Tkinter import *
-from tkinter.multilistbox import *
+from tkinter_difx.multilistbox import *
 from string import  upper
 
 from difxdb.model import model
