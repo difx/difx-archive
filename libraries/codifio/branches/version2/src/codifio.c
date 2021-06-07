@@ -37,24 +37,22 @@
 #include "codifio.h"
 
 
-#define CODIF_VERSION 1
+#define CODIF_VERSION 2
 
 
-int createCODIFHeader(codif_header *header, int dataarraylength, uint16_t threadid, uint16_t groupid, int bits, uint16_t nchan,
-		      int sampleblocklength, int period, uint64_t totalsamples, int iscomplex, char stationid[3]) {
+int createCODIFHeader(codif_header *header, uint32_t dataarraylength, uint16_t threadid, uint16_t groupid, uint8_t bits, uint16_t nchan,
+		      uint16_t sampleblocklength, uint16_t period, uint64_t totalsamples, int iscomplex, char stationid[3], uint16_t secondaryid) {
   
-  if (CODIF_VERSION>7) return(CODIF_ERROR);
-  if (bits>32 || bits<1) return(CODIF_ERROR);
-  if (dataarraylength%8!=0 || dataarraylength<0) return(CODIF_ERROR);
-  if (threadid>USHRT_MAX || threadid<0) return(CODIF_ERROR);
-  if (groupid>USHRT_MAX || groupid<0) return(CODIF_ERROR);
-
-  if (nchan<1 || nchan>USHRT_MAX) return(CODIF_ERROR);
+  if (CODIF_VERSION>31) return(CODIF_ERROR);
+  if (dataarraylength%8!=0) return(CODIF_ERROR);
+  if (nchan==0) return(CODIF_ERROR);
 
   memset(header, 0, CODIF_HEADER_BYTES);
 
   header->version = CODIF_VERSION;
+  header->protocol = 7;
   header->invalid = 0;
+  header->calEnabled = 0;
   setCODIFNumChannels(header, nchan);
   setCODIFFrameBytes(header, dataarraylength);
   if (iscomplex)
@@ -63,17 +61,21 @@ int createCODIFHeader(codif_header *header, int dataarraylength, uint16_t thread
     header->iscomplex = 0;
   setCODIFBitsPerSample(header, bits);
   setCODIFVersion(header, 1);
-  setCODIFRepresentation(header, 0);
-  header->threadid = threadid;
+  setCODIFRepresentation(header, 1);
+  setCODIFThreadID(header, threadid);
+  setCODIFGroupID(header, groupid);
   header->groupid = groupid;
   header->stationid = stationid[0]<<8 | stationid[1];
+  header->groupid = groupid;
+  header->secondaryid = secondaryid;
   setCODIFPeriod(header, period);
   header->totalsamples = totalsamples;
   setCODIFSampleblockLength(header, sampleblocklength);
+  header->seconds=0;
   header->frame=0;
-  header->sync = 0xADEADBEE;
-  
-
+  header->epoch=0;
+  header->sync = 0xFEEDCAFE;
+ 
   return(CODIF_NOERROR);
 }
 

@@ -9,7 +9,11 @@ if [ -z $DIFXROOT ]; then
 fi
 
 aclocal
-libtoolize --copy --force
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    glibtoolize --copy --force
+else
+    libtoolize --copy --force
+fi
 autoconf
 autoheader
 automake -a -c
