@@ -68,7 +68,7 @@ int sanityCheckConsistency(const VexData *V, const CorrParams *P)
 	}
 	if(polarizations & DIFXIO_POL_ERROR)
 	{
-		std::cerr << "Error: the .vex file contains a polarization that is not R, L, X or Y.  Cannot proceed." << std::endl;
+		std::cerr << "Error: the .vex file contains a polarization that is not R, L, X, Y, H, or V.  Cannot proceed." << std::endl;
 		++nError;
 	}
 
