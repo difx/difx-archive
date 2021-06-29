@@ -112,7 +112,7 @@ void DifxConfigMapAntennas(DifxConfig *dc, const DifxDatastream *ds)
 	}
 
 	dc->nAntenna = maxa+1;
-	dc->ant2dsId = (int *)malloc((maxa+2)*sizeof(int));
+	dc->ant2dsId = (int *)calloc((maxa+2), sizeof(int));
 	for(a = 0; a < maxa; ++a)
 	{
 		dc->ant2dsId[a] = -1;
@@ -333,7 +333,7 @@ static int *deriveAntennaMap(const DifxInput *D, DifxParameters *p, int *nTelesc
 		fprintf(stderr, "deriveAntennaMap: NUM TELESCOPES too small: \n%d < %d\n", nTel, D->nAntenna);
 	}
 
-	antennaMap = (int *)malloc(nTel* sizeof(int));
+	antennaMap = (int *)calloc(nTel, sizeof(int));
 
 	for(t = 0; t < nTel; ++t)
 	{
@@ -391,9 +391,35 @@ int polMaskValue(char polName)
 		case 'Y':
 		case 'y':
 			return DIFXIO_POL_Y;
+		case 'H':
+		case 'h':
+			return DIFXIO_POL_H;
+		case 'V':
+		case 'v':
+			return DIFXIO_POL_V;
 		default:
 			return DIFXIO_POL_ERROR;
 	}
+}
+
+int isMixedPolMask(const int polmask)
+{
+	int poltypeCount = 0;
+
+	if (polmask & DIFXIO_POL_RL)
+	{
+		poltypeCount++;
+	}
+	if (polmask & DIFXIO_POL_XY)
+	{
+		poltypeCount++;
+	}
+	if (polmask & DIFXIO_POL_HV)
+	{
+		poltypeCount++;
+	}
+
+	return (poltypeCount > 1);
 }
 
 /* This function populates the DifxFreqSet array
@@ -541,34 +567,44 @@ static int generateFreqSets(DifxInput *D)
 
 		if(dc->polMask & DIFXIO_POL_ERROR || dc->polMask == 0)
 		{
-			fprintf(stderr, "Error: generateFreqSets: polMask = 0x%03x is unsupported!\n", dc->polMask);
+			fprintf(stderr, "Error: generateFreqSets: polMask = 0x%03x is unsupported by FITS-IDI!\n", dc->polMask);
 
 			return -1;
 		}
-		else if((dc->polMask & DIFXIO_POL_RL) && (dc->polMask & DIFXIO_POL_XY))
+		else if(isMixedPolMask(dc->polMask) && D->AntPol == 0)
 		{
-			fprintf(stderr, "Warning: generateFreqSets: polMask = 0x%03x is unsupported!\n", dc->polMask);
+			fprintf(stderr, "Warning: generateFreqSets: polMask = 0x%03x is unsupported by FITS-IDI!\n", dc->polMask);
 		}
 
 		/* populate polarization matrix for this configuration */
-		if(dc->polMask & DIFXIO_POL_R)
+		if(dc->polMask & DIFXIO_POL_R && dc->nPol < 2 )
 		{
 			dc->pol[dc->nPol] = 'R';
 			++dc->nPol;
 		}
-		if(dc->polMask & DIFXIO_POL_L)
+		if(dc->polMask & DIFXIO_POL_L && dc->nPol < 2 )
 		{
 			dc->pol[dc->nPol] = 'L';
 			++dc->nPol;
 		}
-		if(dc->polMask & DIFXIO_POL_X)
+		if(dc->polMask & DIFXIO_POL_X && dc->nPol < 2 )
 		{
 			dc->pol[dc->nPol] = 'X';
 			++dc->nPol;
 		}
-		if(dc->polMask & DIFXIO_POL_Y)
+		if(dc->polMask & DIFXIO_POL_Y && dc->nPol < 2 )
 		{
 			dc->pol[dc->nPol] = 'Y';
+			++dc->nPol;
+		}
+		if(dc->polMask & DIFXIO_POL_H && dc->nPol < 2 )
+		{
+			dc->pol[dc->nPol] = 'H';
+			++dc->nPol;
+		}
+		if(dc->polMask & DIFXIO_POL_V && dc->nPol < 2 )
+		{
+			dc->pol[dc->nPol] = 'V';
 			++dc->nPol;
 		}
 
@@ -964,7 +1000,7 @@ static DifxInput *parseDifxInputConfigurationTable(DifxInput *D, const DifxParam
 		dc->doPolar = -1;	/* to be calculated later */
 
 		/* initialize datastream index array */
-		dc->datastreamId = (int *)malloc(sizeof(int)*(dc->nDatastream + 1));
+		dc->datastreamId = (int *)calloc(dc->nDatastream + 1, sizeof(int));
 		
 		/* here "dsId" is "datastream # within conf" */
 		for(dsId = 0; dsId <= D->nDatastream; ++dsId)
@@ -987,7 +1023,7 @@ static DifxInput *parseDifxInputConfigurationTable(DifxInput *D, const DifxParam
 		}
 
 		/* initialize baseline index array; -1 terminated */
-		dc->baselineId = (int *)malloc(sizeof(int)*(dc->nBaseline+1));
+		dc->baselineId = (int *)calloc(dc->nBaseline+1, sizeof(int));
 		for(blId = 0; blId <= dc->nBaseline; ++blId)
 		{
 			dc->baselineId[blId] = -1;
@@ -2892,7 +2928,7 @@ static DifxInput *deriveFitsSourceIds(DifxInput *D)
 		int freqSetId;
 
 		D->source[i].numFitsSourceIds = D->nFreqSet;
-		D->source[i].fitsSourceIds = (int*)malloc(D->nFreqSet * sizeof(int));
+		D->source[i].fitsSourceIds = (int*)calloc(D->nFreqSet, sizeof(int));
 		for(freqSetId = 0; freqSetId < D->nFreqSet; ++freqSetId)
 		{
 			int a, j;
@@ -3181,6 +3217,16 @@ static void setGlobalValues(DifxInput *D)
 	{
 		D->polPair[0] = 'Y';
 	}
+
+	if(D->AntPol == 1)
+	{
+		D->polPair[0] = 'A';
+		if(D->nPol > 1)
+		{
+			D->polPair[1] = 'A';
+		}
+	}
+
 }
 
 /* returns zero on success, otherwise count of errors encountered */
@@ -3360,6 +3406,13 @@ DifxInput *updateDifxInput(DifxInput *D, const DifxMergeOptions *mergeOptions)
 	}
 
 	D = deriveDifxInputValues(D);
+	if(D == NULL)
+	{
+		fprintf(stderr, "Merging Frequency Setups failed.  Could not derive input values.\n");
+
+		return 0;
+	}
+
 	nError = mergeDifxInputFreqSets(D, mergeOptions);
 	if(nError > 0)
 	{

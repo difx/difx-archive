@@ -60,7 +60,7 @@ void DifxConfigAllocDatastreamIds(DifxConfig *dc, int nDatastream, int start)
 	{
 		free(dc->datastreamId);
 	}
-	dc->datastreamId = (int *)malloc((nDatastream+1)*sizeof(int));
+	dc->datastreamId = (int *)calloc(nDatastream+1, sizeof(int));
 	dc->datastreamId[nDatastream] = -1;
 	for(configDatastreamId = 0; configDatastreamId < nDatastream; ++configDatastreamId)
 	{
@@ -77,7 +77,7 @@ void DifxConfigAllocBaselineIds(DifxConfig *dc, int nBaseline, int start)
 	{
 		free(dc->baselineId);
 	}
-	dc->baselineId = (int *)malloc((nBaseline+1)*sizeof(int));
+	dc->baselineId = (int *)calloc(nBaseline+1, sizeof(int));
 	dc->baselineId[nBaseline] = -1;
 	for(configBaselineId = 0; configBaselineId < nBaseline; ++configBaselineId)
 	{
@@ -239,20 +239,42 @@ int isSameDifxConfig(const DifxConfig *dc1, const DifxConfig *dc2)
 	return 1;
 }
 
-int DifxConfigGetPolId(const DifxConfig *dc, char polName)
+int DifxConfigGetPolId(const DifxInput *D, int configId, char polName)
 {
-	if(dc->pol[0] == polName)
+	if(D->AntPol == 0)
 	{
-		return 0;
-	}
-	if(dc->pol[1] == polName)
-	{
-		return 1;
-	}
+		if(D->config[configId].pol[0] == polName)
+		{
+			return 0;
+		}
+		if(D->config[configId].pol[1] == polName)
+		{
+			return 1;
+		}
 
-	return -1;
+		return -1;
+	}
+	else
+	{
+		switch(polName)
+		{
+			case 'R':
+				return 0;
+			case 'L':
+				return 1;
+			case 'X':
+				return 0;
+			case 'Y':
+				return 1;
+			case 'H':
+				return 0;
+			case 'V':
+				return 1;
+			default:
+				return -1;
+		}
+	}
 }
-
 
 /* Inputs:
  *   D         -- pointer to DifxInput structure
@@ -338,7 +360,7 @@ int DifxConfigRecBand2FreqPol(const DifxInput *D, int configId, int antennaId, i
 	}
 
 	*freqId = ds->recFreqId[localFqId];
-	*polId = DifxConfigGetPolId(dc, ds->recBandPolName[recBand]);
+	*polId = DifxConfigGetPolId(D, configId, ds->recBandPolName[recBand]);
 
 	return 0;
 }
@@ -350,7 +372,7 @@ void copyDifxConfig(DifxConfig *dest, const DifxConfig *src, const int *baseline
 	dest->nAntenna = src->nAntenna;
 	if(src->ant2dsId)
 	{
-		dest->ant2dsId = (int *)malloc((src->nAntenna+1)*sizeof(int));
+		dest->ant2dsId = (int *)calloc(src->nAntenna+1, sizeof(int));
 		for(a = 0; a < src->nAntenna; ++a)
 		{
 			if(src->ant2dsId[a] < 0)

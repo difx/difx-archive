@@ -66,9 +66,12 @@
 #define DIFXIO_POL_L			0x02
 #define DIFXIO_POL_X			0x10
 #define DIFXIO_POL_Y			0x20
-#define DIFXIO_POL_ERROR		0x100
+#define DIFXIO_POL_H			0x100
+#define DIFXIO_POL_V			0x200
+#define DIFXIO_POL_ERROR		0x1000
 #define DIFXIO_POL_RL			(DIFXIO_POL_R | DIFXIO_POL_L)
 #define DIFXIO_POL_XY			(DIFXIO_POL_X | DIFXIO_POL_Y)
+#define DIFXIO_POL_HV			(DIFXIO_POL_H | DIFXIO_POL_V)
 
 #define DIFXIO_DEFAULT_POLY_ORDER	5
 #define DIFXIO_DEFAULT_POLY_INTERVAL	120
@@ -295,7 +298,7 @@ typedef struct
 	double bw;		/* (MHz) */
 	char sideband;		/* U or L -- net sideband */
 	int nPol;		/* 1 or 2 */
-	char pol[2];		/* polarization codes (one per nPol) : L R X or Y. */
+	char pol[2];		/* polarization codes (one per nPol) : L R X Y, H or V. */
 	char rxName[DIFXIO_RX_NAME_LENGTH];
 } DifxIF;
 
@@ -423,7 +426,8 @@ typedef struct
 	double *clockOffsetDelta; /* (us) [freq] */
 	double *phaseOffset;	/* (degrees) [freq] */
 	double *freqOffset;	/* Freq offsets for each frequency in Hz */
-	
+	char pol[2];        /* polarization codes (one per nPol) : L R X Y, H or V. */
+
 	int nRecFreq;		/* number of freqs recorded in this datastream */
 	int nRecBand;		/* number of base band channels recorded */
 	int *nRecPol;		/* [recfreq] */
@@ -463,6 +467,7 @@ typedef struct
 	double X, Y, Z;		/* telescope position, (m) */
 	double dX, dY, dZ;	/* telescope position derivative, (m/s) */
 	int spacecraftId;	/* -1 if not a spacecraft */
+	char pol[2];            /* polarization codes (one per nPol) : L R X Y, H or V. */
 	char shelf[DIFXIO_SHELF_LENGTH];  /* shelf location of module; really this should not be here! */
 } DifxAntenna;
 
@@ -534,16 +539,16 @@ typedef struct
 	double mjdEnd;				/* (day) */
 	int startSeconds;			/* Since model reference (top of calc file) */
 	int durSeconds; 			/* Duration of the scan */
-        char identifier[DIFXIO_NAME_LENGTH];	/* Usually a zero-based number */
+	char identifier[DIFXIO_NAME_LENGTH];	/* Usually a zero-based number */
 	char obsModeName[DIFXIO_NAME_LENGTH];	/* Identifying the "mode" of observation */
 	int maxNSBetweenUVShifts;		/* Maximum interval until data must be shifted/averaged */
 	int maxNSBetweenACAvg;			/* Maximum interval until autocorrelations are sent/averaged */
-        int pointingCentreSrc;  		/* index to source array */
-        int nPhaseCentres;      		/* Number of correlation centres */
-        int phsCentreSrcs[MAX_PHS_CENTRES]; 	/* indices to source array */
+	int pointingCentreSrc;  		/* index to source array */
+	int nPhaseCentres;      		/* Number of correlation centres */
+	int phsCentreSrcs[MAX_PHS_CENTRES]; 	/* indices to source array */
 	int orgjobPhsCentreSrcs[MAX_PHS_CENTRES];/* indices to the source array from the original (pre-merged) job */
 	int jobId;				/* 0, 1, ... nJob-1 */
-        int configId;           		/* to determine freqId */
+	int configId;           		/* to determine freqId */
 	int nAntenna;
 	int nPoly;
 	DifxPolyModel ***im;	/* indexed by [ant][src][poly] */
@@ -663,6 +668,7 @@ typedef struct
 
 	int nIF;		/* maximum num IF across configs */
 	int nPol;		/* maximum num pol across configs */
+	int AntPol;		/* 1 for antenna defined polarizations */
 	int doPolar;		/* 0 if not, 1 if so */
 	int nPolar;		/* nPol*(doPolar+1) */
 				/* 1 for single pol obs */
@@ -859,7 +865,7 @@ DifxConfig *mergeDifxConfigArrays(const DifxConfig *dc1, int ndc1,
 	const DifxConfig *dc2, int ndc2, int *configIdRemap,
 	const int *baselineIdRemap, const int *datastreamIdRemap,
 	const int *pulsarIdRemap, int *ndc);
-int DifxConfigGetPolId(const DifxConfig *dc, char polName);
+int DifxConfigGetPolId(const DifxInput *D, int configId, char polName);
 int DifxConfigRecBand2FreqPol(const DifxInput *D, int configId,
 	int antennaId, int recBand, int *freqId, int *polId);
 int writeDifxConfigArray(FILE *out, int nConfig, const DifxConfig *dc, const DifxPulsar *pulsar,
@@ -1012,6 +1018,7 @@ void DifxInputSetThreads(DifxInput *D, int nThread);
 int DifxInputLoadThreads(DifxInput *D);
 int DifxInputWriteThreads(const DifxInput *D);
 int polMaskValue(char polName);
+int isMixedPolMask(const int polmask);
 
 /* Writing functions */
 int writeDifxIM(const DifxInput *D);
