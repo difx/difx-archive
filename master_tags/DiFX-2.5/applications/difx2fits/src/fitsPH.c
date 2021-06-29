@@ -779,7 +779,7 @@ static int parseDifxPulseCal(const char *line,
 
 		localFqId = dd->recBandFreqId[band];
 		recFreq = dd->recFreqId[localFqId];
-		bandPol = DifxConfigGetPolId(dc, dd->recBandPolName[band]);
+		bandPol = DifxConfigGetPolId(D, *configId, dd->recBandPolName[band]);
 
 		df = D->freq + recFreq;
 

@@ -517,16 +517,16 @@ static int populateFitsKeywords(const DifxInput *D, struct fits_keywords *keys)
 	switch(D->polPair[0])
 	{
 	case 'R':
-		keys->stk_1 = -1;
+		keys->stk_1 = FITS_STOKES_RR;
 		break;
 	case 'L':
-		keys->stk_1 = -2;
+		keys->stk_1 = FITS_STOKES_LL;
 		break;
 	case 'X':
-		keys->stk_1 = -5;
+		keys->stk_1 = FITS_STOKES_XX;
 		break;
 	case 'Y':
-		keys->stk_1 = -6;
+		keys->stk_1 = FITS_STOKES_YY;
 		break;
 	default:
 		fprintf(stderr, "Error: unknown polarization (%c)\n", D->polPair[0]);
@@ -886,6 +886,7 @@ static DifxInput **loadDifxInputSet(const struct CommandLineOptions *opts)
 
 			return 0;
 		}
+		Dset[i]->AntPol = 0;
 
 		Dset[i] = updateDifxInput(Dset[i], &opts->mergeOptions);
 
