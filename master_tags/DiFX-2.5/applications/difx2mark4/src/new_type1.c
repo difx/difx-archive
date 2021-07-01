@@ -22,6 +22,30 @@
 
 #define SCALE 10000.0               // amplitude factor to normalize for fourfit
 
+//this function is needed to compute t100.nindex properly with multiple datastream
+//stations, previously d2m4 erroneously used:
+//nindex = D->baseline[blind].nFreq * D->baseline[blind].nPolProd[0];
+//which is correct when there is a single datastream containing all of the
+//frequencies and pol-products, but wrong for multi-stream station data
+int CalculateNIndex(const DifxInput *D, int a1, int a2)
+{
+    int i;
+    int count = 0;
+    //if any antenna has multiple datastreams, we need
+    //to loop through all the 'baselines' and sum up nfreq*npolprods on each one
+    //TODO! CHECK THIS ON S/X DATA	
+    for (i=0; i<D->nBaseline; i++)
+    {
+        if( (D->datastream[D->baseline[i].dsA].antennaId == a1  && D->datastream[D->baseline[i].dsB].antennaId == a2) )
+        {
+            count += D->baseline[i].nFreq * D->baseline[i].nPolProd[0];
+        }
+    }
+    return count;
+}
+
+
+
 int new_type1 (DifxInput *D,                    // ptr to a filled-out difx input structure
                struct fblock_tag *pfb,          // ptr to filled-in fblock table
                int nb,                          // (next open) index to base_index array
@@ -133,7 +157,10 @@ int new_type1 (DifxInput *D,                    // ptr to a filled-out difx inpu
 
                                     // construct and write type 100 record
     memcpy (t100.baseline, blines+2*nb, 2);
-    t100.nindex = D->baseline[blind].nFreq * D->baseline[blind].nPolProd[0];
+
+    //CalculateNIndex function needed to fix this for mulitple datastreams
+    t100.nindex = CalculateNIndex(D, a1, a2);
+
     write_t100 (&t100, fout[nb]);
 
     if (a1 != a2)                   // cross-correlation
