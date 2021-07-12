@@ -25,6 +25,7 @@ you need make some adjustments for understanding the plot or producing
 different versions (default values are given):
     decimation=$decimation      use one value in this many
     plotrange=$plotrange        Hours and Tsys for gnuplot
+The plotrange defaults to [][0:10] allowing for nominal Tsys performance.
 "
 # parse arguments
 band=${1-'noband'}
@@ -94,7 +95,7 @@ do
     ( echo '' ; echo '' ) >> $tag.out
     awk -v decimate=1 "$awks" $p >> $tag.out
     ndx=$(($ndx + 1))
-    map=`ls *jobs-map.txt`
+    map=`ls *jobs-map.txt 2>&-` || map='no-such-file'
     [ -f "$map" ] && {
         job=`echo $p | cut -d_ -f2 | cut -d. -f1`
         tit[$ndx]="tit '"`awk '$1 == '$job' {print $3}' $map`"($job)'"
