@@ -91,8 +91,8 @@ public:
 	class Outputband {
 	public:
 		double fbandstart;	///< Start frequency of spectral window in Hz
-		double bandwidth;	///< Total bandwidth of spectral window in Hz; the sum of bandwidth(s) of consituent band(s)
-		std::vector<Band> constituents;	///< Collection of bands that produce/cover the total 'bandwidth'
+		double bandwidth;	///< Bandwidth of spectral window in Hz
+		std::vector<Band> constituents;	///< Collection of bands that produce/cover the total 'bandwidth' - if the Outputband is complete
 
 		/// C'stor, describe a spectral window and start from an initially empty list of constituents
 		Outputband(double fbandstart_Hz, double bandwidth_Hz) : fbandstart(fbandstart_Hz),bandwidth(bandwidth_Hz)
@@ -105,6 +105,9 @@ public:
 
 		/// Grow the list of consituent bands by one
 		void extend(const Band& b) { this->extend(b.flow, b.bandwidth()); }
+
+		/// Return the total bandwidth of the outputband constituents
+		double constituentsBandwidth() const;
 
 		/// Check whether constituent band(s) fully cover the preset 'bandwidth' of the outputband
 		bool isComplete() const;

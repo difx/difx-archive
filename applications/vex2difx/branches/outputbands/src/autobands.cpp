@@ -83,16 +83,26 @@ void AutoBands::Outputband::extend(double fstart, double bw)
 	constituents.push_back(AutoBands::Band(fstart, fstart+bw, 0));
 }
 
+double AutoBands::Outputband::constituentsBandwidth() const
+{
+	double constituentbwsum = 0;
+	for(std::vector<AutoBands::Band>::const_iterator b = constituents.begin(); b != constituents.end(); ++b)
+	{
+		constituentbwsum += b->bandwidth();
+	}
+	return constituentbwsum;
+}
+
 bool AutoBands::Outputband::isComplete() const
 {
-	double constituentbws = 0;
+	double constituentbwsum = 0;
 	double constituentstart = std::numeric_limits<double>::infinity();
 	for(std::vector<AutoBands::Band>::const_iterator b = constituents.begin(); b != constituents.end(); ++b)
 	{
-		constituentbws += b->bandwidth();
+		constituentbwsum += b->bandwidth();
 		constituentstart = std::min(constituentstart, b->flow);
 	}
-	return (constituentbws == bandwidth) && (constituentstart == fbandstart);
+	return (constituentbwsum == bandwidth) && (constituentstart == fbandstart);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -618,7 +628,7 @@ int AutoBands::generateOutputbandsExplicit(int Nant)
 			newband.extend(foutstart, bw_utilized);
 			if(verbosity > 0)
 			{
-				std::cout << "    adding " << bw_utilized*1e-6 << " MHz starting at " << foutstart*1e-6 << " MHz, filled to " << newband.bandwidth*1e-6 << " MHz\n";
+				std::cout << "    adding " << bw_utilized*1e-6 << " MHz starting at " << foutstart*1e-6 << " MHz, filled to " << newband.constituentsBandwidth()*1e-6 << " MHz\n";
 			}
 
 
