@@ -2,6 +2,7 @@ Version 2.5.4
 ~~~~~~~~~~~~~
 * Add parameter 'exahustiveAutocorrs' from DiFX 2.6 and Trunk (r8039)
 * Add copy of utility mk62v2d from DiFX Trunk (r9566)
+* Tolerate H,V polarization labels
 
 Version 2.5.3
 ~~~~~~~~~~~~~
