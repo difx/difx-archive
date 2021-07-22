@@ -30,8 +30,11 @@ Version 2.5
 * Calculate Mark5 module signature more consistently; the "NeoLegacy" formats used wrong number of bytes in the calculation
 * Change genmachines.py back to genmachines
 * Fix weights after a datastream dries up (developed after 2.5 branching)
-* Fix extraction of VGOS and IVS 5/10 MHz pcal, but omit VDIFC fixes of 2.6.2 on purpose to retain 2.5.3 compatibility
 * Version for DiFX-2.5, May 16, 2017
+* Fix extraction of VGOS and IVS 5/10 MHz pcal, but omit VDIFC fixes of 2.6.2 on purpose to retain 2.5.3 compatibility
+* Fix complex data PCal extractor to support other than 16 tones per band
+* Remove try/catch pair that fails with new openmpi (developed for 2.5.3)
+* Fix segfault on 'exiting gracefully' when a recording is not present
 
 Version 2.4
 ~~~~~~~~~~~
