@@ -1,4 +1,7 @@
-
+vex2 branched on Aug 2, 2021 from rev. 10089
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* import Goddard parser from Aug 2, 2021
+  - minor updates to get to compile
 
 Version 2.7.0
 ~~~~~~~~~~~~~
