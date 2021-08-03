@@ -32,6 +32,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <list>
 #include <regex.h>
 #include "vex_data.h"
@@ -1535,11 +1536,28 @@ bool VexData::isSX() const
 	return hasSX & (!hasOther);
 }
 
+void VexData::setVersion(const std::string &ver)
+{
+	version = atof(ver.c_str());
+}
+
+void VexData::setVersion(double ver)
+{
+	version = ver;
+}
+
+double VexData::getVersion() const
+{
+	return version;
+}
+
+
 std::ostream& operator << (std::ostream &os, const VexData &x)
 {
 	int n = x.nSource();
 
-	os << "Vex:" << std::endl;
+	os << "Vex " << x.getVersion() << ":" << std::endl;
+	os << *x.getExper() << std::endl;
 	os << n << " sources:" << std::endl;
 	for(int i = 0; i < n; ++i)
 	{

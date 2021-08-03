@@ -65,6 +65,8 @@ private:
 
 	std::string directory;
 
+	double version;			// version of vex file
+
 public:
 	char vexStartTime[50];		// FIXME: figure out why these are needed and are not in VexExper
 	char vexStopTime[50];
@@ -175,6 +177,11 @@ public:
 
 	const VexExper *getExper() const { return &exper; }
 	void setExper(const std::string &name, const Interval &experTimeRange);
+
+	void setVersion(const std::string &ver);
+	void setVersion(double ver);
+	double getVersion() const;
+
 };
 
 std::ostream& operator << (std::ostream &os, const VexData &x);

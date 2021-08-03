@@ -1435,10 +1435,24 @@ static int getExper(VexData *V, Vex *v)
 	llist *block;
 	double start, stop;
 	int nWarn = 0;
-	std::string experimentName;
 
 	start = V->getEarliestScanStart() - 1.0/86400.0;
 	stop = V->getLatestScanStop() + 1.0/86400.0;
+
+	if(v->version)
+	{
+		lowl *w;
+
+		w = (lowl *)(v->version->ptr);
+
+		V->setVersion((char *)(w->item));
+	}
+	else
+	{
+		std::cerr << "Warning: VEX_REV not set.  That is bad." << std::endl;
+
+		++nWarn;
+	}
 
 	block = find_block(B_EXPER, v);
 
@@ -1449,73 +1463,78 @@ static int getExper(VexData *V, Vex *v)
 		V->setExper("RANDOM", Interval(start, stop));
 		
 		++nWarn;
-
-		return nWarn;
 	}
-
-	for(Llist *defs=((struct block *)block->ptr)->items; defs; defs=defs->next)
+	else
 	{
-		int statement;
-		Llist *lowls, *refs;
+		std::string experimentName;
 		
-		statement = ((Lowl *)defs->ptr)->statement;
-		if(statement == T_COMMENT || statement == T_COMMENT_TRAILING)
+		for(Llist *defs=((struct block *)block->ptr)->items; defs; defs=defs->next)
 		{
-			continue;
-		}
-		if(statement != T_DEF)
-		{
-			break;
-		}
-
-		refs = ((Def *)((Lowl *)defs->ptr)->item)->refs;
-
-		lowls = find_lowl(refs, T_EXPER_NAME);
-
-		experimentName = (char *)(((Lowl *)lowls->ptr)->item);
-
-		lowls = find_lowl(refs, T_EXPER_NOMINAL_START);
-		if(lowls)
-		{
-			void *p;
+			int statement;
+			Llist *lowls, *refs;
+			Exper_name *en;
 			
-			p = (((Lowl *)lowls->ptr)->item);
-			start = vexDate((char *)p);
-			strncpy(V->vexStartTime, ((char *)p), 50);
-			V->vexStartTime[4] = '\0';
-			V->vexStartTime[8] = '\0';
-			V->vexStartTime[11] = '\0';
-			V->vexStartTime[14] = '\0';
-			V->vexStartTime[17] = '\0';
-		}
-		else
-		{
-			std::cerr << "Note: The vex file has no exper_nominal_start parameter defined in the EXPER section.  Making assumptions..." << std::endl;
+			statement = ((Lowl *)defs->ptr)->statement;
+			if(statement == T_COMMENT || statement == T_COMMENT_TRAILING)
+			{
+				continue;
+			}
+			if(statement != T_DEF)
+			{
+				break;
+			}
+
+			refs = ((Def *)((Lowl *)defs->ptr)->item)->refs;
+
+			lowls = find_lowl(refs, T_EXPER_NAME);
+
+			en = (Exper_name *)(((Lowl *)lowls->ptr)->item);
+
+			experimentName = en->name;
+
+			lowls = find_lowl(refs, T_EXPER_NOMINAL_START);
+			if(lowls)
+			{
+				void *p;
+				
+				p = (((Lowl *)lowls->ptr)->item);
+				start = vexDate((char *)p);
+				strncpy(V->vexStartTime, ((char *)p), 50);
+				V->vexStartTime[4] = '\0';
+				V->vexStartTime[8] = '\0';
+				V->vexStartTime[11] = '\0';
+				V->vexStartTime[14] = '\0';
+				V->vexStartTime[17] = '\0';
+			}
+			else
+			{
+				std::cerr << "Note: The vex file has no exper_nominal_start parameter defined in the EXPER section.  Making assumptions..." << std::endl;
+			}
+
+			lowls = find_lowl(refs, T_EXPER_NOMINAL_STOP);
+			if(lowls)
+			{
+				void *p;
+
+				p = (((Lowl *)lowls->ptr)->item);
+				stop = vexDate((char *)p);
+				strncpy(V->vexStopTime, ((char *)p), 50);
+				V->vexStopTime[4] = '\0';
+				V->vexStopTime[8] = '\0';
+				V->vexStopTime[11] = '\0';
+				V->vexStopTime[14] = '\0';
+				V->vexStopTime[17] = '\0';
+			}
+			else
+			{
+				std::cerr << "Note: The vex file has no exper_nominal_stop parameter defined in the EXPER section.  Making assumptions..." << std::endl;
+			}
 		}
 
-		lowls = find_lowl(refs, T_EXPER_NOMINAL_STOP);
-		if(lowls)
-		{
-			void *p;
+		Upper(experimentName);
 
-			p = (((Lowl *)lowls->ptr)->item);
-			stop = vexDate((char *)p);
-			strncpy(V->vexStopTime, ((char *)p), 50);
-			V->vexStopTime[4] = '\0';
-			V->vexStopTime[8] = '\0';
-			V->vexStopTime[11] = '\0';
-			V->vexStopTime[14] = '\0';
-			V->vexStopTime[17] = '\0';
-		}
-		else
-		{
-			std::cerr << "Note: The vex file has no exper_nominal_stop parameter defined in the EXPER section.  Making assumptions..." << std::endl;
-		}
+		V->setExper(experimentName, Interval(start, stop));
 	}
-
-	Upper(experimentName);
-
-	V->setExper(experimentName, Interval(start, stop));
 
 	return nWarn;
 }

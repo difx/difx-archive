@@ -2,6 +2,11 @@ vex2 branched on Aug 2, 2021 from rev. 10089
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * import Goddard parser from Aug 2, 2021
   - minor updates to get to compile
+  - change parsing of experiment code
+  - parse vex version
+
+TODO:
+* get segment code independently of experiment code
 
 Version 2.7.0
 ~~~~~~~~~~~~~
