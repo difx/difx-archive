@@ -323,12 +323,6 @@ struct record_method {
 
 typedef struct record_method Record_method;
 
-struct record_control {
-  struct dvalue *control;
-};
-
-typedef struct record_control Record_control;
-
 struct datastream {
   char *link;
   char *format;
@@ -714,7 +708,6 @@ struct connection *make_connection(char *signal_link, char *equipment_link,
 				   char *label, char *direction, char *type);
 struct record_method *make_record_method(char *pattern, struct dvalue *early,
 				   struct dvalue *gap);
-struct record_control *make_record_control(struct dvalue *control);
 struct datastream *make_datastream(char *link,char *format,
 				   char *label);
 struct thread *make_thread(char *datastream_link,char *thread_link,
