@@ -637,10 +637,10 @@ integer *start_len, *mode_len, *scanid_len, *vex;
   void *ptr;
   char *sidptr;
 
-  if(*vex!=0) {
-    save_type=T_STATION;
+  save_type=T_STATION;
+  if(*vex!=0)
     save_ptr=get_scan_station(&save_lowls,&sidptr,*station,(Vex *)*vex);
-  } else
+  else
     save_ptr=get_scan_station_next(&save_lowls,&sidptr);
 
   if(save_ptr==NULL)
@@ -1231,15 +1231,14 @@ integer *n;
 
 {
   int i;
-  char *ptr;
 
   if (*n < 1)
     return -6;
 
   save_type=T_SOURCE;
   save_ptr=get_scan_source2(save_lowls);
-  for (i=1;i < *n && ptr!= NULL;i++)
-    save_ptr=get_scan_source_next2();
+  for (i=1;i < *n && save_ptr!= NULL;i++)
+    save_ptr=get_scan_source2_next();
 
   if(save_ptr==NULL)
     return -6;
@@ -1689,11 +1688,3 @@ field_copy(char *field,int field_len,char *ptr)
 
   return 0;
 }
-
-
-
-
-
-
-
-

@@ -444,7 +444,7 @@ create_comment(char *str, char *str2)
 
   if(!block_flag)
     list=&version_list;
-  else if(in_def_flag||in_scan_flag||!def_flag&&!scan_flag) {
+  else if(in_def_flag||in_scan_flag||(!def_flag&&!scan_flag)) {
     list=&qref_list;
     qref_flag = 1;
   } else
