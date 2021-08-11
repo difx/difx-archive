@@ -2004,6 +2004,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 				{
 					dd = D->datastream + D->nDatastream;
 					dd->phaseCalIntervalMHz = setup.phaseCalIntervalMHz();
+					dd->phaseCalBaseMHz = setup.phaseCalBaseMHz();
 					dd->tcalFrequency = antenna->tcalFrequency;
 
 					// FIXME: eventually zoom bands will migrate to the VexMode/VexSetup infrastructure.  until then, use antenanSetup directly

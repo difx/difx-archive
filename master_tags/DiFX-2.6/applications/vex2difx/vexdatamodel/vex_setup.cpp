@@ -56,7 +56,7 @@ float VexSetup::phaseCalBaseMHz() const
 	for(std::map<std::string,VexIF>::const_iterator it = ifs.begin(); it != ifs.end(); ++it)
 	{
 		pb = it->second.phaseCalBaseMHz;
-		if(pb > 0 && (pb < pcb || pcb == 0))
+		if(pb != 0)
 		{
 			pcb = pb;
 		}
@@ -179,7 +179,7 @@ void VexSetup::setPhaseCalBase(float phaseCalBaseMHz)
 	// weed out unwanted tones
 	for(std::vector<VexChannel>::iterator it = channels.begin(); it != channels.end(); ++it)
 	{
-		if(phaseCalBaseMHz < 0)
+		if(phaseCalIntervalMHz() <= 0)
 		{
 			it->tones.clear();
 		}
