@@ -791,6 +791,10 @@ static int getModes(VexData *V, Vex *v)
 				{
 					vif.phaseCalIntervalMHz = 5.0f;
 				}
+				else if(fabs(phaseCal-10000000.0) < 1.0)
+				{
+					vif.phaseCalIntervalMHz = 10.0f;
+				}
 				else if(fabs(phaseCal-200000000.0) < 1.0)
 				{
 					vif.phaseCalIntervalMHz = 200.0f;
