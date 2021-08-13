@@ -37,13 +37,25 @@
 class VexSource
 {
 public:
-	VexSource() : ra(0.0), dec(0.0), calCode(' ') {}
+	enum Type { Star, EarthSatellite, BSP, TLE, Ephemeris, Unsupported };
+
+	VexSource() : type(Unsupported), ra(0.0), dec(0.0), calCode(' ') {}
 	bool hasSourceName(const std::string &name) const;
-	void setSourceType(const char *t1, const char *t2);
+	bool setSourceType(const char *t1 = 0, const char *t2 = 0, const char *t3 = 0);
+	void setTLE(int lineNum, const char *line);		// lineNum must be 0, 1 or 2
+	void setBSP(const char *fileName, int objectId);
+
+	enum Type type;
 
 	std::string defName;			// in the "def ... ;" line in Vex
 	std::string sourceType1;
 	std::string sourceType2;
+	std::string sourceType3;
+
+	std::string tle[3];			// corresponds to rows 0 (20 chars), 1 (69 chars) and 2 (69 chars) of an embedded TLE
+
+	std::string bspFile;
+	int bspObject;
 	
 	std::vector<std::string> sourceNames;	// from source_name statements
 	double ra;		// (rad)

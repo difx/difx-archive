@@ -294,13 +294,15 @@ static int getAntennas(VexData *V, Vex *v)
 		p = (struct site_position *)get_station_lowl(stn, T_SITE_POSITION, B_SITE, v);
 		if(p == 0)
 		{
-			std::cerr << "Error: cannot find site position for antenna " << antName << " in the vex file." << std::endl;
-
-			exit(EXIT_FAILURE);
+			std::cerr << "Warning: cannot find site position for antenna " << antName << " in the vex file." << std::endl;
+			++nWarn;
 		}
-		fvex_double(&(p->x->value), &(p->x->units), &A->x);
-		fvex_double(&(p->y->value), &(p->y->units), &A->y);
-		fvex_double(&(p->z->value), &(p->z->units), &A->z);
+		else
+		{
+			fvex_double(&(p->x->value), &(p->x->units), &A->x);
+			fvex_double(&(p->y->value), &(p->y->units), &A->y);
+			fvex_double(&(p->z->value), &(p->z->units), &A->z);
+		}
 
 		p = (struct site_position *)get_station_lowl(stn, T_SITE_VELOCITY, B_SITE, v);
 		if(p)
@@ -317,14 +319,16 @@ static int getAntennas(VexData *V, Vex *v)
 		q = (struct axis_type *)get_station_lowl(stn, T_AXIS_TYPE, B_ANTENNA, v);
 		if(q == 0)
 		{
-			std::cerr << "Error: cannot find axis type for antenna " << antName << " in the vex file." << std::endl;
-
-			exit(EXIT_FAILURE);
+			std::cerr << "Warning: cannot find axis type for antenna " << antName << " in the vex file." << std::endl;
+			++nWarn;
 		}
-		A->axisType = std::string(q->axis1) + std::string(q->axis2);
-		if(A->axisType.compare("hadec") == 0)
+		else
 		{
-			A->axisType = "equa";
+			A->axisType = std::string(q->axis1) + std::string(q->axis2);
+			if(A->axisType.compare("hadec") == 0)
+			{
+				A->axisType = "equa";
+			}
 		}
 
 		r = (struct dvalue *)get_station_lowl(stn, T_SITE_POSITION_EPOCH, B_SITE, v);
@@ -346,11 +350,12 @@ static int getAntennas(VexData *V, Vex *v)
 		r = (struct dvalue *)get_station_lowl(stn, T_AXIS_OFFSET, B_ANTENNA, v);
 		if(r == 0)
 		{
-			std::cerr << "Error: cannot find axis offset for antenna " << antName << " in the vex file." << std::endl;
-
-			exit(EXIT_FAILURE);
+			std::cerr << "Warning: cannot find axis offset for antenna " << antName << " in the vex file." << std::endl;
 		}
-		fvex_double(&(r->value), &(r->units), &A->axisOffset);
+		else
+		{
+			fvex_double(&(r->value), &(r->units), &A->axisOffset);
+		}
 
 		for(void *c = get_station_lowl(stn, T_CLOCK_EARLY, B_CLOCK, v); c; c = get_station_lowl_next())
 		{
@@ -496,42 +501,102 @@ static int getSources(VexData *V, Vex *v)
 		if(p)
 		{
 			int link, name;
-			char *arg1 = 0, *arg2 = 0, *units = 0;
+			char *arg1 = 0, *arg2 = 0, *arg3 = 0, *units = 0;
+			bool ok;
 
 			vex_field(T_SOURCE_TYPE, p, 1, &link, &name, &arg1, &units); // first field
 			vex_field(T_SOURCE_TYPE, p, 2, &link, &name, &arg2, &units); // second field
+			vex_field(T_SOURCE_TYPE, p, 3, &link, &name, &arg3, &units); // third field
 
-			// Install the orbit parameters into the source
+			ok = S->setSourceType(arg1, arg2, arg3);
+			if(!ok && V->getVersion() < 1.8)
+			{
+				S->setBSP(arg1, atoi(arg2));	// A hack used pre-Vex2 at VLBA
+			}
 
-			S->setSourceType(arg1, arg2);
+			if(V->getVersion() >= 1.8)
+			{
+				if(S->type == VexSource::BSP)
+				{
+		// FIXME: this is not working yet
+					arg1 = arg2 = 0;
+					vex_field(T_BSP_FILE_NAME, p, 1, &link, &name, &arg1, &units);
+					vex_field(T_BSP_OBJECT_ID, p, 1, &link, &name, &arg2, &units);
+
+					if(arg1 && arg2)
+					{
+						S->setBSP(arg1, atoi(arg2));
+					}
+				}
+				else if(S->type == VexSource::TLE)
+				{
+		// FIXME: this is not working yet
+					char *arg0 = 0;
+
+					arg1 = arg2 = 0;
+					vex_field(T_TLE0, p, 1, &link, &name, &arg0, &units);
+					vex_field(T_TLE1, p, 1, &link, &name, &arg1, &units);
+					vex_field(T_TLE2, p, 1, &link, &name, &arg2, &units);
+
+					if(arg0)
+					{
+						S->setTLE(0, arg0);
+					}
+					if(arg1)
+					{
+						S->setTLE(0, arg1);
+					}
+					if(arg2)
+					{
+						S->setTLE(0, arg2);
+					}
+				}
+			}
 		}
-
-		p = (char *)get_source_lowl(src, T_RA, v);
-		if(!p)
+		else
 		{
-			std::cerr << "Error: Cannot find right ascension for source " << src << std::endl;
-
-			exit(EXIT_FAILURE);
+			// default is to configure as a "star" type
+			S->setSourceType("star");
 		}
-		fvex_ra(&p, &S->ra);
 
-		p = (char *)get_source_lowl(src, T_DEC, v);
-		if(!p)
+		if(S->type == VexSource::Star)
 		{
-			std::cerr << "Error: Cannot find declination for source " << src << std::endl;
+			p = (char *)get_source_lowl(src, T_RA, v);
+			if(!p)
+			{
+				std::cerr << "Error: Cannot find right ascension for source " << src << std::endl;
 
-			exit(EXIT_FAILURE);
+				exit(EXIT_FAILURE);
+			}
+			fvex_ra(&p, &S->ra);
+
+			p = (char *)get_source_lowl(src, T_DEC, v);
+			if(!p)
+			{
+				std::cerr << "Error: Cannot find declination for source " << src << std::endl;
+
+				exit(EXIT_FAILURE);
+			}
+			fvex_dec(&p, &S->dec);
+
+			S->type = VexSource::Star;
 		}
-		fvex_dec(&p, &S->dec);
+
+		if(S->type == VexSource::Unsupported)
+		{
+			std::cerr << "Warning: Source " << S->defName << " is of an unsupported source type" << std::endl;
+			++nWarn;
+		}
 
 		p = (char *)get_source_lowl(src, T_REF_COORD_FRAME, v);
 		if(!p)
 		{
-			std::cerr << "Error: Cannot find ref coord frame for source " << src << std::endl;
+			std::cerr << "Warning: Cannot find ref coord frame for source " << src << std::endl;
+			std::cerr << "Assuming J2000" << std::endl;
 
-			exit(EXIT_FAILURE);
+			++nWarn;
 		}
-		if(strcmp(p, "J2000") != 0)
+		else if(strcmp(p, "J2000") != 0)
 		{
 			std::cerr << "Error: only J2000 ref frame is supported." << std::endl;
 
@@ -676,7 +741,10 @@ static int getModes(VexData *V, Vex *v)
 		{
 			int link, name;
 			char *value, *units;
-			void *p, *q, *p2;
+			void *p, *p2;
+			void *trackFormat, *s2RecMode;
+			void *datastreamFormat = 0;
+			bool hasBitstreams = false;
 			const std::string &antName = V->getAntenna(a)->defName;
 			std::map<std::string,std::vector<unsigned int> > pcalMap;
 			std::map<std::string,char> bbc2pol;
@@ -732,7 +800,7 @@ static int getModes(VexData *V, Vex *v)
 
 			// Get sample rate
 			p = get_all_lowl(antName.c_str(), modeDefName, T_SAMPLE_RATE, B_FREQ, v);
-			if (p)
+			if(p)
 			{
 				vex_field(T_SAMPLE_RATE, p, 1, &link, &name, &value, &units);
 				fvex_double(&value, &units, &stream.sampRate);
@@ -772,8 +840,22 @@ static int getModes(VexData *V, Vex *v)
 				vex_field(T_IF_DEF, p, 1, &link, &name, &value, &units);
 				VexIF &vif = setup.ifs[std::string(value)];
 
-				vex_field(T_IF_DEF, p, 2, &link, &name, &value, &units);
-				vif.name = value;
+				if(V->getVersion() < 2.0)
+				{
+					vex_field(T_IF_DEF, p, 2, &link, &name, &value, &units);
+					vif.name = value;
+				}
+				else
+				{
+					if(strncmp(value, "IF_", 3) == 0)
+					{
+						vif.name = value + 3;
+					}
+					else
+					{
+						vif.name = value;
+					}
+				}
 				
 				vex_field(T_IF_DEF, p, 3, &link, &name, &value, &units);
 				vif.pol = value[0];
@@ -860,40 +942,57 @@ static int getModes(VexData *V, Vex *v)
 			}
 
 			// Get datastream assignments and formats
-			p = get_all_lowl(antName.c_str(), modeDefName, T_TRACK_FRAME_FORMAT, B_TRACKS, v);
-			q = get_all_lowl(antName.c_str(), modeDefName, T_S2_RECORDING_MODE, B_TRACKS, v);
 
-			if(p)
+			// FIXME: here look for relevant BITSTREAMS or DATASTREAMS block.  If found, they take precedence over $TRACKS (or S2) block.
+
+			
+			// hasBitstreams =
+			// datastreamFormat =
+
+			trackFormat = get_all_lowl(antName.c_str(), modeDefName, T_TRACK_FRAME_FORMAT, B_TRACKS, v);
+			s2RecMode = get_all_lowl(antName.c_str(), modeDefName, T_S2_RECORDING_MODE, B_TRACKS, v);
+
+			if(datastreamFormat)
 			{
-				vex_field(T_TRACK_FRAME_FORMAT, p, 1, &link, &name, &value, &units);
+			}
+			else if(hasBitstreams)
+			{
+				// Assume anything using BITSTREAMS is in Mark5B format
+				stream.parseFormatString("MARK5B");
+			}
+			else if(trackFormat)
+			{
+				vex_field(T_TRACK_FRAME_FORMAT, trackFormat, 1, &link, &name, &value, &units);
 				stream.parseFormatString(value);
 
-				if(q)
+				if(s2RecMode)
 				{
 					std::cout << "Warning: both track_frame_format and s2_recording_mode provided for mode " << modeDefName << ". The s2_recording_mode and s2_data_source fields will be ignored." << std::endl;
 
 					++nWarn;
 				}
 			}
-			else if(q)
+			else if(s2RecMode)
 			{
-				vex_field(T_S2_RECORDING_MODE, q, 1, &link, &name, &value, &units);
+				vex_field(T_S2_RECORDING_MODE, s2RecMode, 1, &link, &name, &value, &units);
 				std::string s2mode(value);
 				if(s2mode == "none")
 				{
+					void *s2DataSource;
+
 					// Note: current practice (via Cormac Reynolds, 15 Aug 2016) suggests two LBA modes
 					// that set S2_recording_mode = none :
 					//   S2_data_source = VLBA or S2_data_source = LBAVSOP  --> format = VexStream::FormatLBAVSOP
 					//   S2_data_source = LBASTD                            --> format = VexStream::FormatLBASTD
 
-					q = get_all_lowl(antName.c_str(), modeDefName, T_S2_DATA_SOURCE, B_TRACKS, v);
-					if(!q)
+					s2DataSource = get_all_lowl(antName.c_str(), modeDefName, T_S2_DATA_SOURCE, B_TRACKS, v);
+					if(!s2DataSource)
 					{
 						std::cerr << "Error: S2 mode is 'none' but no S2 Data Source is provided" << std::endl;
 
 						exit(EXIT_FAILURE);
 					}
-					vex_field(T_S2_DATA_SOURCE, q, 1, &link, &name, &value, &units);
+					vex_field(T_S2_DATA_SOURCE, s2DataSource, 1, &link, &name, &value, &units);
 					std::string s2datasource(value);
 
 					if(s2datasource == "VLBA" || s2datasource == "LBAVSOP")
@@ -1172,6 +1271,7 @@ static int getModes(VexData *V, Vex *v)
 				char *bbcName;
 				double freq;
 				double bandwidth;
+				std::string chanName;
 
 				vex_field(T_CHAN_DEF, p, 2, &link, &name, &value, &units);
 				fvex_double(&value, &units, &freq);
@@ -1202,10 +1302,18 @@ static int getModes(VexData *V, Vex *v)
 				vex_field(T_CHAN_DEF, p, 7, &link, &name, &value, &units);
 				std::string phaseCalName(value);
 
-				vex_field(T_CHAN_DEF, p, 5, &link, &name, &value, &units);
-				std::string chanName(value);
-
+				vex_field(T_CHAN_DEF, p, 8, &link, &name, &value, &units);
+				if(value)
+				{
+					chanName = value;
+				}
+				else // Fall back to hack use of the BBC link name as the channel name
+				{
+					vex_field(T_CHAN_DEF, p, 5, &link, &name, &value, &units);
+					chanName = value;
+				}
 				recChanId = getRecordChannel(antName, chanName, ch2tracks, stream, nRecordChan);
+
 				setup.channels.push_back(VexChannel());
 				setup.channels.back().subbandId = subbandId;
 				setup.channels.back().ifName = bbc2ifName[bbcName];
@@ -1557,13 +1665,13 @@ VexData *loadVexFile(const std::string &vexFile, unsigned int *numWarnings)
 
 	V->setDirectory(vexFile.substr(0, vexFile.find_last_of('/')));
 
+	nWarn += getExper(V, v);
 	nWarn += getAntennas(V, v);
 	nWarn += getSources(V, v);
 	nWarn += getScans(V, v);
 	nWarn += getModes(V, v);
 	nWarn += getVSNs(V, v);
 	nWarn += getEOPs(V, v);
-	nWarn += getExper(V, v);
 	*numWarnings = *numWarnings + nWarn;
 
 	return V;
