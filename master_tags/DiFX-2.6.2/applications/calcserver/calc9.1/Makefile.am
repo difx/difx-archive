@@ -1,6 +1,6 @@
 
 #AM_FFLAGS= -fno-second-underscore -fno-globals -C -w -i2 -O2 
-AM_FFLAGS= -fno-second-underscore -C -w  -O2 
+AM_FFLAGS= -fno-second-underscore -std=legacy -C -w  -O2 
 
 i_sources = \
 	CALCIO.INC \
