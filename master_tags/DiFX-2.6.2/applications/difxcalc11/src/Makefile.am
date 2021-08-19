@@ -3,6 +3,7 @@ bin_PROGRAMS = difxcalc
 AM_CPPFLAGS = -I$(top_builddir)/src
 
 AM_FFLAGS = \
+	-std=legacy \
 	-ffree-form \
 	-I$(top_builddir)/src
 
