@@ -2326,7 +2326,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 
 			// produce the necessary bands
 			corrSetup->autobands.setBandwidth(bw);
-			corrSetup->autobands.generateOutputbands();
+			corrSetup->autobands.generateOutputbands(P->minSubarraySize);
 			if(verbose > 2)
 			{
 				std::cout << corrSetup->autobands;
@@ -2366,6 +2366,11 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 			GlobalZoom constituentzooms("temp");
 			for(itOb = corrSetup->autobands.outputbands.begin(); itOb != corrSetup->autobands.outputbands.end(); ++itOb)
 			{
+				if (!itOb->isComplete())
+				{
+					cerr << "Developer error: encountered internal incomplete Outputband during GlobalZoom construction!" << std::endl;
+					continue;
+				}
 				// grow the list of all-band constituent zooms
 				std::vector<AutoBands::Band>::const_iterator itZm;
 				for(itZm = itOb->constituents.begin(); itZm != itOb->constituents.end(); ++itZm)
