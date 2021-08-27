@@ -279,7 +279,7 @@ void AutoBands::simplify(AutoBands::Outputband& mergeable) const
 	// Start from blank outputband
 	Outputband merged(mergeable.fbandstart, mergeable.bandwidth);
 	double f0 = mergeable.fbandstart;
-	double f1 = f0;
+	double f1 = f0 + mergeable.bandwidth;
 
 	// Reduce bands of 'mergeable' into hopefully fewer bands in new 'merged'
 	for(std::vector<AutoBands::Band>::const_iterator bnext = (mergeable.constituents.begin()) + 1; bnext != mergeable.constituents.end(); ++bnext)
@@ -309,7 +309,7 @@ void AutoBands::simplify(AutoBands::Outputband& mergeable) const
 	}
 
 	// Handle leftover
-	if(f1 > f0)
+	if((f1 > f0) && covered(f0, f1))
 	{
 		merged.extend(f0, f1-f0);
 	}
