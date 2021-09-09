@@ -2368,7 +2368,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 			{
 				if (!itOb->isComplete())
 				{
-					cerr << "Developer error: encountered internal incomplete Outputband during GlobalZoom construction!" << std::endl;
+					cerr << "Developer error: encountered internal incomplete Outputband " << *itOb << " during GlobalZoom construction!" << std::endl;
 					continue;
 				}
 				// grow the list of all-band constituent zooms

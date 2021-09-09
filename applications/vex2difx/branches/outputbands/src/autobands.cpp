@@ -102,7 +102,8 @@ bool AutoBands::Outputband::isComplete() const
 		constituentbwsum += b->bandwidth();
 		constituentstart = std::min(constituentstart, b->flow);
 	}
-	return (constituentbwsum == bandwidth) && (constituentstart == fbandstart);
+	//return (constituentbwsum == bandwidth) && (constituentstart == fbandstart);
+	return (fabs(constituentbwsum - bandwidth) < 1) && (fabs(constituentstart - fbandstart) < 1);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -253,9 +254,9 @@ double AutoBands::autoBandwidth()
 }
 
 /**
- * Check if freq range falls in its entirety inside any of the recorded bands, at *all* antennas
+ * Check if freq range falls in its entirety inside any of the recorded bands, at at least Nant_min antennas.
  */
-bool AutoBands::covered(double f0, double f1) const
+bool AutoBands::covered(double f0, double f1, int Nant_min) const
 {
 	std::set<int> coverers;
 	for(std::vector<AutoBands::Band>::const_iterator b = bands.begin(); b != bands.end(); ++b)
@@ -265,16 +266,21 @@ bool AutoBands::covered(double f0, double f1) const
 			coverers.insert((*b).antenna);
 		}
 	}
-	return (coverers.size() >= Nant);
+	return (coverers.size() >= Nant_min);
 }
 
 /**
  * Simplify an outputband definition by merging its list of consituent bands where possible,
  * trimming away any overlapped portions of consituent bands.
  */
-void AutoBands::simplify(AutoBands::Outputband& mergeable) const
+void AutoBands::simplify(AutoBands::Outputband& mergeable, int Nant_min) const
 {
 	assert(!mergeable.constituents.empty());
+
+	if(Nant_min <= 0)
+	{
+		Nant_min = this->Nant;
+	}
 
 	// Start from blank outputband
 	Outputband merged(mergeable.fbandstart, mergeable.bandwidth);
@@ -285,7 +291,7 @@ void AutoBands::simplify(AutoBands::Outputband& mergeable) const
 	for(std::vector<AutoBands::Band>::const_iterator bnext = (mergeable.constituents.begin()) + 1; bnext != mergeable.constituents.end(); ++bnext)
 	{
 		f1 = bnext->fhigh;
-		if(covered(f0, f1))
+		if(covered(f0, f1, Nant_min))
 		{
 			if(verbosity > 4)
 			{
@@ -309,7 +315,7 @@ void AutoBands::simplify(AutoBands::Outputband& mergeable) const
 	}
 
 	// Handle leftover
-	if((f1 > f0) && covered(f0, f1))
+	if((f1 > f0) && covered(f0, f1, Nant_min))
 	{
 		merged.extend(f0, f1-f0);
 	}
@@ -339,12 +345,12 @@ void AutoBands::simplify(AutoBands::Outputband& mergeable) const
  * Spans are the frequency axis split at the band edges of recorded bands of every antenna.
  * Spans without freq gaps to the next span are marked as continued.
  */
-void AutoBands::analyze(int Nant)
+void AutoBands::analyze(int Nant_min)
 {
 	// Init
-	if(Nant <= 0)
+	if(Nant_min <= 0)
 	{
-		Nant = this->Nant;
+		Nant_min = this->Nant;
 	}
 	spans.clear();
 
@@ -379,7 +385,7 @@ void AutoBands::analyze(int Nant)
 		antcount = antennasInSpan.size();
 
 		// Keep the span if enough antennas provide data for it
-		if(antcount >= Nant && bandcount >= Nant)
+		if(antcount >= Nant_min && bandcount >= Nant_min)
 		{
 			spans.push_back(AutoBands::Span(span_lo, span_hi, antcount, bandcount));
 			if(verbosity > 2)
@@ -389,7 +395,7 @@ void AutoBands::analyze(int Nant)
 		}
 		else if(verbosity > 2)
 		{
-			printf ("Autobands::analyze() discard %.6f--%.6f MHz bw %.6f MHz with %d rec bands, %d antennas < %d antennas\n", span_lo*1e-6,span_hi*1e-6,(span_hi-span_lo)*1e-6,bandcount,antcount,Nant);
+			printf ("Autobands::analyze() discard %.6f--%.6f MHz bw %.6f MHz with %d rec bands, %d antennas < %d antennas\n", span_lo*1e-6,span_hi*1e-6,(span_hi-span_lo)*1e-6,bandcount,antcount,Nant_min);
 		}
 	}
 
@@ -410,7 +416,7 @@ void AutoBands::analyze(int Nant)
  * Output bands have the requested bandwidth. They can be direct matches to recorded bands, band slices (zoom) of recorded bands,
  * or pieces of several band slices (zoom sets) taken from neighbouring recorded bands.
  */
-int AutoBands::generateOutputbands(int Nant, double fstart_Hz)
+int AutoBands::generateOutputbands(int Nant_min, double fstart_Hz)
 {
 	// Clear old results
 	outputbands.clear();
@@ -418,7 +424,7 @@ int AutoBands::generateOutputbands(int Nant, double fstart_Hz)
 	// Make sure that spans have been detected
 	if(spans.empty())
 	{
-		analyze(Nant);
+		analyze(Nant_min);
 	}
 	if(spans.empty())
 	{
@@ -428,11 +434,11 @@ int AutoBands::generateOutputbands(int Nant, double fstart_Hz)
 	// Generate bands in full-auto mode? Or use only explicitly specified/added bands?
 	if(userOutputbands.size() <= 0)
 	{
-		return generateOutputbandsAutomatic(Nant, fstart_Hz);
+		return generateOutputbandsAutomatic(Nant_min, fstart_Hz);
 	}
 	else
 	{
-		return generateOutputbandsExplicit(Nant);
+		return generateOutputbandsExplicit(Nant_min);
 	}
 }
 
@@ -442,7 +448,7 @@ int AutoBands::generateOutputbands(int Nant, double fstart_Hz)
  * Output bands have the requested bandwidth. They can be direct matches to recorded bands, band slices (zoom) of recorded bands,
  * or pieces of several band slices (zoom sets) taken from neighbouring recorded bands.
  */
-int AutoBands::generateOutputbandsAutomatic(int Nant, double fstart_Hz)
+int AutoBands::generateOutputbandsAutomatic(int Nant_min, double fstart_Hz)
 {
 	// Parameters
 	assert (outputbandwidth > 0);
@@ -450,9 +456,9 @@ int AutoBands::generateOutputbandsAutomatic(int Nant, double fstart_Hz)
 	const double minspanfreq = spans[0].flow;
 	unsigned span = 0;
 	double foutstart;
-	if(Nant <= 0)
+	if(Nant_min <= 0)
 	{
-		Nant = this->Nant;
+		Nant_min = this->Nant;
 	}
 	if(fstart_Hz > 0)
 	{
@@ -554,7 +560,7 @@ int AutoBands::generateOutputbandsAutomatic(int Nant, double fstart_Hz)
 			// Store the details of the completed outputband
 			if(bw_needed <= 0)
 			{
-				simplify(ob);
+				simplify(ob, Nant_min);
 				assert(ob.isComplete());
 				outputbands.push_back(ob);
 				foutstart += outputbandwidth;
@@ -582,12 +588,12 @@ int AutoBands::generateOutputbandsAutomatic(int Nant, double fstart_Hz)
 	return outputbands.size();
 }
 
-int AutoBands::generateOutputbandsExplicit(int Nant)
+int AutoBands::generateOutputbandsExplicit(int Nant_min)
 {
 	assert (outputbandwidth > 0);
-	if(Nant <= 0)
+	if(Nant_min <= 0)
 	{
-		Nant = this->Nant;
+		Nant_min = this->Nant;
 	}
 
 	// Assemble user bands using recorded bands in full or in pieces
@@ -638,7 +644,7 @@ int AutoBands::generateOutputbandsExplicit(int Nant)
 
 		if(newband.isComplete())
 		{
-			simplify(newband);
+			simplify(newband, Nant_min);
 			outputbands.push_back(newband);
 		}
 
@@ -963,6 +969,7 @@ std::ostream& operator << (std::ostream& os, const AutoBands::Outputband& x)
 	{
 		os << "   input " << std::setw(2) << n << " " << x.constituents[n] << "\n";
 	}
+	os << "total bandwidth " << x.constituentsBandwidth()*1e-6 << " of " << x.bandwidth*1e-6 << " MHz \n";
 	return os;
 }
 

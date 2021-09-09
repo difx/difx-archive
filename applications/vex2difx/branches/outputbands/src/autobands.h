@@ -145,7 +145,7 @@ public:
 	/// based upon previously registered (cf. addRecbands()) recorded bands.
 	/// If explicit outputband positions were registered (cf. addUserOutputbands())
 	/// these will attempt to be generated. Otherwise, bands are auto-generated.
-	int generateOutputbands(int Nant=0, double fstart_Hz=0.0);
+	int generateOutputbands(int Nant_min=0, double fstart_Hz=0.0);
 
 	/// Add user-specified outputbands with a single consituent equal to a vex2difx ZoomFreq
 	void addUserOutputbands(const std::vector<ZoomFreq>& zf);
@@ -179,21 +179,21 @@ private:
 
 private:
 
-	/// Check if freq range falls in its entirety inside any of the recorded bands, at *all* antennas
-	bool covered(double f0, double f1) const;
+	/// Check if freq range falls in its entirety inside any of the recorded bands, at at least Nant_min antennas
+	bool covered(double f0, double f1, int Nant_min) const;
 
-	/// Determine frequency spans where at least Nant antennas overlap. Populates ::spans via ::bands.
-	void analyze(int Nant=0);
+	/// Determine frequency spans where at least Nant_min antennas overlap. Populates ::spans via ::bands.
+	void analyze(int Nant_min=0);
 
 	/// Based on user-registered outputbands, try to fill them with parts of available recorded bands.
-	int generateOutputbandsExplicit(int Nant=0);
+	int generateOutputbandsExplicit(int Nant_min=0);
 
 	/// Automatically deduce "good" outputbands to fill the available spectrum
-	int generateOutputbandsAutomatic(int Nant=0, double fstart_Hz=0.0);
+	int generateOutputbandsAutomatic(int Nant_min=0, double fstart_Hz=0.0);
 
 	/// Simplify an outputband definition by merging its list of consituent bands where possible,
 	/// trimming away any overlapped portions of consituent bands.
-	void simplify(AutoBands::Outputband& mergeable) const;
+	void simplify(AutoBands::Outputband& mergeable, int Nant_min=0) const;
 
 	//TODO: double adjustStartFreq(double f0, double f1, double finitial, double df);
 
