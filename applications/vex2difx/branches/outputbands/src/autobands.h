@@ -179,8 +179,8 @@ private:
 
 private:
 
-	/// Check if freq range falls in its entirety inside any of the recorded bands, at at least Nant_min antennas
-	bool covered(double f0, double f1, int Nant_min) const;
+	/// Check if freq range falls in its entirety inside any of the recorded bands, at *all* antennas
+	bool covered(double f0, double f1) const;
 
 	/// Determine frequency spans where at least Nant_min antennas overlap. Populates ::spans via ::bands.
 	void analyze(int Nant_min=0);

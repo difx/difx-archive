@@ -254,9 +254,15 @@ double AutoBands::autoBandwidth()
 }
 
 /**
- * Check if freq range falls in its entirety inside any of the recorded bands, at at least Nant_min antennas.
+ * Check if freq range falls in its entirety inside any of the recorded bands, at *all* antennas.
+ *
+ * NB: Ideally we'd check only the set of definitely present antennas (v2d antennas=... + VEX scan antenna
+ * list + filelist) since e.g. the most heavily channelized antenna might actually be absent and
+ * thus better optimization of auto-zoombands (i.e., a reduction to fewer zooms) might be possible.
+ * However, not all the required info is available from vex2difx at band construction/mapping stage to do that,
+ * hence we have to include all antennas in this check even if some antennas might be 'droppped' later on.
  */
-bool AutoBands::covered(double f0, double f1, int Nant_min) const
+bool AutoBands::covered(double f0, double f1) const
 {
 	std::set<int> coverers;
 	for(std::vector<AutoBands::Band>::const_iterator b = bands.begin(); b != bands.end(); ++b)
@@ -266,7 +272,7 @@ bool AutoBands::covered(double f0, double f1, int Nant_min) const
 			coverers.insert((*b).antenna);
 		}
 	}
-	return (coverers.size() >= Nant_min);
+	return (coverers.size() >= this->Nant);
 }
 
 /**
@@ -282,6 +288,11 @@ void AutoBands::simplify(AutoBands::Outputband& mergeable, int Nant_min) const
 		Nant_min = this->Nant;
 	}
 
+	if(verbosity > 0)
+	{
+		std::cout << "Simplifying outputband at " << mergeable.fbandstart*1e-6 << " bw " << mergeable.bandwidth*1e-6 << " MHz\n";
+	}
+
 	// Start from blank outputband
 	Outputband merged(mergeable.fbandstart, mergeable.bandwidth);
 	double f0 = mergeable.fbandstart;
@@ -291,16 +302,16 @@ void AutoBands::simplify(AutoBands::Outputband& mergeable, int Nant_min) const
 	for(std::vector<AutoBands::Band>::const_iterator bnext = (mergeable.constituents.begin()) + 1; bnext != mergeable.constituents.end(); ++bnext)
 	{
 		f1 = bnext->fhigh;
-		if(covered(f0, f1, Nant_min))
+		if(covered(f0, f1))
 		{
-			if(verbosity > 4)
+			if(verbosity > 2)
 			{
-				printf("Autobands::simplify() does cover %.6f--%.6f, continue and try merge the next band constituent\n", f0*1e-6, f1*1e-6);
+				printf("Autobands::simplify() found cover for %.6f--%.6f, continuing and trying to merge-in the next band constituent\n", f0*1e-6, f1*1e-6);
 			}
 		}
 		else
 		{
-			if(verbosity > 4)
+			if(verbosity > 2)
 			{
 				printf("Autobands::simplify() no simple cover for %.6f--%.6f, keeping %.6f--%.6f\n", f0*1e-6, f1*1e-6, f0*1e-6, bnext->flow*1e-6);
 			}
@@ -315,7 +326,7 @@ void AutoBands::simplify(AutoBands::Outputband& mergeable, int Nant_min) const
 	}
 
 	// Handle leftover
-	if((f1 > f0) && covered(f0, f1, Nant_min))
+	if((f1 > f0) && covered(f0, f1))
 	{
 		merged.extend(f0, f1-f0);
 	}
@@ -604,6 +615,11 @@ int AutoBands::generateOutputbandsExplicit(int Nant_min)
 		double bw_needed = userband->bandwidth;
 		double foutstart = userband->fbandstart;
 
+		if(verbosity > 0)
+		{
+			std::cout << "Building user band at " << userband->fbandstart*1e-6 << " bw " << userband->bandwidth*1e-6 << " MHz\n";
+		}
+
 		while(!newband.isComplete())
 		{
 			int startspan = -1;
@@ -619,11 +635,6 @@ int AutoBands::generateOutputbandsExplicit(int Nant_min)
 			{
 				std::cout << "Warning: user band at " << userband->fbandstart*1e-6 << " bw " << userband->bandwidth*1e-6 << " MHz could not be extended past " << foutstart*1e-6 << " due to lack of covering VEX frequencies\n";
 				break;
-			}
-
-			if(verbosity > 0)
-			{
-				std::cout << "Building user band at " << userband->fbandstart*1e-6 << " bw " << userband->bandwidth*1e-6 << " MHz\n";
 			}
 
 			double f0 = spans[startspan].flow;
