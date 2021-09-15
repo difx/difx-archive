@@ -19,11 +19,11 @@
 /*===========================================================================
  * SVN properties (DO NOT CHANGE)
  *
- * $Id: zoomfreq.h 9168 2019-09-18 12:56:43Z JanWagner $
+ * $Id$
  * $HeadURL: $
- * $LastChangedRevision: 9168 $
- * $Author: JanWagner $
- * $LastChangedDate: 2019-09-18 14:56:43 +0200 (Wed, 18 Sep 2019) $
+ * $LastChangedRevision$
+ * $Author$
+ * $LastChangedDate$
  *
  *==========================================================================*/
 

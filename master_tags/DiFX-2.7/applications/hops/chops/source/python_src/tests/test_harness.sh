@@ -38,8 +38,8 @@ else
     #add them to our path
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$FFCONTROL_LIB_DIR:$MK4B_LIB_DIR:$VEXPY_LIB_DIR
     export PYTHONPATH=$PYTHONPATH:$HOPSTESTB_DIR:$VPAL_DIR:$FFCONTROL_DIR:$MK4B_DIR:$AFIOB_DIR:$VEXPY_DIR
-    export CHOPS_SRC_DIR="/swc/pops/trunk/chops"
-    export TEXT="/swc/pops/trunk/chops/source/c_src/vex/text"
+    export CHOPS_SRC_DIR="../../../../chops"
+    export TEXT="../../../../chops/source/c_src/vex/text"
 
     ################################################################################
 
@@ -50,7 +50,7 @@ else
     #to avoid making a mess in the source directory its easiest to
     #just copy all the data files we need into the build directory
     CURRENT_TEST_DIR="./3593"
-    TESTDATA_ARCHIVE="/swc/pops/trunk/chops/source/python_src/tests/3593.tar.gz"
+    TESTDATA_ARCHIVE="./3593.tar.gz"
     if [ -d "$CURRENT_TEST_DIR" ]; then
         chmod -R u+rw $CURRENT_TEST_DIR
         rm -rf "$CURRENT_TEST_DIR"
@@ -61,13 +61,13 @@ else
     #run the test suite (environmental var DATADIR should be set before running this)
     #the -B option is makes sure that python doesn't produce any __pycache__ (.pyc)
     #files that we have to clean up later
-    /usr/bin/python -B /swc/pops/trunk/chops/source/python_src/tests/test_ffres2pcp.py $CURRENT_TEST_DIR
+    /usr/bin/python -B ./test_ffres2pcp.py $CURRENT_TEST_DIR
     FFRES2PCP_PASS_FAIL=$?
 
-    /usr/bin/python -B /swc/pops/trunk/chops/source/python_src/tests/test_fourphase.py $CURRENT_TEST_DIR
+    /usr/bin/python -B ./test_fourphase.py $CURRENT_TEST_DIR
     FOURPHASE_PASS_FAIL=$?
 
-    /usr/bin/python -B /swc/pops/trunk/chops/source/python_src/tests/test_pcc_generate.py $CURRENT_TEST_DIR
+    /usr/bin/python -B ./test_pcc_generate.py $CURRENT_TEST_DIR
     PCC_PASS_FAIL=$?
 
     #reset
