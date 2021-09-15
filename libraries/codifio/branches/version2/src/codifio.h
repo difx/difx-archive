@@ -39,7 +39,6 @@ extern "C" {
 #include <time.h>
 
 #define CODIF_HEADER_BYTES		64
-  //#define MAX_CODIF_FRAME_BYTES		9032
 #define CODIF_MAX_THREAD_ID		65535
 
 #define CODIF_SUMMARY_MAX_THREADS	64
@@ -56,16 +55,16 @@ typedef struct codif_header {
   uint64_t frame : 32;
   // Word 1
   uint64_t period : 16;
-  uint64_t nbits : 8;
-  uint64_t epoch : 8;
+  uint64_t reserved : 16;
   uint64_t protocol : 3;
   uint64_t version : 5;
   uint64_t representation : 4;
   uint64_t calEnabled : 1;
   uint64_t iscomplex : 1;
   uint64_t invalid : 1;
-  uint64_t reserved1 : 1;
-  uint64_t reserved2 : 16;
+  uint64_t power : 1;
+  uint64_t nbits : 8;
+  uint64_t epoch : 8;
   // Word 2
   uint64_t stationid : 16;
   uint64_t secondaryid : 16;
@@ -78,11 +77,11 @@ typedef struct codif_header {
   // Word 4
   uint64_t totalsamples;
   // Word 5
+  uint64_t meta1 : 16;
+  uint64_t metaid : 16;
   uint64_t sync : 32;
-  uint64_t eversion : 16;
-  uint64_t extended1 : 16;
-  uint64_t extended2;
-  uint64_t extended3;
+  uint64_t meta2;
+  uint64_t meta3;
 } codif_header;
 
 /* Date manipulation functions */
