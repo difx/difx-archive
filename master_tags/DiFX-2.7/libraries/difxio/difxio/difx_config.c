@@ -239,13 +239,13 @@ int isSameDifxConfig(const DifxConfig *dc1, const DifxConfig *dc2)
 	return 1;
 }
 
-int DifxConfigGetPolId(const DifxConfig *dc, char polName)
+int DifxConfigGetPolId(const DifxInput *D, int configId, char polName)
 {
-	if(dc->pol[0] == polName)
+	if(D->config[configId].pol[0] == polName)
 	{
 		return 0;
 	}
-	if(dc->pol[1] == polName)
+	if(D->config[configId].pol[1] == polName)
 	{
 		return 1;
 	}
@@ -338,7 +338,7 @@ int DifxConfigRecBand2FreqPol(const DifxInput *D, int configId, int antennaId, i
 	}
 
 	*freqId = ds->recFreqId[localFqId];
-	*polId = DifxConfigGetPolId(dc, ds->recBandPolName[recBand]);
+	*polId = DifxConfigGetPolId(D, configId, ds->recBandPolName[recBand]);
 
 	return 0;
 }

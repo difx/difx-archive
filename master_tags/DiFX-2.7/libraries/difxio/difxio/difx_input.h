@@ -41,6 +41,7 @@
 #define MAX_DATA_SOURCE_NAME_LENGTH		16
 #define MAX_ANTENNA_MOUNT_NAME_LENGTH		8
 #define MAX_ANTENNA_SITE_NAME_LENGTH		16
+#define MAX_OUTPUT_BANDWIDTH_MODE_NAME_LENGTH	16
 #define MAX_SAMPLING_NAME_LENGTH		16
 #define MAX_TONE_SELECTION_STRING_LENGTH	12
 #define MAX_EOP_MERGE_MODE_STRING_LENGTH	16
@@ -151,6 +152,8 @@ enum AntennaMountType
 	NumAntennaMounts		/* must remain as last entry */
 };
 
+extern const char antennaMountTypeNames[][MAX_ANTENNA_MOUNT_NAME_LENGTH];
+
 /* keep this current with antennaSiteTypeNames in difx_antenna.c */
 enum AntennaSiteType
 {
@@ -169,8 +172,16 @@ enum OutputFormatType
 	NumOutputFormat			/* must remain as last entry */
 };
 
-extern const char antennaMountTypeNames[][MAX_ANTENNA_MOUNT_NAME_LENGTH];
+/* keep this current with outputBandwidthModeNames[] in difx_outputbands.c */
+enum OutputBandwidthMode
+{
+	OutputBandwidthOff = 0,		/* follow v2d for ZOOMs if any; behave like DiFX 2.5/2.6 */
+	OutputBandwidthAuto = 1,	/* uniform bandwidth auto-determined from VEX $FREQ entries */
+	OutputBandwidthUser = 2,	/* uniform bandwidth user-specified in v2d */
+	NumOutputBandwidthModes		/* must remain as last entry */
+};
 
+extern const char outputBandwidthModeNames[][MAX_OUTPUT_BANDWIDTH_MODE_NAME_LENGTH];
 
 /* keep this current with toneSelectionNames[] in difx_input.c */
 enum ToneSelection
@@ -288,11 +299,11 @@ typedef struct
 /* Straight from DiFX frequency table */
 typedef struct
 {
-	double freq;		/* (MHz) */
+	double freq;	/* (MHz) */
 	double bw;		/* (MHz) */
-	char sideband;		/* U or L -- net sideband */
-        int nChan;
-	int specAvg;            /* This is averaging within mpifxcorr  */
+	char sideband;	/* U or L -- net sideband */
+	int nChan;
+	int specAvg;	/* This is averaging within mpifxcorr  */
 	int overSamp;
 	int decimation;
 	int nTone;		/* Number of pulse cal tones */
@@ -436,11 +447,13 @@ typedef struct
 	double *clockOffsetDelta; /* (us) [freq] */
 	double *phaseOffset;	/* (degrees) [freq] */
 	double *freqOffset;	/* Freq offsets for each frequency in Hz */
-	
+	double *gainOffset;	/* Voltage gain offsets for each frequency in Hz */
+
 	int nRecFreq;		/* number of freqs recorded in this datastream */
 	int nRecBand;		/* number of base band channels recorded */
 	int *nRecPol;		/* [recfreq] */
 	int *recFreqId;		/* [recfreq] index to DifxFreq table */
+	int *recFreqDestId;	/* [recfreq] index to DifxFreq table */
 	int *recBandFreqId;	/* [recband] index to recFreqId[] */
 	char *recBandPolName;	/* [recband] Polarization name (R, L, X or Y) */
 
@@ -448,6 +461,7 @@ typedef struct
 	int nZoomBand;		/* number of zoom subbands */
 	int *nZoomPol;		/* [zoomfreq] */
 	int *zoomFreqId;	/* [zoomfreq] index to DifxFreq table */
+	int *zoomFreqDestId;	/* [zoomfreq] index to DifxFreq table */
 	int *zoomBandFreqId;	/* [zoomband] index to zoomfreqId[] */
 	char *zoomBandPolName;	/* [zoomband] Polarization name (R, L, X or Y) */
 } DifxDatastream;
@@ -456,6 +470,7 @@ typedef struct
 {
 	int dsA, dsB;		/* indices to datastream table */
 	int nFreq;
+	int *destFq;		/* [freq] indices to freq table */
 	int *nPolProd;		/* [freq] */
 
 	/* note: band in excess of nRecBand are assumed to be zoom bands */
@@ -877,7 +892,7 @@ DifxConfig *mergeDifxConfigArrays(const DifxConfig *dc1, int ndc1,
 	const DifxConfig *dc2, int ndc2, int *configIdRemap,
 	const int *baselineIdRemap, const int *datastreamIdRemap,
 	const int *pulsarIdRemap, int *ndc);
-int DifxConfigGetPolId(const DifxConfig *dc, char polName);
+int DifxConfigGetPolId(const DifxInput *D, int configId, char polName);
 int DifxConfigRecBand2FreqPol(const DifxInput *D, int configId,
 	int antennaId, int recBand, int *freqId, int *polId);
 int writeDifxConfigArray(FILE *out, int nConfig, const DifxConfig *dc, const DifxPulsar *pulsar,
@@ -1023,6 +1038,8 @@ int DifxInputGetOriginalDatastreamIdsByAntennaIdJobId(int *dsIds, const DifxInpu
 int DifxInputGetMaxTones(const DifxInput *D);
 int DifxInputGetMaxPhaseCentres(const DifxInput *D);
 int DifxInputGetFreqIdByBaselineFreq(const DifxInput *D, int baselineId, int baselineFreq);
+int DifxInputGetOutputFreqIdByBaselineFreq(const DifxInput *D, int baselineId, int baselineFreq);
+int* DifxInputGetOutputFreqs(const DifxInput *D);
 int DifxInputSortAntennas(DifxInput *D, int verbose);
 int DifxInputSimFXCORR(DifxInput *D);
 int DifxInputGetPointingCentreSource(const DifxInput *D, int sourceId);
