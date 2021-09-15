@@ -1,3 +1,8 @@
+Version 1.7
+~~~~~~~~~~~
+* Based on Version 1.6 (DiFX 2.6.2) with minor changes to fill_fblock.c to handle outputbands
+* Version for DiFX-2.7, Sept 15, 2021
+
 Version 1.6
 ~~~~~~~~~~~
 * rjc 2019.1.4

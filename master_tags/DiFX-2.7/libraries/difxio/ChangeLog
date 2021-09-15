@@ -1,3 +1,7 @@
+3.7.0
+* Post DiFX 2.6, based on 2.6.2 release
+* Support outputbands related .input keywords TARGET FREQ and for now also GAIN OFFSET
+
 3.6.0
 * Post DiFX 2.5
 * Remove unneeded source file

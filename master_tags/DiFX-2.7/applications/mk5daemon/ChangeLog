@@ -15,6 +15,7 @@ Version 2.6.0
 * fileto5c: add 10 second delay before writing directory -- fixes instability.
 * Version for DiFX-2.6, Mar 4, 2019
 * mk6dir: Write scan size to .filelist (backport from trunk)
+* Version for DiFX-2.7, Sept 15, 2021
 
 Version 2.5.0
 ~~~~~~~~~~~~~

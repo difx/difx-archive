@@ -3,6 +3,7 @@ Verion 1.5.4
 * m5d, m5spec: --version option
 * m5d: fix use of offset for short reads (assumes file starts on a frame header)
 * Version for DiFX-2.6, Mar 4, 2019
+* Version for DiFX-2.7, Sept 15, 2021
 
 Verion 1.5.3
 * Integer rounding error in m5slice
