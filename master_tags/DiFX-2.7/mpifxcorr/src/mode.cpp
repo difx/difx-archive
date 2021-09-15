@@ -177,16 +177,16 @@ Mode::Mode(Configuration * conf, int confindex, int dsindex, int recordedbandcha
       {
         if(j<numrecordedbands)
         {
-	  if(fringerotationorder == 0) // post-F
-	  {
-	    fftoutputs[j][k] = vectorAlloc_cf32(recordedbandchannels+1);
+          if(fringerotationorder == 0) // post-F
+          {
+            fftoutputs[j][k] = vectorAlloc_cf32(recordedbandchannels+1);
             conjfftoutputs[j][k] = vectorAlloc_cf32(recordedbandchannels+1);
-	  }
-	  else
-	  {
+          }
+          else
+          {
             fftoutputs[j][k] = vectorAlloc_cf32(recordedbandchannels);
             conjfftoutputs[j][k] = vectorAlloc_cf32(recordedbandchannels);
-	  }
+          }
           estimatedbytes += 2*sizeof(cf32)*recordedbandchannels;
         }
         else
@@ -525,24 +525,24 @@ Mode::~Mode()
       vectorFree(complexrotator);
       vectorFree(fftd);
       if(isfft) {
-	vectorFreeFFTC_cf32(pFFTSpecC);
+        vectorFreeFFTC_cf32(pFFTSpecC);
         if (status != vecNoErr)
           csevere << startl << "Error in freeing FFT spec!!!" << status << endl;
       }
       else{
-	vectorFreeDFTC_cf32(pDFTSpecC);
+        vectorFreeDFTC_cf32(pDFTSpecC);
         if (status != vecNoErr)
           csevere << startl << "Error in freeing DFT spec!!!" << status << endl;
       }
       break;
     case 0: //zeroth order interpolation, "post-F"
       if(isfft) {
-	vectorFreeFFTR_f32(pFFTSpecR);
+        vectorFreeFFTR_f32(pFFTSpecR);
         if (status != vecNoErr)
           csevere << startl << "Error in freeing FFT spec!!!" << status << endl;
       }
       else{
-	vectorFreeDFTR_f32(pDFTSpecR);
+        vectorFreeDFTR_f32(pDFTSpecR);
         if (status != vecNoErr)
           csevere << startl << "Error in freeing DFT spec!!!" << status << endl;
       }
@@ -1173,24 +1173,25 @@ void Mode::process(int index, int subloopindex)  //frac sample error is in micro
             }
 
             if(config->getDRecordedLowerSideband(configindex, datastreamindex, i)) {
-	      if (usecomplex) {
-		if (usedouble) {
-		  status = vectorFlip_cf32(fftd, fftoutputs[j][subloopindex], recordedbandchannels/2+1);
-		  status = vectorFlip_cf32(&fftd[recordedbandchannels/2]+1, &fftoutputs[j][subloopindex][recordedbandchannels/2]+1, recordedbandchannels/2-1);
-		} else {
-              status = vectorConjFlip_cf32(fftd+1, fftoutputs[j][subloopindex]+1, recordedbandchannels-1);
-              fftoutputs[j][subloopindex][0] = fftd[0];
+              if (usecomplex) {
+                if (usedouble) {
+                  status = vectorFlip_cf32(fftd, fftoutputs[j][subloopindex], recordedbandchannels/2+1);
+                  status = vectorFlip_cf32(&fftd[recordedbandchannels/2]+1, &fftoutputs[j][subloopindex][recordedbandchannels/2]+1, recordedbandchannels/2-1);
+                } else {
+                  status = vectorConjFlip_cf32(fftd+1, fftoutputs[j][subloopindex]+1, recordedbandchannels-1);
+                  fftoutputs[j][subloopindex][0] = fftd[0];
+                }
+              } else {
+                status = vectorCopy_cf32(&(fftd[recordedbandchannels]), fftoutputs[j][subloopindex], recordedbandchannels);
               }
-	      } else {
-		status = vectorCopy_cf32(&(fftd[recordedbandchannels]), fftoutputs[j][subloopindex], recordedbandchannels);
-	      }
             }
             else {
-	      if (usecomplex && usedouble) {
-		status = vectorCopy_cf32(fftd, &fftoutputs[j][subloopindex][recordedbandchannels/2], recordedbandchannels/2);
-		status = vectorCopy_cf32(&fftd[recordedbandchannels/2], fftoutputs[j][subloopindex], recordedbandchannels/2);
-	      } else 
-		status = vectorCopy_cf32(fftd, fftoutputs[j][subloopindex], recordedbandchannels);
+              if (usecomplex && usedouble) {
+                status = vectorCopy_cf32(fftd, &fftoutputs[j][subloopindex][recordedbandchannels/2], recordedbandchannels/2);
+                status = vectorCopy_cf32(&fftd[recordedbandchannels/2], fftoutputs[j][subloopindex], recordedbandchannels/2);
+              } else {
+                status = vectorCopy_cf32(fftd, fftoutputs[j][subloopindex], recordedbandchannels);
+              }
             }
             if(status != vecNoErr)
               csevere << startl << "Error copying FFT results!!!" << endl;

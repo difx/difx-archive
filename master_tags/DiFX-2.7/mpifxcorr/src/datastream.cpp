@@ -68,6 +68,7 @@ DataStream::DataStream(const Configuration * conf, int snum, int id, int ncores,
   datamuxer = 0;
   isnewfile = false;
   isfake = false;
+  lastvalidsegment = 0;
 
   portnumber = config->getDPortNumber(0, streamnum);
   tcpwindowsizebytes = config->getDTCPWindowSizeKB(0, streamnum)*1024;
