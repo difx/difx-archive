@@ -28,29 +28,74 @@
  *==========================================================================*/
 
 #include "freq.h"
+#include <iomanip>
+
+// Returns index of requested (fq, bw, sb, ...) from freqs.
+// If not in freqs, returns -1
+int getFreqId(const std::vector<freq>& freqs, double fq, double bw, char sb, double isr, double osr, int d, int iz, unsigned int t)
+{
+	freq fqinfo(fq, bw, sb, isr, osr, d, iz, t);
+	return getFreqId(freqs, fqinfo);
+}
 
 // Returns index of requested (fq, bw, sb, ...) from freqs.
 // If not in freqs, it is added first
-int getFreqId(std::vector<freq>& freqs, double fq, double bw, char sb, double isr, double osr, int d, int iz, unsigned int t)
+int getFreqId(const std::vector<freq>& freqs, const freq& fqinfo)
 {
 	for(std::vector<freq>::const_iterator it = freqs.begin(); it != freqs.end(); ++it)
 	{
-		if(fq  == it->fq &&
-		   bw  == it->bw &&
-		   sb  == it->sideBand &&
-		   isr == it->inputSpecRes &&
-		   osr == it->outputSpecRes &&
-		   d   == it->decimation &&
-		   iz  == it->isZoomFreq &&
-		   t   == it->toneSetId)
+		if(fqinfo == *it)
 		{
 			// use iterator math to get index
 			return it - freqs.begin();
 		}
 	}
 
+	return -1;
+}
+
+// Returns index of requested (fq, bw, sb, ...) from freqs.
+// If not in freqs, it is added first
+int addFreqId(std::vector<freq>& freqs, double fq, double bw, char sb, double isr, double osr, int d, int iz, unsigned int t)
+{
+	freq newfq(fq, bw, sb, isr, osr, d, iz, t);
+	return addFreqId(freqs, newfq);
+}
+
+// Returns index of requested (fq, bw, sb, ...) from freqs.
+// If not in freqs, it is added first
+int addFreqId(std::vector<freq>& freqs, const freq& newfq)
+{
+	int id = getFreqId(freqs, newfq);
+	if(id >= 0)
+	{
+		return id;
+	}
+
 	// not in list yet, so add
-	freqs.push_back(freq(fq, bw, sb, isr, osr, d, iz, t));
+	freqs.push_back(newfq);
 
 	return freqs.size() - 1;
+}
+
+void freq::flip()
+{
+	if (sideBand == 'U')
+	{
+		sideBand = 'L';
+		fq += bw;
+	}
+	else
+	{
+		sideBand = 'U';
+		fq -= bw;
+	}
+}
+
+std::ostream& operator << (std::ostream& os, const freq& f)
+{
+	os << std::setw(15) << std::setprecision(8)
+		<< f.fq*1e-6 << " MHz "<< f.bw*1e-6 << " MHz sb:" << f.sideBand
+		<< " z:" << f.isZoomFreq;
+	return os;
 }

@@ -1518,7 +1518,7 @@ static int getExper(VexData *V, Vex *v)
 }
 
 
-VexData *loadVexFile(const std::string &vexFile, int *numWarnings)
+VexData *loadVexFile(const std::string &vexFile, unsigned int *numWarnings)
 {
 	VexData *V;
 	Vex *v;

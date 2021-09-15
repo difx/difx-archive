@@ -34,13 +34,23 @@ This is a helper class used within vex2difx.cpp
 #ifndef __FREQ_H__
 #define __FREQ_H__
 
+#include <cassert>
 #include <vector>
+#include <ostream>
 
 class freq
 {
 public:
 	freq(double f=0.0, double b=0.0, char s=' ', double isr=0.0, double osr=0.0, int d=0, int iz=0, unsigned int t=0) 
-		: fq(f), bw(b), inputSpecRes(isr), outputSpecRes(osr), decimation(d), isZoomFreq(iz), toneSetId(t), sideBand(s) {};
+		: fq(f), bw(b), inputSpecRes(isr), outputSpecRes(osr), decimation(d), isZoomFreq(iz), toneSetId(t), sideBand(s)
+	{
+		assert(fq >= 0);
+		assert(bw >= 0);
+		assert(sideBand == 'L' || sideBand == 'U');
+		assert(inputSpecRes > 0);
+	}
+
+	//variables
 	double fq;		// Hz
 	double bw;		// Hz
 	double inputSpecRes;	// Hz
@@ -48,11 +58,32 @@ public:
 	int decimation;
 	int isZoomFreq;
 	unsigned int toneSetId;
-	char sideBand;
+	char sideBand;		// 'U' or 'L'
 
+	//methods
 	int specAvg() const { return static_cast<int>(outputSpecRes/inputSpecRes + 0.5); }
+	void flip();
+	friend bool operator== (const freq& lhs, const freq& rhs);
+	friend std::ostream& operator << (std::ostream& os, const freq& f);
 };
 
-int getFreqId(std::vector<freq>& freqs, double fq, double bw, char sb, double isr, double osr, int d, int iz, unsigned int t);
+inline bool operator== (const freq& lhs, const freq& rhs)
+{
+	return (lhs.fq  == rhs.fq &&
+		lhs.bw  == rhs.bw &&
+		lhs.sideBand      == rhs.sideBand &&
+		lhs.inputSpecRes  == rhs.inputSpecRes &&
+		lhs.outputSpecRes == rhs.outputSpecRes &&
+		lhs.decimation    == rhs.decimation &&
+		lhs.isZoomFreq    == rhs.isZoomFreq &&
+		lhs.toneSetId     == rhs.toneSetId);
+}
+
+//freq.cpp
+int getFreqId(const std::vector<freq>& freqs, const freq& newfq);
+int getFreqId(const std::vector<freq>& freqs, double fq, double bw, char sb, double isr, double osr, int d, int iz, unsigned int t);
+int addFreqId(std::vector<freq>& freqs, const freq& newfq);
+int addFreqId(std::vector<freq>& freqs, double fq, double bw, char sb, double isr, double osr, int d, int iz, unsigned int t);
+std::ostream& operator << (std::ostream& os, const freq& f);
 
 #endif

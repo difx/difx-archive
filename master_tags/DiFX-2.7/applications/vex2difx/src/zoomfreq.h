@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2015-2016 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2009-2017 by Walter Brisken                             *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,23 +19,31 @@
 /*===========================================================================
  * SVN properties (DO NOT CHANGE)
  *
- * $Id$
- * $HeadURL: https://svn.atnf.csiro.au/difx/applications/vex2difx/branches/multidatastream_refactor/src/vex2difx.cpp $
- * $LastChangedRevision$
- * $Author$
- * $LastChangedDate$
+ * $Id: zoomfreq.h 9168 2019-09-18 12:56:43Z JanWagner $
+ * $HeadURL: $
+ * $LastChangedRevision: 9168 $
+ * $Author: JanWagner $
+ * $LastChangedDate: 2019-09-18 14:56:43 +0200 (Wed, 18 Sep 2019) $
  *
  *==========================================================================*/
 
+#ifndef __ZOOMFREQ_H__
+#define __ZOOMFREQ_H__
 
-#ifndef __APPLYCORRPARAMS_H__
-#define __APPLYCORRPARAMS_H__
+class ZoomFreq
+{
+public: 
+	//constructor
+	ZoomFreq();
 
-#include <set>
-#include <string>
-#include "vex_data.h"
-#include "corrparams.h"
+	//method
+	void initialise(double freq, double bw, bool corrparent, int specavg); // Hz
 
-int applyCorrParams(VexData *V, const CorrParams &params, unsigned int &nWarn, unsigned int &nError, std::set<std::string> &canonicalVDIFUsers);
+	//variables
+	double frequency, bandwidth; // Hz
+	int spectralaverage;
+	bool correlateparent;
+};
 
 #endif
+

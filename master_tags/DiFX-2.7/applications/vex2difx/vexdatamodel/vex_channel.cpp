@@ -234,6 +234,19 @@ char VexChannel::bandCode() const
 	return '?';
 }
 
+// returns Hz
+double VexChannel::centerFreq() const
+{
+	if(bbcSideBand == 'U')
+	{
+		return bbcFreq + 0.5*bbcBandwidth;
+	}
+	else
+	{
+		return bbcFreq - 0.5*bbcBandwidth;
+	}
+}
+
 bool operator ==(const VexChannel &c1, const VexChannel &c2)
 {
 	if( (c1.recordChan  != c2.recordChan)   ||

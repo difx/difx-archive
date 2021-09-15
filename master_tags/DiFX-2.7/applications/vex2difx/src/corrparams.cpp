@@ -217,10 +217,12 @@ CorrSetup::CorrSetup(const std::string &name) : corrSetupName(name)
 	suppliedSpecAvg = 0;
 	FFTSpecRes = 250000.0;		// Hz; spectral resolution at FFT stage
 	outputSpecRes = 500000.0;	// Hz; spectral resolution in Output
+	outputBandwidth = 0;		// Hz; target bw for assembly of output bands from slices depending on OutputBandwidthMode
 	nFFTChan = 0;			// If this or nOutputChan != 0, these override SpecAvg params
 	nOutputChan = 0;
 	doPolar = true;
 	doAuto = true;
+	outputBandwidthMode = OutputBandwidthOff;
 	fringeRotOrder = 1;
 	strideLength = 0;
 	xmacLength = 0;
@@ -234,6 +236,28 @@ CorrSetup::CorrSetup(const std::string &name) : corrSetupName(name)
 	minRecordedBandwidth = 0.0;
 	maxRecordedBandwidth = 0.0;
 	onlyPol = ' ';
+	autobands.clear();
+}
+
+int CorrSetup::setkv(const std::string &key, const std::string &value, ZoomFreq *outputbandFreq)
+{
+	int nWarn = 0;
+
+	if(key == "freq" || key == "FREQ")
+	{
+		outputbandFreq->frequency = atof(value.c_str())*1000000; //convert to Hz
+	}
+	else if(key == "bw" || key == "BW")
+	{
+		outputbandFreq->bandwidth = atof(value.c_str())*1000000; //convert to Hz
+	}
+	else
+	{
+		std::cerr << "Warning: SETUP: Unknown parameter '" << key << "'." << std::endl;
+		++nWarn;
+	}
+
+	return nWarn;
 }
 
 void CorrSetup::addRecordedBandwidth(double bw)
@@ -251,6 +275,8 @@ void CorrSetup::addRecordedBandwidth(double bw)
 
 int CorrSetup::setkv(const std::string &key, const std::string &value)
 {
+	std::string::size_type at, last, splitat;
+	std::string nestedkeyval;
 	std::stringstream ss;
 	int nWarn = 0;
 	char *ptr;
@@ -281,6 +307,66 @@ int CorrSetup::setkv(const std::string &key, const std::string &value)
 		ss >> outputSpecRes;
 		outputSpecRes *= 1e6;	// Users use MHz, vex2difx uses Hz
 		explicitOutputSpecRes = true;
+	}
+	else if(key == "outputBandwidth")
+	{
+		if (value == "auto")
+		{
+			outputBandwidthMode = OutputBandwidthAuto;
+		}
+		else
+		{
+			outputBandwidthMode = OutputBandwidthUser;
+			ss >> outputBandwidth;
+			outputBandwidth *= 1e6; // Users use MHz, vex2difx uses Hz
+		}
+	}
+	else if(key == "addOutputBand")
+	{
+		// Register explicit v2d user-specified output band into the autoband logic
+		// The syntax follows ZOOM addZoomFreq.  All parameters must be together, with @ replacing =, and separated by /
+		// e.g., addOutputBand = freq@1649.99/bw@32.0
+		// only freq is compulsory; bandwidth bw only if outputBandwidth=<x> was not specified prior to addOutputBand
+		ZoomFreq outputbandDef;
+		outputbandDef.initialise(0, 0, false, 1);
+		last = 0;
+		at = 0;
+		while(at != std::string::npos)
+		{
+			at = value.find_first_of('/', last);
+			nestedkeyval = value.substr(last, at-last);
+			splitat = nestedkeyval.find_first_of('@');
+			nWarn += setkv(nestedkeyval.substr(0, splitat), nestedkeyval.substr(splitat+1), &outputbandDef);
+			last = at+1;
+		}
+		if(outputbandDef.frequency <= 0)
+		{
+			std::cerr << "Error: Explicit outputband entry '" << value << "' parsed into unexpected frequency of " << outputbandDef.frequency << " MHz." << std::endl;
+
+			exit(EXIT_FAILURE);
+		}
+		if(outputBandwidth == 0 && outputbandDef.bandwidth == 0)
+		{
+			std::cerr << "Error: For explicit outputband placement please provide a bandwidth as part of 'addOutputBand' or in a preceding 'outputBandwidth'." << std::endl;
+
+			exit(EXIT_FAILURE);
+		}
+		if(outputBandwidth <= 0)
+		{
+			outputBandwidth = outputbandDef.bandwidth;
+		}
+		else if(outputbandDef.bandwidth == 0)
+		{
+			outputbandDef.bandwidth = outputBandwidth;
+		}
+		if(outputBandwidth != outputbandDef.bandwidth)
+		{
+			std::cerr << "Error: Bandwidth of outputBandwidth parameter (" << outputBandwidth*1e-6 << " MHz) conflicts with addOutputBand bw element (" << outputbandDef.bandwidth*1e-6 << " MHz)" << std::endl;
+
+			exit(EXIT_FAILURE);
+		}
+		outputBandwidthMode = OutputBandwidthUser;
+		autobands.addUserOutputband(outputbandDef);
 	}
 	else if(key == "FFTSpecRes" || key == "fftSpecRes")
 	{
@@ -769,14 +855,14 @@ int SourceSetup::setkv(const std::string &key, const std::string &value, PhaseCe
 
 ZoomFreq::ZoomFreq()
 {
-	initialise(-999, -999, false, -1);
+	initialise(-999e6, -999e6, false, -1);
 }
 
-// freq and bw supplied in MHz
+// freq and bw supplied in Hz
 void ZoomFreq::initialise(double freq, double bw, bool corrparent, int specavg)
 {
-	frequency = freq*1000000; //convert to Hz
-	bandwidth = bw*1000000; //convert to Hz
+	frequency = freq;
+	bandwidth = bw;
 	correlateparent = corrparent;
 	spectralaverage = specavg;
 }
@@ -1530,6 +1616,13 @@ int AntennaSetup::setkv(const std::string &key, const std::string &value)
 
 		ss >> d;
 		loOffsets.push_back(d);
+	}
+	else if(key == "gainOffsets")
+	{
+		double d;
+
+		ss >> d;
+		gainOffsets.push_back(d);
 	}
 	else if(key == "zoom")
 	{
@@ -2461,6 +2554,10 @@ int CorrParams::load(const std::string &fileName)
 
 			it->copyGlobalZoom(*z);
 		}
+
+		// copy the custom v2d zoomFreqs into vector v2dZoomFreqs which the Outputbands does not tamper with
+		it->v2dZoomFreqs.clear();
+		std::copy(it->zoomFreqs.begin(), it->zoomFreqs.end(), std::back_inserter(it->v2dZoomFreqs));
 	}
 
 	// populate datastream structures
@@ -2632,6 +2729,23 @@ int CorrParams::checkSetupValidity()
 				++nWarn;
 			}
 			c->FFTSpecRes = c->outputSpecRes;
+		}
+	}
+
+	// automatically switch to exhaustiveAutocorrs if any corr setup uses the outputbands feature, because
+	// this keeps the mpifxcorr implementation of outputbands simple and autocorrs need no special code path
+	if(!exhaustiveAutocorrs)
+	{
+		for(std::vector<CorrSetup>::const_iterator c = corrSetups.begin(); c != corrSetups.end(); ++c)
+		{
+			if (c->outputBandwidthMode != OutputBandwidthOff)
+			{
+				exhaustiveAutocorrs = true;
+			}
+		}
+		if(exhaustiveAutocorrs)
+		{
+			std::cerr << "Note: SETUP with outputBandwidth detected, but exhaustiveAutocorrs was not specified. Auto-enabling it." << std::endl;
 		}
 	}
 
@@ -3287,6 +3401,13 @@ std::ostream& operator << (std::ostream &os, const CorrParams &x)
 		for(std::vector<AntennaSetup>::const_iterator as = x.antennaSetups.begin(); as != x.antennaSetups.end(); ++as)
 		{
 			os << std::endl;
+			if(!as->datastreamSetups.empty())
+			{
+				for(std::vector<DatastreamSetup>::const_iterator ds =as->datastreamSetups.begin(); ds != as->datastreamSetups.end(); ++ds)
+				{
+					os << *ds;
+				}
+			}
 			os << *as;
 		}
 	}

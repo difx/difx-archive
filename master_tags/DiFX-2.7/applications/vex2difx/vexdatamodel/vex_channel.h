@@ -41,6 +41,7 @@ public:
 	VexChannel() : recordChan(-1), subbandId(-1), bbcFreq(0.0), bbcBandwidth(0.0), bbcSideBand(' '), threadId(0) {}
 	void selectTones(float toneIntervalMHz, float toneBaseMHz, enum ToneSelection selection, double guardBandMHz);
 	char bandCode() const;
+	double centerFreq() const;		// returns Hz
 	friend bool operator ==(const VexChannel &c1, const VexChannel &c2);
 	friend bool operator <(const VexChannel &c1, const VexChannel &c2);
 	friend bool sameTuning(const VexChannel &c1, const VexChannel &c2);

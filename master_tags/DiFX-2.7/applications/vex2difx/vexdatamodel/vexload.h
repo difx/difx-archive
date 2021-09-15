@@ -33,6 +33,6 @@
 #include <string>
 #include <vex_data.h>
 
-VexData *loadVexFile(const std::string &vexFile, int *numWarnings);
+VexData *loadVexFile(const std::string &vexFile, unsigned int *numWarnings);
 
 #endif

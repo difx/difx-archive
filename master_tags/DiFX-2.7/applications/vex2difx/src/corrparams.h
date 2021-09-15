@@ -38,8 +38,12 @@
 #include <iostream>
 #include <difxio.h>
 
+class AutoBands;
+
+#include "autobands.h"
 #include "interval.h"
 #include "freq.h"
+#include "zoomfreq.h"
 #include "vex_data.h"
 
 extern const double MJD_UNIX0;	// MJD at beginning of unix time
@@ -103,21 +107,6 @@ public:
 	std::string vexName;		// Source name as appears in vex file
 	PhaseCentre pointingCentre;	// The source which is at the pointing centre
 	std::vector<PhaseCentre> phaseCentres; // Additional phase centres to be correlated
-};
-
-class ZoomFreq
-{
-public:
-	//constructor
-	ZoomFreq();
-
-	//method
-	void initialise(double freq, double bw, bool corrparent, int specavg);
-
-	//variables
-	double frequency, bandwidth;
-	int spectralaverage;
-	bool correlateparent;
 };
 
 class GlobalZoom
@@ -199,6 +188,7 @@ public:
 	std::vector<double> freqClockOffsDelta; // Clock offsets between pols for the individual frequencies
 	std::vector<double> freqPhaseDelta;	// Phase difference between pols for each frequency
 	std::vector<double> loOffsets;		// LO offsets for each individual frequency
+	std::vector<double> gainOffsets;	// Gains (V/V) for each individual frequency
 	VexClock clock;
 	double deltaClock;	// [sec]
 	double deltaClockRate;	// [sec/sec]
@@ -221,6 +211,9 @@ public:
 	DatastreamSetup defaultDatastreamSetup;	// only used to contain defaults used in creating datastreamSetups
 	std::list<std::string> datastreamList;	// list of datastreams provided in v2d file
 	std::vector<DatastreamSetup> datastreamSetups;
+
+	std::vector<ZoomFreq> v2dZoomFreqs;//List of zoom freqs for this antenna; minus any Outputbands-introduced zooms
+
 private:
 	void addDatastream(const std::string &dsName);
 };
@@ -230,6 +223,7 @@ class CorrSetup
 public:
 	CorrSetup(const std::string &name = "setup_default");
 	int setkv(const std::string &key, const std::string &value);
+	int setkv(const std::string &key, const std::string &value, ZoomFreq *outputbandFreq);
 	bool correlateFreqId(int freqId) const;
 	double bytesPerSecPerBLPerBand() const;
 	int checkValidity() const;
@@ -260,6 +254,7 @@ public:
 	int guardNS;		// Number of "guard" ns tacked on to end of a send
 	double FFTSpecRes;	// Hz; resolution of initial FFTs
 	double outputSpecRes;	// Hz; resolution of averaged output FFTs
+	double outputBandwidth;	// Hz; target bw for assembly of output bands from slices depending on OutputBandwidthMode
 	double suppliedSpecAvg;	// specAvg supplied by .v2d file
 	int nFFTChan;		// This and the next parameter can be used to override the above two if all channels are the same width
 	int nOutputChan;	//
@@ -271,6 +266,8 @@ public:
 	int xmacLength;		// Number of channels to do at a time when xmac'ing
 	int numBufferedFFTs;	// Number of FFTs to do in Mode before XMAC'ing
 	std::set<int> freqIds;	// which bands to correlate
+	enum OutputBandwidthMode outputBandwidthMode;	// mode in which to choose/generate output bands
+	mutable AutoBands autobands;	// generator for output bands
 	std::string binConfigFile;
 	std::string phasedArrayConfigFile;
 	char onlyPol;		// which polarization to correlate
