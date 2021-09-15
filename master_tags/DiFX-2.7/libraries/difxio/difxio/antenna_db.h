@@ -6,9 +6,14 @@
 #define ANTENNA_DB_NAME_LENGTH		16
 #define ANTENNA_DB_MOUNT_LENGTH		8
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct
 {
 	char name[ANTENNA_DB_NAME_LENGTH];
+	char ivsName[ANTENNA_DB_NAME_LENGTH];		/* Name as used in IVS situations */
 	double x, y, z;					/* ITRF coords [m]; note: not precise enough for correlation! */
 	double diameter;				/* [m] */
 	double arrayExtent;				/* [km] ; radius of array from the given xyz.  0.0 for single dishes */
@@ -26,6 +31,13 @@ const AntennaDBEntry *antennaDBGetByXYZ(double x, double y, double z);
 
 const AntennaDBEntry *antennaDBGetByName(const char *name);
 
+const AntennaDBEntry *antennaDBGetByIVSName(const char *ivsName);
+
 void ecef2lla(double *lat, double *lon, double *alt, double x, double y, double z);
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif
