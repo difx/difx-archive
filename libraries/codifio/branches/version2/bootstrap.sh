@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 echo "Running the GNU autotools"
 
@@ -9,7 +9,7 @@ if [ -z $DIFXROOT ]; then
 fi
 
 aclocal
-if [ "$OSTYPE" = "darwin"* ]; then
+if [[ "$OSTYPE" == "darwin"* ]]; then
     glibtoolize --copy --force
 else
     libtoolize --copy --force
