@@ -306,14 +306,14 @@ void AutoBands::simplify(AutoBands::Outputband& mergeable, int Nant_min) const
 		{
 			if(verbosity > 2)
 			{
-				printf("Autobands::simplify() found cover for %.6f--%.6f, continuing and trying to merge-in the next band constituent\n", f0*1e-6, f1*1e-6);
+				std::cout << "    found cover for " << f0*1e-6 << "--" << f1*1e-6 << ", continuing and trying to merge-in the next band constituent\n";
 			}
 		}
 		else
 		{
 			if(verbosity > 2)
 			{
-				printf("Autobands::simplify() no simple cover for %.6f--%.6f, keeping %.6f--%.6f\n", f0*1e-6, f1*1e-6, f0*1e-6, bnext->flow*1e-6);
+				std::cout << "    no simple cover for " << f0*1e-6 << "--" << f1*1e-6 << ", keeping " << f0*1e-6 << "--" << bnext->flow*1e-6 << "\n";
 			}
 			merged.extend(f0, bnext->flow - f0);
 			f0 = bnext->flow;
@@ -331,17 +331,23 @@ void AutoBands::simplify(AutoBands::Outputband& mergeable, int Nant_min) const
 		merged.extend(f0, f1-f0);
 	}
 
+	// Retain the original if simplification incomplete
+	if(mergeable.isComplete() && !merged.isComplete())
+	{
+		merged = mergeable;
+	}
+
 	// Print the details if something was merged
 	if(verbosity > 1)
 	{
 		if(merged.constituents.size() < mergeable.constituents.size())
 		{
-			std::cout << "Autobands::simplify()    merged " << mergeable.constituents.size()
+			std::cout << "    merged " << mergeable.constituents.size()
 				<< " sub-spans into " << merged.constituents.size() << "\n";
 		}
 		else
 		{
-			std::cout << "Autobands::simplify() not reducible, input had " << mergeable.constituents.size()
+			std::cout << "    not reducible, input had " << mergeable.constituents.size()
 				<< " sub-spans, output has " << merged.constituents.size() << "\n";
 		}
 	}
@@ -364,6 +370,11 @@ void AutoBands::analyze(int Nant_min)
 		Nant_min = this->Nant;
 	}
 	spans.clear();
+
+	if(verbosity > 0)
+	{
+		std::cout << "Analyzing all registered recorded bands to detect band edges\n";
+	}
 
 	// Sorted set of all recorded band edges
 	std::set<double> bandedges;
@@ -401,12 +412,13 @@ void AutoBands::analyze(int Nant_min)
 			spans.push_back(AutoBands::Span(span_lo, span_hi, antcount, bandcount));
 			if(verbosity > 2)
 			{
-				printf ("Autobands::analyze() retain  %.6f--%.6f MHz bw %.6f MHz with %d rec bands, %d antennas\n", span_lo*1e-6,span_hi*1e-6, (span_hi-span_lo)*1e-6, bandcount,antcount);
+				std::cout << "    retain  " << span_lo*1e-6 << "--" << span_hi*1e-6 << " MHz bw " << (span_hi-span_lo)*1e-6 << " with " << bandcount << " rec bands, " << antcount << " antennas\n";
 			}
 		}
 		else if(verbosity > 2)
 		{
-			printf ("Autobands::analyze() discard %.6f--%.6f MHz bw %.6f MHz with %d rec bands, %d antennas < %d antennas\n", span_lo*1e-6,span_hi*1e-6,(span_hi-span_lo)*1e-6,bandcount,antcount,Nant_min);
+			std::cout << "    discard " << span_lo*1e-6 << "--" << span_hi*1e-6 << " MHz bw " << (span_hi-span_lo)*1e-6 << " with " << bandcount << " rec bands, "
+				<< antcount << " antennas < " << Nant_min << "antennas\n";
 		}
 	}
 
@@ -480,6 +492,12 @@ int AutoBands::generateOutputbandsAutomatic(int Nant_min, double fstart_Hz)
 		foutstart = minspanfreq;
 	}
 
+	if(verbosity > 0)
+	{
+		std::cout << "Building automatic bands starting from " << fstart_Hz*1e-6 << " MHz with target bw " << outputbandwidth*1e-6 << " MHz\n";
+	}
+
+
 	// Assemble output bands using recorded bands in full or in pieces
 	while (span < Nspans)
 	{
@@ -505,8 +523,9 @@ int AutoBands::generateOutputbandsAutomatic(int Nant_min, double fstart_Hz)
 		{
 			if(verbosity > 1)
 			{
-				printf ("Autobands::outputbands()    case 1 adding %10.6f MHz bw from span %3d @ %10.6f MHz to out#%d %10.6f MHz\n",
-					outputbandwidth*1e-6, span, (foutstart-f0)*1e-6, (int)outputbands.size(), foutstart*1e-6);
+				std::cout << "    case 1 adding " << std::setw(10) << outputbandwidth*1e-6 << " MHz bw from span " << std::setw(2) << span
+					<< " @ " << std::setw(10) << (foutstart-f0)*1e-6 << " MHz "
+					<< "to out#" << (int)outputbands.size() << " " << foutstart*1e-6 << " MHz\n";
 			}
 
 			AutoBands::Outputband ob(foutstart, outputbandwidth);
@@ -514,6 +533,11 @@ int AutoBands::generateOutputbandsAutomatic(int Nant_min, double fstart_Hz)
 
 			outputbands.push_back(ob);
 			foutstart += outputbandwidth;
+
+			if(verbosity > 1)
+			{
+				std::cout << "Building further automatic bands continuing from " << foutstart*1e-6 << " MHz\n";
+			}
 		}
 
 		// Generate band : insert one band by combining smaller pieces of spans and patch over to next span(s) if needed
@@ -540,8 +564,9 @@ int AutoBands::generateOutputbandsAutomatic(int Nant_min, double fstart_Hz)
 				bw_needed -= bw_utilized;
 				if(verbosity > 1)
 				{
-					printf ("Autobands::outputbands()    case 2 adding %10.6f MHz bw from span %3d @ %10.6f MHz to out#%d %10.6f MHz, remain %10.6f MHz\n",
-						bw_utilized*1e-6, span, (slicestartfreq-f0)*1e-6, (int)outputbands.size(), foutstart*1e-6, bw_needed*1e-6);
+					std::cout << "    case 2 adding " << std::setw(10) << bw_utilized*1e-6 << " MHz bw from span " << std::setw(2) << span
+						<< " @ " << std::setw(10) << (slicestartfreq-f0)*1e-6 << " MHz "
+						<< "to out#" << (int)outputbands.size() << " " << foutstart*1e-6 << " MHz, remain " << bw_needed*1e-6 << " MHz\n";
 				}
 
 				// Add bandwidth to outputband
@@ -575,12 +600,16 @@ int AutoBands::generateOutputbandsAutomatic(int Nant_min, double fstart_Hz)
 				assert(ob.isComplete());
 				outputbands.push_back(ob);
 				foutstart += outputbandwidth;
+				if(verbosity > 1)
+				{
+					std::cout << "Building further automatic bands continuing from " << foutstart*1e-6 << " MHz\n";
+				}
 			}
 			else
 			{
 				if(verbosity > 1)
 				{
-					printf ("Autobands::outputbands()    dropping incomplete out fq %.6f MHz, was short by %.6f MHz\n", foutstart*1e-6, bw_needed*1e-6);
+					std::cout << "    dropping incomplete out fq " << foutstart*1e-6 << " MHz, was short by " << bw_needed*1e-6 << " MHz\n";
 				}
 				foutstart += bw_needed;
 				// span++; // perhaps?
@@ -645,7 +674,8 @@ int AutoBands::generateOutputbandsExplicit(int Nant_min)
 			newband.extend(foutstart, bw_utilized);
 			if(verbosity > 0)
 			{
-				std::cout << "    adding " << bw_utilized*1e-6 << " MHz starting at " << foutstart*1e-6 << " MHz, filled to " << newband.constituentsBandwidth()*1e-6 << " MHz\n";
+				std::cout << "    adding " << std::setw(10) << bw_utilized*1e-6 << " MHz starting at " << foutstart*1e-6 << " MHz, "
+					<< "filled to " << std::setw(10) << newband.constituentsBandwidth()*1e-6 << " MHz\n";
 			}
 
 
@@ -980,7 +1010,7 @@ std::ostream& operator << (std::ostream& os, const AutoBands::Outputband& x)
 	{
 		os << "   input " << std::setw(2) << n << " " << x.constituents[n] << "\n";
 	}
-	os << "total bandwidth " << x.constituentsBandwidth()*1e-6 << " of " << x.bandwidth*1e-6 << " MHz \n";
+	os << "   total bandwidth " << x.constituentsBandwidth()*1e-6 << " of " << x.bandwidth*1e-6 << " MHz \n";
 	return os;
 }
 
