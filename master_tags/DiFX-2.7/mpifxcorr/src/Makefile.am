@@ -12,6 +12,14 @@ mark5_files = \
 	vdifmark5_stubs.cpp
 endif
 
+if WITH_MARK6SG
+mark6_files = \
+	vdifmark6_datastream.cpp \
+	mark5bmark6_datastream.cpp
+else
+mark6_files =
+endif
+
 bin_PROGRAMS = mpifxcorr neuteredmpifxcorr
 
 mpifxcorr_SOURCES = \
@@ -24,7 +32,7 @@ mpifxcorr_SOURCES = \
 	mathutil.cpp \
 	sysutil.cpp \
 	mode.cpp \
-        model.cpp \
+	model.cpp \
 	mk5.cpp \
 	mk5mode.cpp \
 	datamuxer.cpp \
@@ -38,9 +46,8 @@ mpifxcorr_SOURCES = \
 	alert.cpp \
 	pcal.cpp \
 	switchedpower.cpp \
-	vdifmark6_datastream.cpp \
-	mark5bmark6_datastream.cpp \
-	$(mark5_files)
+	$(mark5_files) \
+	$(mark6_files)
 
 library_includedir = $(includedir)/mpifxcorr
 library_include_HEADERS = \
@@ -55,8 +62,8 @@ library_include_HEADERS = \
 	sysutil.h \
 	mk5.h \
 	mk5mode.h \
-        model.h \
-        mode.h \
+	model.h \
+	mode.h \
 	polyco.h \
 	nativemk5.h \
 	watchdog.h \
@@ -88,7 +95,7 @@ libmpifxcorr_a_SOURCES = \
 	fxmanager.cpp \
 	mathutil.cpp \
 	sysutil.cpp \
-        model.cpp \
+	model.cpp \
 	visibility.cpp \
 	alert.cpp \
 	switchedpower.cpp \
@@ -99,9 +106,9 @@ libmpifxcorr_a_SOURCES = \
 	vdifsharedmemory.cpp \
 	sharedmemorybuffer.cpp \
 	datamuxer.cpp \
-	vdifmark6_datastream.cpp \
-	mark5bmark6_datastream.cpp \
-	$(mark5_files)
+	$(mark5_files) \
+	$(mark6_files)
+
 
 libfxcorr_a_SOURCES = \
 	configuration.cpp \
@@ -112,7 +119,7 @@ libfxcorr_a_SOURCES = \
 	mk5mode.cpp \
 	polyco.cpp \
 	visibility.cpp \
-        model.cpp \
+	model.cpp \
 	datamuxer.cpp \
 	alert.cpp
 
@@ -132,9 +139,8 @@ neuteredmpifxcorr_SOURCES = \
 	vdifsharedmemory.cpp \
 	sharedmemorybuffer.cpp \
 	datamuxer.cpp \
-	vdifmark6_datastream.cpp \
-	mark5bmark6_datastream.cpp \
-	$(mark5_files)
+	$(mark5_files) \
+	$(mark6_files)
 
 neuteredmpifxcorr_CXXFLAGS = -DNEUTERED_DIFX $(AM_CXXFLAGS)
 
