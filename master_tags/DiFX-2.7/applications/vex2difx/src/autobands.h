@@ -100,6 +100,22 @@ public:
 			this->constituents.clear();
 		}
 
+		/// Copy C'stor required for storage std::vector<AutoBands::Outputband>
+		Outputband(const Outputband& o)
+		{
+			this->fbandstart = o.fbandstart;
+			this->bandwidth = o.bandwidth;
+			this->constituents = o.constituents;
+		}
+
+		// Default C'stor
+		Outputband()
+		{
+			this->fbandstart = 0;
+			this->bandwidth = 0;
+			this->constituents.clear();
+		}
+
 		/// Grow the list of consituent bands by one
 		void extend(double fstart, double bw);
 
