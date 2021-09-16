@@ -10,6 +10,7 @@
 //============================================================================
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "vex.h"
 #include "y.tab.h"
 
@@ -1140,6 +1141,7 @@ get_all_literals(struct llist *literals, char *array[])
     i++;
     literals = get_literal_lowl_next();
   }
+  return(*array);
 }
 /*---------------------------------------------------------------------------*/
 void *

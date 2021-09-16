@@ -1,3 +1,20 @@
+#ifdef YYPARSE_PARAM
+#if defined __STDC__ || defined __cplusplus
+int yyparse (void *YYPARSE_PARAM);
+#else
+int yyparse ();
+#endif
+#else /* ! YYPARSE_PARAM */
+#if defined __STDC__ || defined __cplusplus
+int yyparse (void);
+#else
+int yyparse ();
+#endif
+#endif /* ! YYPARSE_PARAM */
+
+int yylex();
+void yyerror(const char*);
+
 /* structure declarations */
 //===========================================================================
 // SVN properties (DO NOT CHANGE)
@@ -1110,6 +1127,18 @@ create_s2_recording_mode(char *str);
 
 void *
 create_s2_data_source(char *str, char *str2, char *str3);
+
+void * 
+end_def();
+
+void *
+create_ref(char *str, char *str2);
+
+void *
+end_scan();
+
+void *
+create_headstack_pos(char *str, char *str2);
 
 /*--------------------------- TEST PILOT ----------------------------*/
 void *
