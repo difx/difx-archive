@@ -51,35 +51,35 @@ extern "C" {
 
 typedef struct codif_header {
   // Word 0
-  uint64_t seconds : 32;
   uint64_t frame : 32;
+  uint64_t seconds : 32;
   // Word 1
-  uint64_t period : 16;
-  uint64_t reserved : 16;
-  uint64_t protocol : 3;
-  uint64_t version : 5;
+  uint64_t epoch : 8;
+  uint64_t nbits : 8;
   uint64_t representation : 4;
   uint64_t calEnabled : 1;
   uint64_t iscomplex : 1;
   uint64_t invalid : 1;
   uint64_t power : 1;
-  uint64_t nbits : 8;
-  uint64_t epoch : 8;
+  uint64_t protocol : 3;
+  uint64_t version : 5;
+  uint64_t reserved : 16;
+  uint64_t period : 16;
   // Word 2
-  uint64_t stationid : 16;
-  uint64_t secondaryid : 16;
-  uint64_t groupid : 16;
   uint64_t threadid : 16;
+  uint64_t groupid : 16;
+  uint64_t secondaryid : 16;
+  uint64_t stationid : 16;
   // Word 3
-  uint64_t framelength8 : 32;	// Frame length (excluding header) divided by 8 
-  uint64_t blocklength : 16;
   uint64_t nchan : 16;
+  uint64_t blocklength : 16;
+  uint64_t framelength8 : 32;	// Frame length (excluding header) divided by 8 
   // Word 4
   uint64_t totalsamples;
   // Word 5
-  uint64_t meta1 : 16;
-  uint64_t metaid : 16;
   uint64_t sync : 32;
+  uint64_t metaid : 16;
+  uint64_t meta1 : 16;
   uint64_t meta2;
   uint64_t meta3;
 } codif_header;
@@ -104,7 +104,7 @@ static inline int getCODIFHeaderBytes(const codif_header *header) { return CODIF
 static inline int getCODIFFrameBytes(const codif_header *header) { return (int)(header->framelength8)*8; }
 static inline int getCODIFPeriod(const codif_header *header) { return (int)header->period; }
 static inline int getCODIFSync(const codif_header *header) { return (int)header->sync; }
-static inline uint64_t getCODIFTotalSamples(const codif_header *header) { return header->totalsamples; }
+static inline uint64_t getCODIFTotalSamples(const codif_header *header) { return header->totalsamples*256; }
 
 uint64_t getCODIFFrameMJDSec(codif_header *header);
 int getCODIFFrameMJD(const codif_header *header);
@@ -119,9 +119,13 @@ static inline int getCODIFVersion(const codif_header *header) { return ((int)hea
 static inline int getCODIFNumChannels(const codif_header *header) {return (int)header->nchan;} 
 static inline int getCODIFSampleblockLength(codif_header *header) { return (int)header->blocklength;}
 static inline int getCODIFFrameInvalid(const codif_header *header) { return (int)header->invalid; }
-static inline int getCODIFCalEnabled(const codif_header *header) { return (int)header->invalid; }
+static inline int getCODIFIsPower(const codif_header *header) { return (int)header->power; }
+static inline int getCODIFCalEnabled(const codif_header *header) { return (int)header->calEnabled; }
 static inline int getCODIFFrameEpochSecOffset(const codif_header *header) { return (int)header->seconds; }
 static inline int getCODIFEpoch(const codif_header *header) { return (int)header->epoch; }
+
+int getCODIFFrameperperiod(const codif_header *header);
+double getCODIFFramepersec(const codif_header *header);
 int getCODIFEpochMJD(const codif_header *header);
 uint32_t getCODIFFramesPerPeriod(const codif_header *header);
   
@@ -132,6 +136,7 @@ static inline void setCODIFFrameEpochSecOffset(codif_header *header, int seconds
 static inline void setCODIFFrameNumber(codif_header *header, int framenumber) { header->frame = framenumber; }
 static inline void setCODIFFrameInvalid(codif_header *header, unsigned int invalid) { header->invalid = invalid; }
 static inline void setCODIFCalEnabled(codif_header *header, unsigned int calEnabled) { header->calEnabled =  calEnabled; }
+static inline void setCODIFIsPower(codif_header *header, unsigned int power) { header->power =  power; }
 static inline void setCODIFBitsPerSample(codif_header *header, int nbits) { header->nbits = nbits; }
 static inline void setCODIFRepresentation(codif_header *header, int representation) { header->representation = representation; }
 static inline void setCODIFSampleblockLength(codif_header *header, int sampleblock) { header->blocklength = sampleblock; }
@@ -150,7 +155,7 @@ int setCODIFEpochMJD(codif_header *header, int mjd);
 int nextCODIFHeader(codif_header *header, int framepersec);
 int incrementCODIFHeader(codif_header *header, int framepersec, int64_t inc);
 
-double CODIFframe2mjd(const codif_header *header, int sec, int frame, int frampersec);
+double CODIFframe2mjd(const codif_header *header, int sec, int frame, double frampersec);
 
   //void fprintCODIFHeader(FILE *out, const codif_header *header, enum CODIFHeaderPrintLevel);
   //void printCODIFHeader(const codif_header *header, enum CODIFHeaderPrintLevel);
