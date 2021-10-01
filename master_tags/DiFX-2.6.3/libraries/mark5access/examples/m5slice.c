@@ -118,7 +118,8 @@ int main(int argc, char **argv) {
 
   framens = ms->framens;
 
-  offsetbytes = (off_t)(ms->frameoffset + offset/framens*1e9*ms->framebytes);
+
+  offsetbytes = (off_t)(ms->frameoffset + (long int)(offset*1e9/framens)*ms->framebytes);
 
   readbytes = length/framens*1e9*ms->framebytes;
 
