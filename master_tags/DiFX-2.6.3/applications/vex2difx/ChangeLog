@@ -1,3 +1,7 @@
+Version 2.6.3
+~~~~~~~~~~~~~
+* Fix from trunk: utilities/mk62v2d : fix end of year crash
+
 Version 2.6.1
 ~~~~~~~~~~~~~
 * Post DiFX-2.6; backported from trunk
