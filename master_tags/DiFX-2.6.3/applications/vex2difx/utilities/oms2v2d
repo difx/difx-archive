@@ -37,8 +37,8 @@ from os.path import isfile, isdir
 from os import umask, popen, system
 
 program = 'oms2v2d'
-version = '1.11'
-verdate = '20200331'
+version = '1.11.1'
+verdate = '20211004'
 author = 'Walter Brisken'
 
 def usage(pgm):
@@ -273,6 +273,7 @@ def writev2d(oms, v2dFile, prefix, nrt, filebased, datacopyFormat, evlbiType, nS
 		out.write('nCore = 10\n')
 		out.write('nThread = 12\n\n')
 		out.write('singleScan = True\n\n')
+		out.write('maxLength=3200\n\n')
 
 	for s in oms['SOURCE_INFO']:
 		srcParams = ''
