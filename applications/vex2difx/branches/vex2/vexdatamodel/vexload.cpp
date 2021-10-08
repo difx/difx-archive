@@ -46,12 +46,89 @@
 
 using namespace std;
 
-class Tracks
+class BitAssignments
 {
 public:
 	std::vector<int> sign;
 	std::vector<int> mag;
 };
+
+int reorderBitAssignments(std::map<std::string,BitAssignments> &bitAssignements, int startSlotNumber)
+{
+	const int MaxSlotNumber = 66;
+	int order[MaxSlotNumber+1];
+
+	for(int i = 0; i <= MaxSlotNumber; ++i)
+	{
+		order[i] = -2;
+	}
+
+	for(std::map<std::string,BitAssignments>::iterator it = bitAssignements.begin(); it != bitAssignements.end(); ++it)
+	{
+		const BitAssignments &T = it->second;
+
+		for(std::vector<int>::const_iterator b = T.sign.begin(); b != T.sign.end(); ++b)
+		{
+			if(*b < 0 || *b > MaxSlotNumber)
+			{
+				cerr << "Error: sign assignment " << *b << " for channel " << it->first << " is out of range (0.." << MaxSlotNumber << ").  Must quit." << endl;
+
+				exit(EXIT_FAILURE);
+			}
+			if(order[*b] != -2)
+			{
+				cerr << "Error: sign assignment " << *b << " for channel " << it->first << " is repeated.  Must quit." << endl;
+
+				exit(EXIT_FAILURE);
+			}
+			order[*b] = -1;
+		}
+
+		for(std::vector<int>::const_iterator b = T.mag.begin(); b != T.mag.end(); ++b)
+		{
+			if(*b < 0 || *b > MaxSlotNumber)
+			{
+				cerr << "Error: mag assignment " << *b << " for channel " << it->first << " is out of range (0.." << MaxSlotNumber << ").  Must quit." << endl;
+
+				exit(EXIT_FAILURE);
+			}
+			if(order[*b] != -2)
+			{
+				cerr << "Error: mag assignment " << *b << " for channel " << it->first << " is repeated.  Must quit." << endl;
+
+				exit(EXIT_FAILURE);
+			}
+			order[*b] = -1;
+		}
+	}
+
+	int newSlotNumber = startSlotNumber;
+	for(int i = 0; i < 67; ++i)
+	{
+		if(order[i] == 1)
+		{
+			order[i] = newSlotNumber;
+			++newSlotNumber;
+		}
+	}
+
+	for(std::map<std::string,BitAssignments>::iterator it = bitAssignements.begin(); it != bitAssignements.end(); ++it)
+	{
+		BitAssignments &T = it->second;
+
+		for(std::vector<int>::iterator b = T.sign.begin(); b != T.sign.end(); ++b)
+		{
+			*b = order[*b];
+		}
+
+		for(std::vector<int>::iterator b = T.mag.begin(); b != T.mag.end(); ++b)
+		{
+			*b = order[*b];
+		}
+	}
+
+	return 0;
+}
 
 static void fixOhs(std::string &str)
 {
@@ -76,19 +153,19 @@ static void fixOhs(std::string &str)
 	}
 }
 
-static int getRecordChannelFromTracks(const std::string &antName, const std::string &chanName, const std::map<std::string,Tracks> &ch2tracks, const VexStream &stream, unsigned int n)
+static int getRecordChannelFromTracks(const std::string &antName, const std::string &chanName, const std::map<std::string,BitAssignments> &ch2tracks, const VexStream &stream, unsigned int n)
 {
 	if(stream.formatHasFanout())
 	{
 		int delta, track;
-		std::map<std::string,Tracks>::const_iterator it = ch2tracks.find(chanName);
+		std::map<std::string,BitAssignments>::const_iterator it = ch2tracks.find(chanName);
 
 		if(it == ch2tracks.end())
 		{
 			return -1;
 		}
 
-		const Tracks &T = it->second;
+		const BitAssignments &T = it->second;
 		delta = 2*(T.sign.size() + T.mag.size());
 		track = T.sign[0];
 
@@ -118,14 +195,14 @@ static int getRecordChannelFromTracks(const std::string &antName, const std::str
 	else if(stream.format == VexStream::FormatMark5B || stream.format == VexStream::FormatKVN5B) 
 	{
 		int delta, track;
-		std::map<std::string,Tracks>::const_iterator it = ch2tracks.find(chanName);
+		std::map<std::string,BitAssignments>::const_iterator it = ch2tracks.find(chanName);
 
 		if(it == ch2tracks.end())
 		{
 			return -1;
 		}
 
-		const Tracks &T = it->second;
+		const BitAssignments &T = it->second;
 
 		if(T.sign.empty())
 		{
@@ -142,14 +219,14 @@ static int getRecordChannelFromTracks(const std::string &antName, const std::str
 	else if(stream.isLBAFormat())
 	{
 		int delta, track;
-		std::map<std::string,Tracks>::const_iterator it = ch2tracks.find(chanName);
+		std::map<std::string,BitAssignments>::const_iterator it = ch2tracks.find(chanName);
 
 		if(it == ch2tracks.end())
 		{
 			return -1;
 		}
 
-		const Tracks &T = it->second;
+		const BitAssignments &T = it->second;
 		delta = T.sign.size() + T.mag.size();
 		track = T.sign[0];
 
@@ -176,6 +253,31 @@ static int getRecordChannelFromTracks(const std::string &antName, const std::str
 	}
 
 	return -1;
+}
+
+static int getRecordChannelFromBitstreams(const std::string &antName, const std::string &chanName, const std::map<std::string,BitAssignments> &ch2bitstreams, const VexStream &stream, unsigned int n)
+{
+	int delta, track;
+	std::map<std::string,BitAssignments>::const_iterator it = ch2bitstreams.find(chanName);
+
+	if(it == ch2bitstreams.end())
+	{
+		return -1;
+	}
+
+	const BitAssignments &T = it->second;
+
+	if(T.sign.empty())
+	{
+		cerr << "Note: antenna " << antName << " has Mark5B format but no tracks defined in the vex file." << endl;
+
+		return -1;
+	}
+
+	delta = T.sign.size() + T.mag.size();
+	track = T.sign[0];
+
+	return track/delta;
 }
 
 int DOYtoMJD(int year, int doy)
@@ -886,7 +988,6 @@ static int collectIFInfo(VexSetup &setup, VexData *V, Vex *v, const char *antDef
 	return nWarn;
 }
 
-
 // FIXME: common code for pulse cal info
 static int collectPcalInfo(std::map<std::string,std::vector<unsigned int> > &pcalMap, VexData *V, Vex *v, const char *antDefName, const char *modeDefName)
 {
@@ -941,13 +1042,9 @@ static int getTracksSetup(VexSetup &setup, VexMode *M, VexData *V, Vex *v, const
 	void *trackFormat;
 	std::map<std::string,char> bbc2pol;
 	std::map<std::string,std::string> bbc2ifName;
-	std::map<std::string,Tracks> ch2tracks;
+	std::map<std::string,BitAssignments> ch2tracks;
 	int nBit = 1;
 	int nTrack = 0;
-
-	bbc2pol.clear();
-	bbc2ifName.clear();
-	ch2tracks.clear();
 
 	p = get_all_lowl(antDefName, modeDefName, T_SAMPLE_RATE, B_FREQ, v);
 	if(p)
@@ -1072,79 +1169,7 @@ static int getTracksSetup(VexSetup &setup, VexMode *M, VexData *V, Vex *v, const
 	if(stream.format == VexStream::FormatMark5B || stream.format == VexStream::FormatKVN5B)
 	{
 		// Because Mark5B formatters can apply a bitmask, the track numbers may not be contiguous.  Here we go through and reorder track numbers in sequence, starting with 2
-
-		const int MaxTrackNumber = 66;
-		int order[MaxTrackNumber+1];
-
-		for(int i = 0; i <= MaxTrackNumber; ++i)
-		{
-			order[i] = 0;
-		}
-
-		std::map<std::string,Tracks>::iterator it;
-		for(it = ch2tracks.begin(); it != ch2tracks.end(); ++it)
-		{
-			const Tracks &T = it->second;
-
-			for(std::vector<int>::const_iterator b = T.sign.begin(); b != T.sign.end(); ++b)
-			{
-				if(*b < 0 || *b > MaxTrackNumber)
-				{
-					cerr << "Error: sign track number " << *b << " for channel " << it->first << " is out of range (0.." << MaxTrackNumber << ").  Must quit." << endl;
-
-					exit(EXIT_FAILURE);
-				}
-				if(order[*b] != 0)
-				{
-					cerr << "Error: sign track number " << *b << " for channel " << it->first << " is repeated.  Must quit." << endl;
-
-					exit(EXIT_FAILURE);
-				}
-				order[*b] = 1;
-			}
-
-			for(std::vector<int>::const_iterator b = T.mag.begin(); b != T.mag.end(); ++b)
-			{
-				if(*b < 0 || *b > MaxTrackNumber)
-				{
-					cerr << "Error: mag track number " << *b << " for channel " << it->first << " is out of range (0.." << MaxTrackNumber << ").  Must quit." << endl;
-
-					exit(EXIT_FAILURE);
-				}
-				if(order[*b] != 0)
-				{
-					cerr << "Error: mag track number " << *b << " for channel " << it->first << " is repeated.  Must quit." << endl;
-
-					exit(EXIT_FAILURE);
-				}
-				order[*b] = 1;
-			}
-		}
-
-		int newTrackNumber = 2;
-		for(int i = 0; i < 67; ++i)
-		{
-			if(order[i] == 1)
-			{
-				order[i] = newTrackNumber;
-				++newTrackNumber;
-			}
-		}
-
-		for(it = ch2tracks.begin(); it != ch2tracks.end(); ++it)
-		{
-			Tracks &T = it->second;
-
-			for(std::vector<int>::iterator b = T.sign.begin(); b != T.sign.end(); ++b)
-			{
-				*b = order[*b];
-			}
-
-			for(std::vector<int>::iterator b = T.mag.begin(); b != T.mag.end(); ++b)
-			{
-				*b = order[*b];
-			}
-		}
+		reorderBitAssignments(ch2tracks, 2);
 	}
 
 	// Get rest of Subband information
@@ -1252,7 +1277,189 @@ static int getTracksSetup(VexSetup &setup, VexMode *M, VexData *V, Vex *v, const
 
 static int getBitstreamsSetup(VexSetup &setup, VexMode *M, VexData *V, Vex *v, const char *antDefName, const char *modeDefName, std::map<std::string,std::vector<unsigned int> > &pcalMap)
 {
+	const int MaxBitstreams = 64;
+	VexStream &stream = setup.streams[0];	// the first stream is created by default
 	int nWarn = 0;
+	int link, name;
+	char *value, *units;
+	void *p;
+	std::map<std::string,char> bbc2pol;
+	std::map<std::string,std::string> bbc2ifName;
+	std::map<std::string,BitAssignments> ch2bitstreams;
+	int nBit = 1;
+	int nBitstream = 0;
+
+	p = get_all_lowl(antDefName, modeDefName, T_STREAM_SAMPLE_RATE, B_BITSTREAMS, v);
+	if(p)
+	{
+		vex_field(T_STREAM_SAMPLE_RATE, p, 1, &link, &name, &value, &units);
+		fvex_double(&value, &units, &stream.sampRate);
+	}
+
+	// Get BBC to pol map for this antenna
+	for(p = get_all_lowl(antDefName, modeDefName, T_BBC_ASSIGN, B_BBC, v); p; p = get_all_lowl_next())
+	{
+		vex_field(T_BBC_ASSIGN, p, 3, &link, &name, &value, &units);
+		VexIF &vif = setup.ifs[std::string(value)];
+
+		vex_field(T_BBC_ASSIGN, p, 1, &link, &name, &value, &units);
+		bbc2pol[value] = vif.pol;
+		bbc2ifName[value] = vif.name;
+	}
+
+	// Only Mark5B format is supported when using BITSTREAMS
+	stream.parseFormatString("MARK5B");
+
+	for(p = get_all_lowl(antDefName, modeDefName, T_STREAM_DEF, B_BITSTREAMS, v); p; p = get_all_lowl_next())
+	{
+		std::string chanName;
+		bool sign;
+		int bitstreamNum;
+		
+		vex_field(T_STREAM_DEF, p, 1, &link, &name, &value, &units);
+		chanName = value;
+		vex_field(T_STREAM_DEF, p, 2, &link, &name, &value, &units);
+		sign = (value[0] == 's');
+		vex_field(T_STREAM_DEF, p, 4, &link, &name, &value, &units);
+		sscanf(value, "%d", &bitstreamNum);
+
+		if(bitstreamNum < 0 || bitstreamNum >= MaxBitstreams)
+		{
+			std::cerr << "Error: Antenna " << antDefName << " Mode " << modeDefName << " Chan " << chanName << " has bitstream number out of range." << std::endl;
+			std::cerr << "  bitstream number was " << bitstreamNum << " but it must be in [0.." << (MaxBitstreams-1) << "] inclusive." << std::endl;
+			exit(0);
+		}
+
+		++nBitstream;
+		if(sign)
+		{
+			ch2bitstreams[chanName].sign.push_back(bitstreamNum);
+		}
+		else
+		{
+			nBit = 2;
+			ch2bitstreams[chanName].mag.push_back(bitstreamNum);
+		}
+	}
+	if(ch2bitstreams.empty())
+	{
+		std::cerr << "Error: Antenna " << antDefName << " Mode " << modeDefName << " has no bitstreams defined." << std::endl;
+		exit(0);
+	}
+
+	stream.nBit = nBit;
+	stream.nRecordChan = ch2bitstreams.size();
+	// verify sign-mag are all consecutive and sanely populated
+	if(nBit == 2)
+	{
+		for(std::map<std::string,BitAssignments>::const_iterator it = ch2bitstreams.begin(); it != ch2bitstreams.end(); ++it)
+		{
+			const BitAssignments &ba = it->second;
+			if(ba.sign.size() != 1 || ba.mag.size() != 1)
+			{
+				std::cerr << "Error: Antenna " << antDefName << " Mode " << modeDefName << " Chan " << it->first << " does not have exactly one sign and one mag bit assigned." << std::endl;
+				std::cerr << "  nSign = " << ba.sign.size() <<" nMag = " << ba.mag.size() << std::endl;
+				exit(0);
+			}
+			else if(ba.mag[0] != ba.sign[0] + 1 || ba.sign[0] % 2 == 1)
+			{
+				std::cerr << "Error: Antenna " << antDefName << " Mode " << modeDefName << " Chan " << it->first << " violates vex2difx's constraint on bit stream assignments." << std::endl;
+				std::cerr << "  2-bit data must have the sign bit on an even channel with the magnitude bit in the next bitstream." << std::endl;
+				std::cerr << "  Sign assignment = " << ba.sign[0] <<" Mag assignemnt = " << ba.mag[0] << std::endl;
+				exit(0);
+			}
+		}
+	}
+	else
+	{
+		for(std::map<std::string,BitAssignments>::const_iterator it = ch2bitstreams.begin(); it != ch2bitstreams.end(); ++it)
+		{
+			const BitAssignments &ba = it->second;
+			if(ba.sign.size() != 1 || ba.mag.size() != 0)
+			{
+				std::cerr << "Error: Antenna " << antDefName << " Mode " << modeDefName << " Chan " << it->first << " does not have exactly one sign and zero mag bit assigned." << std::endl;
+				std::cerr << "  nSign = " << ba.sign.size() <<" nMag = " << ba.mag.size() << std::endl;
+				exit(0);
+			}
+		}
+	}
+
+	// Because Mark5B formatters can apply a bitmask, the track numbers may not be contiguous.  Here we go through and reorder track numbers in sequence, starting with 2
+	reorderBitAssignments(ch2bitstreams, 0);
+
+	// Get rest of Subband information
+	unsigned int nRecordChan = 0;
+	
+	for(p = get_all_lowl(antDefName, modeDefName, T_CHAN_DEF, B_FREQ, v); p; p = get_all_lowl_next())
+	{
+		int recChanId;
+		int subbandId;
+		char *bbcName;
+		double freq;
+		double bandwidth;
+		std::string chanName;
+
+		vex_field(T_CHAN_DEF, p, 2, &link, &name, &value, &units);
+		fvex_double(&value, &units, &freq);
+
+		vex_field(T_CHAN_DEF, p, 3, &link, &name, &value, &units);
+		char sideBand = value[0];
+		
+		vex_field(T_CHAN_DEF, p, 4, &link, &name, &value, &units);
+		fvex_double(&value, &units, &bandwidth);
+
+		if(bandwidth - stream.sampRate/2 > 1e-6)
+		{
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " has sample rate = " << stream.sampRate << " bandwidth = " << bandwidth << std::endl;
+			std::cerr << "Sample rate must be no less than twice the bandwidth in all cases." << std::endl;
+
+			exit(EXIT_FAILURE);
+		}
+
+		if(bandwidth - stream.sampRate/2 < -1e-6)
+		{
+			// Note: this is tested in a sanity check later.  This behavior is not always desirable.
+			bandwidth = stream.sampRate/2;
+		}
+
+		vex_field(T_CHAN_DEF, p, 6, &link, &name, &bbcName, &units);
+		subbandId = M->addSubband(freq, bandwidth, sideBand, bbc2pol[bbcName]);
+
+		vex_field(T_CHAN_DEF, p, 7, &link, &name, &value, &units);
+		std::string phaseCalName(value);
+
+		vex_field(T_CHAN_DEF, p, 8, &link, &name, &value, &units);
+		if(value)
+		{
+			chanName = value;
+		}
+		else // Fall back to hack use of the BBC link name as the channel name
+		{
+			vex_field(T_CHAN_DEF, p, 5, &link, &name, &value, &units);
+			chanName = value;
+		}
+		recChanId = getRecordChannelFromBitstreams(antDefName, chanName, ch2bitstreams, stream, nRecordChan);
+
+		setup.channels.push_back(VexChannel());
+		setup.channels.back().subbandId = subbandId;
+		setup.channels.back().ifName = bbc2ifName[bbcName];
+		setup.channels.back().bbcFreq = freq;
+		setup.channels.back().bbcBandwidth = bandwidth;
+		setup.channels.back().bbcSideBand = sideBand;
+		setup.channels.back().bbcName = bbcName;
+		setup.channels.back().name = chanName;
+		if(recChanId >= 0)
+		{
+			setup.channels.back().recordChan = recChanId;
+			setup.channels.back().tones = pcalMap[phaseCalName];
+		}
+		else
+		{
+			setup.channels.back().recordChan = -1;
+		}
+
+		++nRecordChan;
+	}
 
 	return nWarn;
 }
@@ -1300,7 +1507,7 @@ static int getModes(VexData *V, Vex *v)
 			// if we made it this far the antenna is involved in this mode
 			VexSetup &setup = M->setups[V->getAntenna(a)->name];	// This creates the new entry
 
-			// FIXME: setup.type = type;
+			setup.type = type;
 
 			nWarn += collectIFInfo(setup, V, v, antName.c_str(), modeDefName);
 			nWarn += collectPcalInfo(pcalMap, V, v, antName.c_str(), modeDefName);

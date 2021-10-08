@@ -53,7 +53,7 @@ public:
 
 	static const char setupTypeName[][20];
 
-	VexSetup() : streams(1) {};
+	VexSetup() : type(SetupIncomplete), streams(1) {};
 	float phaseCalIntervalMHz() const;
 	float phaseCalBaseMHz() const;
 	const VexIF *getIF(const std::string &ifName) const;
@@ -80,6 +80,7 @@ public:
 	int getPolarizations() const;
 	int getConvertedPolarizations() const;
 
+	SetupType type;
 	std::map<std::string,VexIF> ifs;		// Indexed by name in the vex file, such as IF_A
 	std::vector<VexChannel> channels;
 	std::vector<VexStream> streams;			// or "datastreams".  
