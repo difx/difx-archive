@@ -460,6 +460,19 @@ int VexSetup::getPolarizations() const
 	return rv;
 }
 
+VexStream *VexSetup::getVexStreamByLinkName(const std::string link)
+{
+	for(std::vector<VexStream>::iterator it = streams.begin(); it != streams.end(); ++it)
+	{
+		if(it->linkName == link)
+		{
+			return &(*it);
+		}
+	}
+
+	return 0;
+}
+
 std::ostream& operator << (std::ostream &os, const VexSetup &x)
 {
 	os << "   Setup:" << std::endl;

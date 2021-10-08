@@ -861,19 +861,6 @@ static VexSetup::SetupType getSetupType(Vex *v, const char *antDefName, const ch
 	return VexSetup::SetupIncomplete;
 }
 
-/* getModes
-
-Loop over modes
-  Loop over antennas
-    Determine case:
-      * Mode incomplete
-      * Track
-      * S2
-      * BITSTREAM
-      * DATASTREAM
-   
-
-*/
 static int collectIFInfo(VexSetup &setup, VexData *V, Vex *v, const char *antDefName, const char *modeDefName)
 {
 	int nWarn = 0;
@@ -1467,6 +1454,128 @@ static int getBitstreamsSetup(VexSetup &setup, VexMode *M, VexData *V, Vex *v, c
 static int getDatastreamsSetup(VexSetup &setup, VexMode *M, VexData *V, Vex *v, const char *antDefName, const char *modeDefName, std::map<std::string,std::vector<unsigned int> > &pcalMap)
 {
 	int nWarn = 0;
+	int link, name;
+	char *value, *units;
+	void *p;
+	std::map<std::string,char> bbc2pol;
+	std::map<std::string,std::string> bbc2ifName;
+	int nStream = 0;	
+
+	// Get BBC to pol map for this antenna
+	for(p = get_all_lowl(antDefName, modeDefName, T_BBC_ASSIGN, B_BBC, v); p; p = get_all_lowl_next())
+	{
+		vex_field(T_BBC_ASSIGN, p, 3, &link, &name, &value, &units);
+		VexIF &vif = setup.ifs[std::string(value)];
+
+		vex_field(T_BBC_ASSIGN, p, 1, &link, &name, &value, &units);
+		bbc2pol[value] = vif.pol;
+		bbc2ifName[value] = vif.name;
+	}
+
+	// Loop over datastreams
+	for(p = get_all_lowl(antDefName, modeDefName, T_DATASTREAM, B_DATASTREAMS, v); p; p = get_all_lowl_next())
+	{
+		if(nStream > 0)
+		{
+			setup.streams.push_back(VexStream());
+		}
+
+		VexStream &stream = setup.streams[nStream];
+
+		vex_field(T_DATASTREAM, p, 1, &link, &name, &value, &units);
+		if(!value)
+		{
+			std::cerr << "YIKES 1" << std::endl;
+
+			exit(0);
+		}
+		stream.linkName = value;
+
+		vex_field(T_DATASTREAM, p, 2, &link, &name, &value, &units);
+		if(!value)
+		{
+			std::cerr << "YIKES 2" << std::endl;
+
+			exit(0);
+		}
+		if(strcasecmp(value, "VDIF") == 0)
+		{
+			stream.parseFormatString("VDIF");
+		}
+		else if(strcasecmp(value, "VDIF_legacy") == 0)
+		{
+			stream.parseFormatString("VDIFL");
+		}
+		else if(strcasecmp(value, "CODIF") == 0)
+		{
+			stream.parseFormatString("CODIF");
+		}
+
+		vex_field(T_DATASTREAM, p, 3, &link, &name, &value, &units);
+		if(value && strlen(value) > 0)
+		{
+			stream.label = value;
+		}
+
+		++nStream;
+	}
+
+	// Loop over threads
+	for(p = get_all_lowl(antDefName, modeDefName, T_THREAD, B_DATASTREAMS, v); p; p = get_all_lowl_next())
+	{
+		VexStream *stream;
+		double sampRate;
+		unsigned int nBit;
+
+		vex_field(T_THREAD, p, 1, &link, &name, &value, &units);
+		if(!value)
+		{
+			std::cerr << "YIKES 3" << std::endl;
+
+			exit(0);
+		}
+		stream = setup.getVexStreamByLinkName(value);
+		if(!stream)
+		{
+			std::cerr << "YIKES 4" << std::endl;
+
+			exit(0);
+		}
+
+		vex_field(T_THREAD, p, 2, &link, &name, &value, &units);
+		// Do something with thread link here...
+
+		vex_field(T_THREAD, p, 5, &link, &name, &value, &units);
+		fvex_double(&value, &units, &sampRate);
+		if(stream->sampRate == 0.0)
+		{
+			stream->sampRate = sampRate;
+		}
+		else if(stream->sampRate != sampRate)
+		{
+			std::cerr << "YIKES 5" << std::endl;
+
+			exit(0);
+		}
+
+		vex_field(T_THREAD, p, 6, &link, &name, &value, &units);
+		nBit = atoi(value);
+		if(stream->nBit == 0)
+		{
+			stream->nBit = nBit;
+		}
+		else if(stream->nBit != nBit)
+		{
+			std::cerr << "YIKES 6" << std::endl;
+
+			exit(0);
+		}
+
+	}
+
+	// Loop over channels
+
+
 
 	return nWarn;
 }

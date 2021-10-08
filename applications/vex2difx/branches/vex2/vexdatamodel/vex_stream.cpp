@@ -691,6 +691,14 @@ std::ostream& operator << (std::ostream &os, const VexStream &x)
 	}
 
 	os << " [format=" << formatName.str() << ", nBit=" << x.nBit << ", nRecordChan=" << x.nRecordChan << ", dataFrameSize=" << x.dataFrameSize() << ", nThread=" << x.nThread << ", singleThread=" << x.singleThread << ", sampRate=" << x.sampRate << ", tSys=" << x.difxTsys << ", dataSource=" << x.dataSource << "/" << dataSourceNames[x.dataSource];
+	if(!x.linkName.empty())
+	{
+		os << ", linkName=" << x.linkName;
+	}
+	if(!x.label.empty())
+	{
+		os << ". label=" << x.label;
+	}
 	if(!x.threads.empty())
 	{
 		for(std::vector<int>::const_iterator it = x.threads.begin(); it != x.threads.end(); ++it)
