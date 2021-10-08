@@ -1,13 +1,15 @@
+
 SUBDIRS = \
 	difxdb/difxarchive \
 	difxdb/difxexport \
 	difxdb/prepDifx \
-	hops \
 	misc/getObsFiles \
 	misc/datacheckers \
 	misc/difxslurm \
 	misc/difxresource \
-	mark6
-
-
-
+	mark5/m5tone \
+	mark6 \
+	vdif \
+	hops \
+	noema \
+	vex

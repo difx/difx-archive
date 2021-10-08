@@ -149,7 +149,9 @@ def expPrepare(code):
     out.close()
 
     # obtain experiment files from FTP areas
-    resp = raw_input ("Download observation files (vex, logs, eop etc.)? [y/n]")
+    resp = ''
+    while resp not in ['y','n']:
+        resp = raw_input ("Download observation files (vex, logs, eop etc.)? [y/n]")
     if strip(resp) == 'y':
         while True:
             year = raw_input("year of observation? [YYYY]:")
