@@ -640,6 +640,8 @@ int VexStream::dataFrameSize() const
 
 	switch(format)
 	{
+	case FormatNone:
+		break;
 	case FormatVDIF:
 	case FormatLegacyVDIF:
 	case FormatCODIF:

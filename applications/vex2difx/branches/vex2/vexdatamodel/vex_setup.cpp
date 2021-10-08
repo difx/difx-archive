@@ -32,6 +32,16 @@
 #include "vex_setup.h"
 #include <difxio/difx_input.h>
 
+const char VexSetup::setupTypeName[][20] =
+{
+        "Incomplete",
+	"Tracks",
+	"S2",
+	"Bitstreams",
+	"Datastreams",
+	"Merged datastreams"
+};
+
 float VexSetup::phaseCalIntervalMHz() const
 {
 	float p;

@@ -41,6 +41,18 @@
 class VexSetup	// Container for all antenna-specific settings
 {
 public:
+	enum SetupType		// Determines how parsing of channel information is performed
+	{
+		SetupIncomplete,
+		SetupTracks,
+		SetupS2,
+		SetupBitstreams,
+		SetupDatastreams,
+		SetupMergedDatastreams
+	};
+
+	static const char setupTypeName[][20];
+
 	VexSetup() : streams(1) {};
 	float phaseCalIntervalMHz() const;
 	float phaseCalBaseMHz() const;
