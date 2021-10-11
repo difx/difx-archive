@@ -718,7 +718,7 @@ std::ostream& operator << (std::ostream &os, const VexStream &x)
 	os << " [format=" << formatName.str() << ", nBit=" << x.nBit << ", nRecordChan=" << x.nRecordChan << ", dataFrameSize=" << x.dataFrameSize() << ", nThread=" << x.nThread() << ", singleThread=" << x.singleThread << ", sampRate=" << x.sampRate << ", tSys=" << x.difxTsys << ", dataSource=" << x.dataSource << "/" << dataSourceNames[x.dataSource];
 	if(!x.linkName.empty())
 	{
-		os << ", linkName=" << x.linkName;
+		os << ", link=" << x.linkName;
 	}
 	if(!x.label.empty())
 	{

@@ -1020,8 +1020,9 @@ static int collectPcalInfo(std::map<std::string,std::vector<unsigned int> > &pca
 }
 
 // collect channel information from a $FREQ section
-void getFreqChannels(std::vector<VexChannel> &freqChannels, VexSetup &setup, VexMode *M, Vex *v, const char *antDefName, const char *modeDefName)
+int collectFreqChannels(std::vector<VexChannel> &freqChannels, VexSetup &setup, VexMode &mode, Vex *v, const char *antDefName, const char *modeDefName)
 {
+	int nWarn = 0;
 	std::map<std::string,char> bbc2pol;
 	std::map<std::string,std::string> bbc2ifName;
 	int link, name;
@@ -1042,7 +1043,6 @@ void getFreqChannels(std::vector<VexChannel> &freqChannels, VexSetup &setup, Vex
 
 	for(void *p = get_all_lowl(antDefName, modeDefName, T_CHAN_DEF, B_FREQ, v); p; p = get_all_lowl_next())
 	{
-		int recChanId;
 		int subbandId;
 		char *bbcName;
 		double freq;
@@ -1064,7 +1064,7 @@ void getFreqChannels(std::vector<VexChannel> &freqChannels, VexSetup &setup, Vex
 		chanLinkName = value;
 
 		vex_field(T_CHAN_DEF, p, 6, &link, &name, &bbcName, &units);
-		subbandId = M->addSubband(freq, bandwidth, sideBand, bbc2pol[bbcName]);
+		subbandId = mode.addSubband(freq, bandwidth, sideBand, bbc2pol[bbcName]);
 
 		vex_field(T_CHAN_DEF, p, 7, &link, &name, &value, &units);
 		phaseCalName = value;
@@ -1091,6 +1091,8 @@ void getFreqChannels(std::vector<VexChannel> &freqChannels, VexSetup &setup, Vex
 		freqChannels.back().recordChan = -1;
 		freqChannels.back().phaseCalName = phaseCalName;
 	}
+
+	return nWarn;
 }
 
 VexChannel *getVexChannelByLinkName(std::vector<VexChannel> &freqChannels, const std::string link)
@@ -1107,7 +1109,7 @@ VexChannel *getVexChannelByLinkName(std::vector<VexChannel> &freqChannels, const
 }
 
 
-static int getTracksSetup(VexSetup &setup, VexMode *M, VexData *V, Vex *v, const char *antDefName, const char *modeDefName, std::map<std::string,std::vector<unsigned int> > &pcalMap)
+static int getTracksSetup(VexSetup &setup, Vex *v, const char *antDefName, const char *modeDefName, std::map<std::string,std::vector<unsigned int> > &pcalMap, std::vector<VexChannel> &freqChannels)
 {
 	VexStream &stream = setup.streams[0];	// the first stream is created by default
 	int nWarn = 0;
@@ -1177,8 +1179,6 @@ static int getTracksSetup(VexSetup &setup, VexMode *M, VexData *V, Vex *v, const
 				ch2tracks[chanName].mag.push_back(chanNum);
 			}
 		}
-		stream.nRecordChan = ch2tracks.size();
-		stream.nBit = nBit;
 	}
 	else
 	{
@@ -1233,13 +1233,12 @@ static int getTracksSetup(VexSetup &setup, VexMode *M, VexData *V, Vex *v, const
 			{
 				stream.setFanout(fanout);
 			}
-
-			// FIXME: what to do if nBit and nRecordChan already set but they disagree?
-
-			stream.nRecordChan = ch2tracks.size();
-			stream.nBit = nBit;
 		}
 	}
+
+	// FIXME: what to do if nBit and nRecordChan already set but they disagree?
+	stream.nRecordChan = ch2tracks.size();
+	stream.nBit = nBit;
 
 	if(stream.format == VexStream::FormatMark5B || stream.format == VexStream::FormatKVN5B)
 	{
@@ -1247,79 +1246,38 @@ static int getTracksSetup(VexSetup &setup, VexMode *M, VexData *V, Vex *v, const
 		reorderBitAssignments(ch2tracks, 2);
 	}
 
-	// Get rest of Subband information
+	// Generate channels
 	unsigned int nRecordChan = 0;
 	
-	for(p = get_all_lowl(antDefName, modeDefName, T_CHAN_DEF, B_FREQ, v); p; p = get_all_lowl_next())
+	for(std::vector<VexChannel>::const_iterator it = freqChannels.begin(); it != freqChannels.end(); ++it)
 	{
 		int recChanId;
-		int subbandId;
-		char *bbcName;
-		double freq;
-		double bandwidth;
-		std::string chanName;
 
-		vex_field(T_CHAN_DEF, p, 2, &link, &name, &value, &units);
-		fvex_double(&value, &units, &freq);
+		setup.channels.push_back(*it);
+		VexChannel &channel = setup.channels.back();
 
-		vex_field(T_CHAN_DEF, p, 3, &link, &name, &value, &units);
-		char sideBand = value[0];
-		
-		vex_field(T_CHAN_DEF, p, 4, &link, &name, &value, &units);
-		fvex_double(&value, &units, &bandwidth);
-
-		if(bandwidth - stream.sampRate/2 > 1e-6)
-		{
-			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " has sample rate = " << stream.sampRate << " bandwidth = " << bandwidth << std::endl;
-			std::cerr << "Sample rate must be no less than twice the bandwidth in all cases." << std::endl;
-
-// FIXME: replace this later					exit(EXIT_FAILURE);
-		}
-
-		if(bandwidth - stream.sampRate/2 < -1e-6)
-		{
-			// Note: this is tested in a sanity check later.  This behavior is not always desirable.
-			bandwidth = stream.sampRate/2;
-		}
-
-		vex_field(T_CHAN_DEF, p, 6, &link, &name, &bbcName, &units);
-		subbandId = M->addSubband(freq, bandwidth, sideBand, bbc2pol[bbcName]);
-
-		vex_field(T_CHAN_DEF, p, 7, &link, &name, &value, &units);
-		std::string phaseCalName(value);
-
-		vex_field(T_CHAN_DEF, p, 8, &link, &name, &value, &units);
-		if(value)
-		{
-			chanName = value;
-		}
-		else // Fall back to hack use of the BBC link name as the channel name
-		{
-			vex_field(T_CHAN_DEF, p, 5, &link, &name, &value, &units);
-			chanName = value;
-		}
-		recChanId = getRecordChannelFromTracks(antDefName, chanName, ch2tracks, stream, nRecordChan);
-
-		setup.channels.push_back(VexChannel());
-		setup.channels.back().subbandId = subbandId;
-		setup.channels.back().ifName = bbc2ifName[bbcName];
-		setup.channels.back().bbcFreq = freq;
-		setup.channels.back().bbcBandwidth = bandwidth;
-		setup.channels.back().bbcSideBand = sideBand;
-		setup.channels.back().bbcName = bbcName;
-		setup.channels.back().name = chanName;
-		setup.channels.back().phaseCalName = phaseCalName;
+		recChanId = getRecordChannelFromTracks(antDefName, it->name, ch2tracks, stream, nRecordChan);
 		if(recChanId >= 0)
 		{
-			setup.channels.back().recordChan = recChanId;
-			setup.channels.back().tones = pcalMap[phaseCalName];
-		}
-		else
-		{
-			setup.channels.back().recordChan = -1;
-		}
+			if(channel.bbcBandwidth - stream.sampRate/2 > 1e-6)
+			{
+				std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " has sample rate = " << stream.sampRate << " bandwidth = " << channel.bbcBandwidth << std::endl;
+				std::cerr << "Sample rate must be no less than twice the bandwidth in all cases." << std::endl;
 
-		++nRecordChan;
+				exit(EXIT_FAILURE);
+			}
+
+			if(channel.bbcBandwidth - stream.sampRate/2 < -1e-6)
+			{
+				// Note: this is tested in a sanity check later.  This behavior is not always desirable.
+				channel.bbcBandwidth = stream.sampRate/2;
+			}
+
+			channel.recordChan = recChanId;
+			channel.tones = pcalMap[channel.phaseCalName];
+
+			++nRecordChan;
+		}
 	}
 
 	if(stream.nRecordChan == 0)	// then use the number of that we just counted out
@@ -1337,6 +1295,7 @@ static int getTracksSetup(VexSetup &setup, VexMode *M, VexData *V, Vex *v, const
 		stream.nRecordChan = nRecordChan;
 	}
 
+	// This is really a hack -- VDIF is not properly supported by $TRACKS
 	if(stream.isVDIFFormat())
 	{
 		// Sort channels by name and then assign sequential thread Id
@@ -1351,7 +1310,7 @@ static int getTracksSetup(VexSetup &setup, VexMode *M, VexData *V, Vex *v, const
 	return nWarn;
 }
 
-static int getBitstreamsSetup(VexSetup &setup, VexMode *M, VexData *V, Vex *v, const char *antDefName, const char *modeDefName, std::map<std::string,std::vector<unsigned int> > &pcalMap)
+static int getBitstreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, const char *modeDefName, std::map<std::string,std::vector<unsigned int> > &pcalMap, std::vector<VexChannel> &freqChannels)
 {
 	const int MaxBitstreams = 64;
 	VexStream &stream = setup.streams[0];	// the first stream is created by default
@@ -1460,103 +1419,54 @@ static int getBitstreamsSetup(VexSetup &setup, VexMode *M, VexData *V, Vex *v, c
 		}
 	}
 
-	// Because Mark5B formatters can apply a bitmask, the track numbers may not be contiguous.  Here we go through and reorder track numbers in sequence, starting with 2
+	// Because Mark5B formatters can apply a bitmask, the track numbers may not be contiguous.  Here we go through and reorder track numbers in sequence, starting with 0
 	reorderBitAssignments(ch2bitstreams, 0);
 
-	// Get rest of Subband information
+	// Generate channels
 	unsigned int nRecordChan = 0;
 	
-	for(p = get_all_lowl(antDefName, modeDefName, T_CHAN_DEF, B_FREQ, v); p; p = get_all_lowl_next())
+	for(std::vector<VexChannel>::const_iterator it = freqChannels.begin(); it != freqChannels.end(); ++it)
 	{
 		int recChanId;
-		int subbandId;
-		char *bbcName;
-		double freq;
-		double bandwidth;
-		std::string chanName;
-		std::string chanLinkName;
 
-		vex_field(T_CHAN_DEF, p, 2, &link, &name, &value, &units);
-		fvex_double(&value, &units, &freq);
+		setup.channels.push_back(*it);
+		VexChannel &channel = setup.channels.back();
 
-		vex_field(T_CHAN_DEF, p, 3, &link, &name, &value, &units);
-		char sideBand = value[0];
-		
-		vex_field(T_CHAN_DEF, p, 4, &link, &name, &value, &units);
-		fvex_double(&value, &units, &bandwidth);
-
-		if(bandwidth - stream.sampRate/2 > 1e-6)
-		{
-			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " has sample rate = " << stream.sampRate << " bandwidth = " << bandwidth << std::endl;
-			std::cerr << "Sample rate must be no less than twice the bandwidth in all cases." << std::endl;
-
-			exit(EXIT_FAILURE);
-		}
-
-		if(bandwidth - stream.sampRate/2 < -1e-6)
-		{
-			// Note: this is tested in a sanity check later.  This behavior is not always desirable.
-			bandwidth = stream.sampRate/2;
-		}
-
-		vex_field(T_CHAN_DEF, p, 5, &link, &name, &value, &units);
-		chanLinkName = value;
-
-		vex_field(T_CHAN_DEF, p, 6, &link, &name, &bbcName, &units);
-		subbandId = M->addSubband(freq, bandwidth, sideBand, bbc2pol[bbcName]);
-
-		vex_field(T_CHAN_DEF, p, 7, &link, &name, &value, &units);
-		std::string phaseCalName(value);
-
-		vex_field(T_CHAN_DEF, p, 8, &link, &name, &value, &units);
-		if(value)
-		{
-			chanName = value;
-		}
-		else // Fall back to hack use of the BBC link name as the channel name
-		{
-			chanName = chanLinkName;
-		}
-		recChanId = getRecordChannelFromBitstreams(antDefName, chanName, ch2bitstreams, stream, nRecordChan);
-
-		setup.channels.push_back(VexChannel());
-		setup.channels.back().subbandId = subbandId;
-		setup.channels.back().ifName = bbc2ifName[bbcName];
-		setup.channels.back().bbcFreq = freq;
-		setup.channels.back().bbcBandwidth = bandwidth;
-		setup.channels.back().bbcSideBand = sideBand;
-		setup.channels.back().bbcName = bbcName;
-		setup.channels.back().name = chanName;
-		setup.channels.back().linkName = chanLinkName;
-		setup.channels.back().phaseCalName = phaseCalName;
+		recChanId = getRecordChannelFromBitstreams(antDefName, it->name, ch2bitstreams, stream, nRecordChan);
 		if(recChanId >= 0)
 		{
-			setup.channels.back().recordChan = recChanId;
-			setup.channels.back().tones = pcalMap[phaseCalName];
-		}
-		else
-		{
-			setup.channels.back().recordChan = -1;
-		}
+			if(channel.bbcBandwidth - stream.sampRate/2 > 1e-6)
+			{
+				std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " has sample rate = " << stream.sampRate << " bandwidth = " << channel.bbcBandwidth << std::endl;
+				std::cerr << "Sample rate must be no less than twice the bandwidth in all cases." << std::endl;
 
-		++nRecordChan;
+				exit(EXIT_FAILURE);
+			}
+
+			if(channel.bbcBandwidth - stream.sampRate/2 < -1e-6)
+			{
+				// Note: this is tested in a sanity check later.  This behavior is not always desirable.
+				channel.bbcBandwidth = stream.sampRate/2;
+			}
+
+			channel.recordChan = recChanId;
+			channel.tones = pcalMap[channel.phaseCalName];
+
+			++nRecordChan;
+		}
 	}
 
 	return nWarn;
 }
 
-static int getDatastreamsSetup(VexSetup &setup, VexMode *M, VexData *V, Vex *v, const char *antDefName, const char *modeDefName, std::map<std::string,std::vector<unsigned int> > &pcalMap)
+static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, const char *modeDefName, std::map<std::string,std::vector<unsigned int> > &pcalMap, std::vector<VexChannel> &freqChannels)
 {
 	int nWarn = 0;
 	int link, name;
 	char *value, *units;
 	void *p;
-	std::vector<VexChannel> freqChannels;		// list of channels from relevant $FREQ section
 	int nStream = 0;	
 
-	// Get list of channels from $FREQ
-	getFreqChannels(freqChannels, setup, M, v, antDefName, modeDefName);
-	
 	// Loop over datastreams
 	for(p = get_all_lowl(antDefName, modeDefName, T_DATASTREAM, B_DATASTREAMS, v); p; p = get_all_lowl_next())
 	{
@@ -1822,69 +1732,57 @@ static int getDatastreamsSetup(VexSetup &setup, VexMode *M, VexData *V, Vex *v, 
 	return nWarn;
 }
 
-/* 
-
-Some things to do to clean things up
-
-1. Capture contents of $FREQ early (use getFreqChannels()) in getModes()
-
-2. All Setup readers should make use of this list
-
-2. At end of getModes, unset unused tones
-
-*/
-
 static int getModes(VexData *V, Vex *v)
 {
 	int nWarn = 0;
 
 	for(const char *modeDefName = get_mode_def(v); modeDefName; modeDefName = get_mode_def_next())
 	{
-		VexMode *M;
-		
 		// don't bother building up modes that are not used
 		if(!V->usesMode(modeDefName))
 		{
 			continue;
 		}
 
-		M = V->newMode();
-		M->defName = modeDefName;
+		VexMode &mode = *(V->newMode());
+		mode.defName = modeDefName;
 
 		for(unsigned int a = 0; a < V->nAntenna(); ++a)
 		{
-			const std::string &antName = V->getAntenna(a)->defName;
+			const char *antDefName = V->getAntenna(a)->defName.c_str();
 			VexSetup::SetupType type;
 			std::map<std::string,std::vector<unsigned int> > pcalMap;
+			std::vector<VexChannel> freqChannels;		// list of channels from relevant $FREQ section
 
-			type = getSetupType(v, antName.c_str(), modeDefName);
+			type = getSetupType(v, antDefName, modeDefName);
 
-			std::cout << "Setup(" << modeDefName << ", " << antName << ") has type " << VexSetup::setupTypeName[type] << std::endl;
+			std::cout << "Setup(" << modeDefName << ", " << antDefName << ") has type " << VexSetup::setupTypeName[type] << std::endl;
 
 			if(type == VexSetup::SetupIncomplete)
 			{
-				std::cerr << "Note: Incomplete description for " << antName << " in mode " << modeDefName << ". The vex file might need editing.  This antenna/mode will be ignored." << std::endl;
+				std::cerr << "Note: Incomplete description for " << antDefName << " in mode " << modeDefName << ". The vex file might need editing.  This antenna/mode will be ignored." << std::endl;
 				continue;
 			}
 
 			// if we made it this far the antenna is involved in this mode
-			VexSetup &setup = M->setups[V->getAntenna(a)->name];	// This creates the new entry
+			VexSetup &setup = mode.setups[V->getAntenna(a)->name];	// This creates the new entry
 
 			setup.type = type;
 
-			nWarn += collectIFInfo(setup, V, v, antName.c_str(), modeDefName);
-			nWarn += collectPcalInfo(pcalMap, V, v, antName.c_str(), modeDefName);
+			nWarn += collectFreqChannels(freqChannels, setup, mode, v, antDefName, modeDefName);
+			nWarn += collectIFInfo(setup, V, v, antDefName, modeDefName);
+			nWarn += collectPcalInfo(pcalMap, V, v, antDefName, modeDefName);
 
 			switch(type)
 			{
 			case VexSetup::SetupTracks:
-				nWarn += getTracksSetup(setup, M, V, v, antName.c_str(), modeDefName, pcalMap);
+				nWarn += getTracksSetup(setup, v, antDefName, modeDefName, pcalMap, freqChannels);
 				break;
 			case VexSetup::SetupBitstreams:
-				nWarn += getBitstreamsSetup(setup, M, V, v, antName.c_str(), modeDefName, pcalMap);
+				nWarn += getBitstreamsSetup(setup, v, antDefName, modeDefName, pcalMap, freqChannels);
 				break;
 			case VexSetup::SetupDatastreams:
-				nWarn += getDatastreamsSetup(setup, M, V, v, antName.c_str(), modeDefName, pcalMap);
+				nWarn += getDatastreamsSetup(setup, v, antDefName, modeDefName, pcalMap, freqChannels);
 				break;
 			default:
 				std::cerr << "Setup type " << VexSetup::setupTypeName[type] << " is not (yet) supported." << std::endl;
