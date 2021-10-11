@@ -973,14 +973,13 @@ void VexData::setCanonicalVDIF(const std::string &modeName, const std::string &a
 
 			for(std::vector<VexStream>::iterator sit = it->second.streams.begin(); sit != it->second.streams.end(); ++sit)
 			{
-				if(sit->format == VexStream::FormatVDIF && sit->nThread != sit->nRecordChan)
+				if(sit->format == VexStream::FormatVDIF && sit->nThread() != sit->nRecordChan)
 				{
-					sit->nThread = sit->nRecordChan;
 					sit->singleThread = false;
 					sit->threads.clear();
 					for(unsigned int c = 0; c < sit->nRecordChan; ++c)
 					{
-						sit->threads.push_back(c + tStart);
+						sit->threads.push_back(VexThread(c + tStart));
 					}
 				}
 				tStart += sit->nRecordChan;

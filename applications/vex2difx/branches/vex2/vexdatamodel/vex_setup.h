@@ -80,6 +80,7 @@ public:
 	int getPolarizations() const;
 	int getConvertedPolarizations() const;
 	VexStream *getVexStreamByLinkName(const std::string link);
+	VexChannel *getVexChannelByLinkName(const std::string link);
 
 	SetupType type;
 	std::map<std::string,VexIF> ifs;		// Indexed by name in the vex file, such as IF_A

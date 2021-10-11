@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2015-2020 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2015-2021 by Walter Brisken & Adam Deller               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -52,8 +52,10 @@ public:
 	double bbcFreq;				// sky frequency tuning of the BBC (Hz)
 	double bbcBandwidth;			// bandwidth (Hz)
 	char bbcSideBand;			// sideband of the BBC
-	std::string name;
+	std::string name;			// column 8 of the $FREQ chan_def line, but fill in with column 5 if not present
+	std::string linkName;			// column 5 of the $FREQ chan_def line
 	std::string bbcName;			// name given in VEX of this channel in the BBC table
+	std::string phaseCalName;		// name of phase cal setup for this channel
 	std::vector<unsigned int> tones;	// pulse cal tones to extract, directly from PHASE_CAL_DETECT
 	int threadId;				// thread Id for this channel (assigned based on channel names)
 };

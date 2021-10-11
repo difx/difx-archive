@@ -473,6 +473,19 @@ VexStream *VexSetup::getVexStreamByLinkName(const std::string link)
 	return 0;
 }
 
+VexChannel *VexSetup::getVexChannelByLinkName(const std::string link)
+{
+	for(std::vector<VexChannel>::iterator it = channels.begin(); it != channels.end(); ++it)
+	{
+		if(it->linkName == link)
+		{
+			return &(*it);
+		}
+	}
+
+	return 0;
+}
+
 std::ostream& operator << (std::ostream &os, const VexSetup &x)
 {
 	os << "   Setup:" << std::endl;

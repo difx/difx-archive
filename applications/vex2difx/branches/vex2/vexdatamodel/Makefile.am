@@ -41,6 +41,8 @@ libvexdatamodel_la_SOURCES = \
 	vex_stream.h \
 	vex_subband.cpp \
 	vex_subband.h \
+	vex_thread.cpp \
+	vex_thread.h \
 	vex_utility.cpp \
 	vex_utility.h
 

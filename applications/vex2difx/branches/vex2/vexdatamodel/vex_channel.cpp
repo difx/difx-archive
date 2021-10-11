@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2015-2020 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2015-2021 by Walter Brisken & Adam Deller               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -269,7 +269,7 @@ bool operator <(const VexChannel &c1, const VexChannel &c2)
 
 std::ostream& operator << (std::ostream &os, const VexChannel &x)
 {
-	os << "[name=" << x.name << " BBC=" << x.bbcName << " IF=" << x.ifName << " s=" << x.subbandId << " -> r=" << x.recordChan << " t=" << x.threadId << " tones=";
+	os << "[name=" << x.name << "link=" << x.linkName << " BBC=" << x.bbcName << " IF=" << x.ifName << " s=" << x.subbandId << " -> r=" << x.recordChan << " t=" << x.threadId << " tones=";
 	for(std::vector<unsigned int>::const_iterator v = x.tones.begin(); v != x.tones.end(); ++v)
 	{
 		if(v != x.tones.begin())
