@@ -1000,21 +1000,99 @@ static int collectIFInfo(VexSetup &setup, VexData *V, Vex *v, const char *antDef
 		char *value, *units;
 
 		vex_field(T_RECEIVER_NAME, p, 1, &link, &name, &value, &units);
-		VexIF &vif = setup.ifs[std::string(value)];
+		VexIF *vif = setup.getVexIFByLink(value);
+
+		if(vif == 0)
+		{
+			std::cerr << "Warning: IF receiver name line provided with link " << value << " that is not defined in setup:" << std::endl;
+			std::cerr << "  " << setup << std::endl;
+
+			++nWarn;
+		}
+		else
+		{
+			vex_field(T_RECEIVER_NAME, p, 2, &link, &name, &value, &units);
+			if(value && value[0])
+			{
+				vif->rxName = value;
+			}
+		}
 	}
 
 	for(void *p = get_all_lowl(antDefName, modeDefName, T_SUB_LO_FREQUENCIES, B_IF, v); p; p = get_all_lowl_next())
 	{
 		int link, name;
 		char *value, *units;
+
+		vex_field(T_SUB_LO_FREQUENCIES, p, 1, &link, &name, &value, &units);
+		VexIF *vif = setup.getVexIFByLink(value);
+		if(vif == 0)
+		{
+			std::cerr << "Warning: IF sub LO frequencies line provided with link " << value << " that is not defined in setup:" << std::endl;
+			std::cerr << "  " << setup << std::endl;
+
+			++nWarn;
+		}
+		else
+		{
+			for(int field = 2; ; ++field)
+			{
+				vex_field(T_SUB_LO_FREQUENCIES, p, field, &link, &name, &value, &units);
+				if(value == 0 || value[0] == 0)
+				{
+					break;
+				}
+				vif->upstreamSSLO.push_back(atof(value));
+			}
+		}
 	}
 
 	for(void *p = get_all_lowl(antDefName, modeDefName, T_SUB_LO_SIDEBANDS, B_IF, v); p; p = get_all_lowl_next())
 	{
 		int link, name;
 		char *value, *units;
-	}
 
+		vex_field(T_SUB_LO_SIDEBANDS, p, 1, &link, &name, &value, &units);
+		VexIF *vif = setup.getVexIFByLink(value);
+		if(vif == 0)
+		{
+			std::cerr << "Warning: IF sub LO frequencies line provided with link " << value << " that is not defined in setup:" << std::endl;
+			std::cerr << "  " << setup << std::endl;
+
+			++nWarn;
+		}
+		else
+		{
+			for(int field = 2; ; ++field)
+			{
+				char sb;
+
+				vex_field(T_SUB_LO_SIDEBANDS, p, field, &link, &name, &value, &units);
+				if(value == 0 || value[0] == 0)
+				{
+					break;
+				}
+				sb = value[0];
+				if(sb >= 'a')
+				{
+					sb = sb -'a' + 'A';
+				}
+				vif->upstreamSideBand.push_back(sb);
+				if(sb == 'L')
+				{
+					int i = vif->upstreamSideBand.size() - 1;
+					vif->upstreamSSLO[i] = - vif->upstreamSSLO[i];
+				}
+				else if(sb != 'R')
+				{
+					std::cerr << "Warning: IF sub LO sideband with value " << value << " was provided.  This is not supported.  Assuming upper sideband." << std::endl;
+
+					++nWarn;
+				}
+			}
+
+		}
+	}
 
 	return nWarn;
 }
@@ -1080,7 +1158,7 @@ int collectFreqChannels(std::vector<VexChannel> &freqChannels, VexSetup &setup, 
 
 		if(vif == 0)
 		{
-			std::cerr << "Error: cannot find ifLink " << value << " in setup structure" << std::endl;
+			std::cerr << "Error: mode=" << modeDefName << " antenna=" << antDefName << " cannot find ifLink " << value << " in setup structure:" << std::endl;
 			std::cerr << "Setup = " << setup << std::endl;
 
 			exit(EXIT_FAILURE);
