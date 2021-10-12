@@ -37,7 +37,18 @@
 class VexIF
 {
 public:
-	VexIF() : ifSSLO(0.0), ifSideBand(' '), pol(' '), phaseCalIntervalMHz(0.0), phaseCalBaseMHz(0.0), ifSampleRate(0.0) {}
+	enum SwitchedPowerAmplitude
+	{
+		SP_unset,			// Vex file did not indicate a setting for switched power
+		SP_off,
+		SP_low,
+		SP_high,
+		SP_error
+	};
+
+	static const char SwitchedPowerAmplitudeName[][8];
+
+	VexIF() : ifSSLO(0.0), ifSideBand(' '), pol(' '), phaseCalIntervalMHz(0.0), phaseCalBaseMHz(0.0), ifSampleRate(0.0), spAmp(SP_unset), spFreq(0.0) {}
 	std::string bandName() const;
 	std::string VLBABandName() const;
 	double getLowerEdgeFreq() const;
@@ -53,10 +64,14 @@ public:
 	std::string rxName;			// Name of the receiver the IF is connected to
 	std::vector<double> upstreamSSLO;	// Signed sum of upstream (downconverter) LO settings in signal path order
 	std::vector<char> upstreamSideBand;	// U or L or D (D sideband not supported yet)
+	enum SwitchedPowerAmplitude spAmp;
+	double spFreq;				// [Hz]
 
 	// special values needed for VLBA, extracted from comment line
 	std::string comment;
 };
+
+enum VexIF::SwitchedPowerAmplitude stringToSwitchedPowerAmplitude(const char *s);
 
 std::ostream& operator << (std::ostream &os, const VexIF &x);
 

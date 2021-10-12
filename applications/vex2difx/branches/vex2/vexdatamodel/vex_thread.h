@@ -36,6 +36,8 @@
 class VexThread
 {
 public:
+	VexThread(int id) : threadId(id), startRecordChan(0), nChan(0), sampRate(0.0), nBit(0), dataBytes(0) {};
+
 	int threadId;
 	int startRecordChan;	// start record channel number, within datastream
 	int nChan;		// number of channels in this thread
@@ -43,9 +45,6 @@ public:
 	std::string threadLink;
 	unsigned int nBit;
 	int dataBytes;		// size of one frame, excluding header
-
-	VexThread(int id) : threadId(id) {}
-
 
 private:
 };

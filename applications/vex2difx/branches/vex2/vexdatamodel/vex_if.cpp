@@ -27,8 +27,38 @@
  *
  *==========================================================================*/
 
+#include <cstring>
 #include <regex.h>
 #include "vex_if.h"
+
+const char VexIF::SwitchedPowerAmplitudeName[][8] =
+{
+	"unset",
+	"off",
+	"low",
+	"high",
+	"error"
+};
+
+enum VexIF::SwitchedPowerAmplitude stringToSwitchedPowerAmplitude(const char *s)
+{
+	if(strcasecmp(s, "off") == 0)
+	{
+		return VexIF::SP_off;
+	}
+	else if(strcasecmp(s, "low") == 0)
+	{
+		return VexIF::SP_low;
+	}
+	else if(strcasecmp(s, "high") == 0)
+	{
+		return VexIF::SP_high;
+	}
+	else
+	{
+		return VexIF::SP_error;
+	}
+}
 
 double VexIF::getLowerEdgeFreq() const
 {

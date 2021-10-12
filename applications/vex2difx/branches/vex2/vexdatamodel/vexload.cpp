@@ -1094,6 +1094,46 @@ static int collectIFInfo(VexSetup &setup, VexData *V, Vex *v, const char *antDef
 		}
 	}
 
+	for(void *p = get_all_lowl(antDefName, modeDefName, T_SWITCHED_POWER, B_IF, v); p; p = get_all_lowl_next())
+	{
+		int link, name;
+		char *value, *units;
+
+		vex_field(T_SWITCHED_POWER, p, 1, &link, &name, &value, &units);
+		VexIF *vif = setup.getVexIFByLink(value);
+		if(vif == 0)
+		{
+			std::cerr << "Warning: IF sub LO frequencies line provided with link " << value << " that is not defined in setup:" << std::endl;
+			std::cerr << "  " << setup << std::endl;
+
+			++nWarn;
+		}
+		else
+		{
+			vex_field(T_SUB_LO_SIDEBANDS, p, 2, &link, &name, &value, &units);
+			if(value && value[0])
+			{
+				vif->spAmp = stringToSwitchedPowerAmplitude(value);
+				if(vif->spAmp == VexIF::SP_error)
+				{
+					std::cerr << "Warning: IF switched power amplitude setting, '" << value << "', is not one of those supported: 'Off', 'Low' and 'High'.  Ignoring." << std::endl;
+					vif->spAmp = VexIF::SP_unset;
+					
+					++nWarn;
+				}
+				vex_field(T_SUB_LO_SIDEBANDS, p, 3, &link, &name, &value, &units);
+				if(value && value[0])
+				{
+					fvex_double(&value, &units, &vif->spFreq);
+				}
+			}
+			else
+			{
+				std::cerr << "Warning: IF switched power statement does not specify amplitude.  Ignoring." << std::endl;
+			}
+		}
+	}
+
 	return nWarn;
 }
 
@@ -1190,13 +1230,19 @@ int collectFreqChannels(std::vector<VexChannel> &freqChannels, VexSetup &setup, 
 		fvex_double(&value, &units, &bandwidth);
 
 		vex_field(T_CHAN_DEF, p, 5, &link, &name, &value, &units);
-		chanLink = value;
+		if(value && value[0])
+		{
+			chanLink = value;
+		}
 
 		vex_field(T_CHAN_DEF, p, 6, &link, &name, &bbcName, &units);
 		subbandId = mode.addSubband(freq, bandwidth, sideBand, bbc2pol[bbcName]);
 
 		vex_field(T_CHAN_DEF, p, 7, &link, &name, &value, &units);
-		phaseCalName = value;
+		if(value && value[0])
+		{
+			phaseCalName = value;
+		}
 
 		vex_field(T_CHAN_DEF, p, 8, &link, &name, &value, &units);
 		if(value)
@@ -1228,7 +1274,7 @@ VexChannel *getVexChannelByLink(std::vector<VexChannel> &freqChannels, const std
 {
 	for(std::vector<VexChannel>::iterator it = freqChannels.begin(); it != freqChannels.end(); ++it)
 	{
-		if(it->chanLink == chanLink)
+		if(!it->chanLink.empty() && it->chanLink == chanLink)
 		{
 			return &(*it);
 		}
@@ -1390,7 +1436,10 @@ static int getTracksSetup(VexSetup &setup, Vex *v, const char *antDefName, const
 			}
 
 			channel.recordChan = recChanId;
-			channel.tones = pcalMap[channel.phaseCalName];
+			if(!channel.phaseCalName.empty())
+			{
+				channel.tones = pcalMap[channel.phaseCalName];
+			}
 
 			++nRecordChan;
 		}
@@ -1553,7 +1602,10 @@ static int getBitstreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, c
 			}
 
 			channel.recordChan = recChanId;
-			channel.tones = pcalMap[channel.phaseCalName];
+			if(!channel.phaseCalName.empty())
+			{
+				channel.tones = pcalMap[channel.phaseCalName];
+			}
 
 			++nRecordChan;
 		}
@@ -1837,7 +1889,10 @@ static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, 
 		}
 
 		channel->recordChan = thread->startRecordChan + threadChan;
-		channel->tones = pcalMap[channel->phaseCalName];
+		if(!channel->phaseCalName.empty())
+		{
+			channel->tones = pcalMap[channel->phaseCalName];
+		}
 	}
 
 	return nWarn;
