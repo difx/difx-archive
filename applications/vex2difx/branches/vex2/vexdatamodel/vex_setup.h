@@ -56,12 +56,11 @@ public:
 	VexSetup() : type(SetupIncomplete), streams(1) {};
 	float phaseCalIntervalMHz() const;
 	float phaseCalBaseMHz() const;
-	const VexIF *getIF(const std::string &ifName) const;
 	void sortChannels();				// sorts by channel name
 	bool hasUniqueRecordChans() const;		// true if each channel's recordChan parameter is unique
 	void assignRecordChans();
-	double firstTuningForIF(const std::string &ifName) const;	// returns Hz
-	double averageTuningForIF(const std::string &ifName) const;	// returns Hz
+	double firstTuningForIF(const std::string &ifLink) const;	// returns Hz
+	double averageTuningForIF(const std::string &ifLink) const;	// returns Hz
 	double dataRateMbps() const;
 	void setPhaseCalInterval(float phaseCalIntervalMHz);
 	void setPhaseCalBase(float phaseCalBaseMHz);
@@ -79,11 +78,12 @@ public:
 	bool hasDuplicateSubbands() const;
 	int getPolarizations() const;
 	int getConvertedPolarizations() const;
-	VexStream *getVexStreamByLinkName(const std::string link);
-	VexChannel *getVexChannelByLinkName(const std::string link);
+	VexStream *getVexStreamByLink(const std::string streamLink);
+	VexChannel *getVexChannelByLink(const std::string chanLink);
+	VexIF *getVexIFByLink(const std::string &ifLink);
 
 	SetupType type;
-	std::map<std::string,VexIF> ifs;		// Indexed by name in the vex file, such as IF_A
+	std::map<std::string,VexIF> ifs;		// Indexed by name in the vex file, such as IF_A	FIXME: change to vector<> rather than map<> ?
 	std::vector<VexChannel> channels;
 	std::vector<VexStream> streams;			// or "datastreams".  
 };

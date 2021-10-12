@@ -671,11 +671,11 @@ int VexStream::dataFrameSize() const
 	return s;
 }
 
-VexThread *VexStream::getVexThreadByLinkName(const std::string link)
+VexThread *VexStream::getVexThreadByLink(const std::string threadLink)
 {
 	for(std::vector<VexThread>::iterator it = threads.begin(); it != threads.end(); ++it)
 	{
-		if(it->linkName == link)
+		if(it->threadLink == threadLink)
 		{
 			return &(*it);
 		}
@@ -716,13 +716,13 @@ std::ostream& operator << (std::ostream &os, const VexStream &x)
 	}
 
 	os << " [format=" << formatName.str() << ", nBit=" << x.nBit << ", nRecordChan=" << x.nRecordChan << ", dataFrameSize=" << x.dataFrameSize() << ", nThread=" << x.nThread() << ", singleThread=" << x.singleThread << ", sampRate=" << x.sampRate << ", tSys=" << x.difxTsys << ", dataSource=" << x.dataSource << "/" << dataSourceNames[x.dataSource];
-	if(!x.linkName.empty())
+	if(!x.streamLink.empty())
 	{
-		os << ", link=" << x.linkName;
+		os << ", link=" << x.streamLink;
 	}
-	if(!x.label.empty())
+	if(!x.streamName.empty())
 	{
-		os << ". label=" << x.label;
+		os << ". name=" << x.streamName;
 	}
 	if(!x.threads.empty())
 	{

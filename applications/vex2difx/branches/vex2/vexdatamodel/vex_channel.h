@@ -48,12 +48,12 @@ public:
 
 	int recordChan;				// channel number on recorded media or threadnum on stream	(< 0 indicates non-recording)
 	int subbandId;				// 0-based index; -1 means unset
-	std::string ifName;			// name of the IF this channel came from
 	double bbcFreq;				// sky frequency tuning of the BBC (Hz)
 	double bbcBandwidth;			// bandwidth (Hz)
 	char bbcSideBand;			// sideband of the BBC
-	std::string name;			// column 8 of the $FREQ chan_def line, but fill in with column 5 if not present
-	std::string linkName;			// column 5 of the $FREQ chan_def line
+	std::string chanName;			// column 8 of the $FREQ chan_def line, but fill in with column 5 if not present
+	std::string ifLink;			// name of the IF this channel came from
+	std::string chanLink;			// column 5 of the $FREQ chan_def line
 	std::string bbcName;			// name given in VEX of this channel in the BBC table
 	std::string phaseCalName;		// name of phase cal setup for this channel
 	std::vector<unsigned int> tones;	// pulse cal tones to extract, directly from PHASE_CAL_DETECT

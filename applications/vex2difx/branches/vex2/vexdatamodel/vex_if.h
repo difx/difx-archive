@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2015-2016 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2015-2021 by Walter Brisken & Adam Deller               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -32,21 +32,27 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
 
 class VexIF
 {
 public:
-	VexIF() : ifSSLO(0.0), ifSideBand(' '), pol(' '), phaseCalIntervalMHz(0) {}
+	VexIF() : ifSSLO(0.0), ifSideBand(' '), pol(' '), phaseCalIntervalMHz(0.0), phaseCalBaseMHz(0.0), ifSampleRate(0.0) {}
 	std::string bandName() const;
 	std::string VLBABandName() const;
 	double getLowerEdgeFreq() const;
 
-	std::string name;
-	double ifSSLO;		// [Hz] SSLO of the IF
-	char ifSideBand;	// U or L
-	char pol;		// R or L
-	float phaseCalIntervalMHz;// MHz, typically 1 or 5 (or 0 if none)
-	float phaseCalBaseMHz; // MHz, typically 0 (VEX Rev 1.5b1, 2002)
+	std::string ifLink;			// Use to connect this IF to other bits
+	std::string ifName;			// Name of the IF; this should only be used casually, not to navigate the IF structure
+	double ifSSLO;				// [Hz] SSLO of the IF
+	char ifSideBand;			// U or L or D (D sideband not supported yet)
+	char pol;				// R or L
+	float phaseCalIntervalMHz;		// MHz, typically 1 or 5 (or 0 if none)
+	float phaseCalBaseMHz;			// MHz, typically 0 (VEX Rev 1.5b1, 2002)
+	double ifSampleRate;			// [samples/sec] non-zero only for digital IFs
+	std::string rxName;			// Name of the receiver the IF is connected to
+	std::vector<double> upstreamSSLO;	// Signed sum of upstream (downconverter) LO settings in signal path order
+	std::vector<char> upstreamSideBand;	// U or L or D (D sideband not supported yet)
 
 	// special values needed for VLBA, extracted from comment line
 	std::string comment;

@@ -40,7 +40,7 @@ public:
 	int startRecordChan;	// start record channel number, within datastream
 	int nChan;		// number of channels in this thread
 	double sampRate;	// [samples/sec]
-	std::string linkName;
+	std::string threadLink;
 	unsigned int nBit;
 	int dataBytes;		// size of one frame, excluding header
 

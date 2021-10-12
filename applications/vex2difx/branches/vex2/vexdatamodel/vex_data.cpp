@@ -1502,10 +1502,10 @@ bool VexData::isSX() const
 
 			for(std::map<std::string,VexIF>::const_iterator it = setup.ifs.begin(); it != setup.ifs.end(); ++it)
 			{
-				const VexIF &i = it->second;
+				const VexIF &vif = it->second;
 				double averageTune;	// (Hz)
 				
-				averageTune = setup.averageTuningForIF(i.name);
+				averageTune = setup.averageTuningForIF(vif.ifLink);
 
 				if(averageTune > 2.0e9 && averageTune < 3.9e9)
 				{

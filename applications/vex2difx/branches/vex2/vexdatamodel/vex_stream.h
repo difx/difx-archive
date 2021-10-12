@@ -84,7 +84,7 @@ public:
 	bool recordChanIgnore(int recChan) const;	// return true if this record channel should not be correlated
 	unsigned int nThread() const { return threads.size(); }		// number of threads
 
-	VexThread *getVexThreadByLinkName(const std::string link);
+	VexThread *getVexThreadByLink(const std::string threadLink);
 	VexThread *getVexThreadByThreadId(int threadId);
 
 	double sampRate;		// [Hz]
@@ -101,8 +101,8 @@ public:
 	enum DataSource dataSource;
 	unsigned int alignmentPeriod;   // in seconds; always 1 for VDIF, can be >1 for CODIF
 	double difxTsys;		// The DiFX .input file TSYS value for this datastream
-	std::string linkName;		// First parameter of a vex2 DATASTREAMS:datasteam line
-	std::string label;		// Third parameter of a vex2 DATASTREAMS:datasteam line
+	std::string streamLink;		// First parameter of a vex2 DATASTREAMS:datasteam line
+	std::string streamName;		// Third parameter of a vex2 DATASTREAMS:datasteam line
 
 private:
 	static bool Init();		// called to initialize the regexes below

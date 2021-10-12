@@ -76,29 +76,16 @@ float VexSetup::phaseCalBaseMHz() const
 	return pcb;
 }
 
-const VexIF *VexSetup::getIF(const std::string &ifName) const
-{
-	for(std::map<std::string,VexIF>::const_iterator it = ifs.begin(); it != ifs.end(); ++it)
-	{
-		if(it->second.name == ifName)
-		{
-			return &it->second;
-		}
-	}
-
-	return 0;
-}
-
-double VexSetup::firstTuningForIF(const std::string &ifName) const	// return Hz
+double VexSetup::firstTuningForIF(const std::string &ifLink) const	// return Hz
 {
 	double tune = 0.0;	// [Hz]
 	std::string chanName;
 
 	for(std::vector<VexChannel>::const_iterator ch=channels.begin(); ch != channels.end(); ++ch)
 	{
-		if(ch->ifName == ifName && (chanName == "" || ch->name < chanName))
+		if(ch->ifLink == ifLink && (chanName == "" || ch->chanName < chanName))
 		{
-			chanName = ch->name;
+			chanName = ch->chanName;
 			tune = ch->bbcFreq;
 		}
 	}
@@ -106,14 +93,14 @@ double VexSetup::firstTuningForIF(const std::string &ifName) const	// return Hz
 	return tune;
 }
 
-double VexSetup::averageTuningForIF(const std::string &ifName) const      // return Hz
+double VexSetup::averageTuningForIF(const std::string &ifLink) const      // return Hz
 {
 	double sum = 0.0;
 	int n = 0;
 
 	for(std::vector<VexChannel>::const_iterator ch=channels.begin(); ch != channels.end(); ++ch)
 	{
-		if(ch->ifName == ifName)
+		if(ch->ifLink == ifLink)
 		{
 			sum += ch->centerFreq();
 			++n;
@@ -240,8 +227,8 @@ void VexSetup::selectTones(enum ToneSelection selection, double guardBandMHz)
 {
 	for(std::vector<VexChannel>::iterator it = channels.begin(); it != channels.end(); ++it)
 	{
-		const VexIF *vif = getIF(it->ifName);
-		if (vif)
+		const VexIF *vif = getVexIFByLink(it->ifLink);
+		if(vif)
 		{
 			it->selectTones(vif->phaseCalIntervalMHz, vif->phaseCalBaseMHz, selection, guardBandMHz);
 		}
@@ -460,11 +447,11 @@ int VexSetup::getPolarizations() const
 	return rv;
 }
 
-VexStream *VexSetup::getVexStreamByLinkName(const std::string link)
+VexStream *VexSetup::getVexStreamByLink(const std::string streamLink)
 {
 	for(std::vector<VexStream>::iterator it = streams.begin(); it != streams.end(); ++it)
 	{
-		if(it->linkName == link)
+		if(it->streamLink == streamLink)
 		{
 			return &(*it);
 		}
@@ -473,13 +460,26 @@ VexStream *VexSetup::getVexStreamByLinkName(const std::string link)
 	return 0;
 }
 
-VexChannel *VexSetup::getVexChannelByLinkName(const std::string link)
+VexChannel *VexSetup::getVexChannelByLink(const std::string chanLink)
 {
 	for(std::vector<VexChannel>::iterator it = channels.begin(); it != channels.end(); ++it)
 	{
-		if(it->linkName == link)
+		if(it->chanLink == chanLink)
 		{
 			return &(*it);
+		}
+	}
+
+	return 0;
+}
+
+VexIF *VexSetup::getVexIFByLink(const std::string &ifLink)
+{
+	for(std::map<std::string,VexIF>::iterator it = ifs.begin(); it != ifs.end(); ++it)
+	{
+		if(it->second.ifLink == ifLink)
+		{
+			return &it->second;
 		}
 	}
 

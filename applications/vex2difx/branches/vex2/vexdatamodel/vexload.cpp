@@ -153,19 +153,18 @@ static void fixOhs(std::string &str)
 	}
 }
 
-static int getRecordChannelFromTracks(const std::string &antName, const std::string &chanName, const std::map<std::string,BitAssignments> &ch2tracks, const VexStream &stream, unsigned int n)
+static int getRecordChannelFromTracks(const std::string &antName, const std::string &chanLink, const std::map<std::string,BitAssignments> &ch2tracks, const VexStream &stream, unsigned int n)
 {
+	std::map<std::string,BitAssignments>::const_iterator it = ch2tracks.find(chanLink);
+	if(it == ch2tracks.end())
+	{
+		return -1;
+	}
+	const BitAssignments &T = it->second;
+
 	if(stream.formatHasFanout())
 	{
 		int delta, track;
-		std::map<std::string,BitAssignments>::const_iterator it = ch2tracks.find(chanName);
-
-		if(it == ch2tracks.end())
-		{
-			return -1;
-		}
-
-		const BitAssignments &T = it->second;
 		delta = 2*(T.sign.size() + T.mag.size());
 		track = T.sign[0];
 
@@ -195,14 +194,6 @@ static int getRecordChannelFromTracks(const std::string &antName, const std::str
 	else if(stream.format == VexStream::FormatMark5B || stream.format == VexStream::FormatKVN5B) 
 	{
 		int delta, track;
-		std::map<std::string,BitAssignments>::const_iterator it = ch2tracks.find(chanName);
-
-		if(it == ch2tracks.end())
-		{
-			return -1;
-		}
-
-		const BitAssignments &T = it->second;
 
 		if(T.sign.empty())
 		{
@@ -219,14 +210,7 @@ static int getRecordChannelFromTracks(const std::string &antName, const std::str
 	else if(stream.isLBAFormat())
 	{
 		int delta, track;
-		std::map<std::string,BitAssignments>::const_iterator it = ch2tracks.find(chanName);
 
-		if(it == ch2tracks.end())
-		{
-			return -1;
-		}
-
-		const BitAssignments &T = it->second;
 		delta = T.sign.size() + T.mag.size();
 		track = T.sign[0];
 
@@ -255,16 +239,14 @@ static int getRecordChannelFromTracks(const std::string &antName, const std::str
 	return -1;
 }
 
-static int getRecordChannelFromBitstreams(const std::string &antName, const std::string &chanName, const std::map<std::string,BitAssignments> &ch2bitstreams, const VexStream &stream, unsigned int n)
+static int getRecordChannelFromBitstreams(const std::string &antName, const std::string &chanLink, const std::map<std::string,BitAssignments> &ch2bitstreams, const VexStream &stream, unsigned int n)
 {
 	int delta, track;
-	std::map<std::string,BitAssignments>::const_iterator it = ch2bitstreams.find(chanName);
-
+	std::map<std::string,BitAssignments>::const_iterator it = ch2bitstreams.find(chanLink);
 	if(it == ch2bitstreams.end())
 	{
 		return -1;
 	}
-
 	const BitAssignments &T = it->second;
 
 	if(T.sign.empty())
@@ -915,21 +897,22 @@ static int collectIFInfo(VexSetup &setup, VexData *V, Vex *v, const char *antDef
 		
 		vex_field(T_IF_DEF, p, 1, &link, &name, &value, &units);
 		VexIF &vif = setup.ifs[std::string(value)];
+		vif.ifLink = value;
 
 		if(V->getVersion() < 2.0)
 		{
 			vex_field(T_IF_DEF, p, 2, &link, &name, &value, &units);
-			vif.name = value;
+			vif.ifName = value;
 		}
 		else
 		{
 			if(strncmp(value, "IF_", 3) == 0 && strlen(value) > 3)
 			{
-				vif.name = value + 3;
+				vif.ifName = value + 3;
 			}
 			else
 			{
-				vif.name = value;
+				vif.ifName = value;
 			}
 		}
 		
@@ -985,6 +968,11 @@ static int collectIFInfo(VexSetup &setup, VexData *V, Vex *v, const char *antDef
 		}
 		vif.phaseCalBaseMHz = static_cast<float>(phaseCalBase/1000000.0);
 
+		vex_field(T_IF_DEF, p, 8, &link, &name, &value, &units);
+		if(value)
+		{
+			fvex_double(&value, &units, &vif.ifSampleRate);
+		}
 
 		if(p2count >= MAX_IF)
 		{
@@ -1005,6 +993,28 @@ static int collectIFInfo(VexSetup &setup, VexData *V, Vex *v, const char *antDef
 			vif.comment = "\0";
 		}
 	}
+
+	for(void *p = get_all_lowl(antDefName, modeDefName, T_RECEIVER_NAME, B_IF, v); p; p = get_all_lowl_next())
+	{
+		int link, name;
+		char *value, *units;
+
+		vex_field(T_RECEIVER_NAME, p, 1, &link, &name, &value, &units);
+		VexIF &vif = setup.ifs[std::string(value)];
+	}
+
+	for(void *p = get_all_lowl(antDefName, modeDefName, T_SUB_LO_FREQUENCIES, B_IF, v); p; p = get_all_lowl_next())
+	{
+		int link, name;
+		char *value, *units;
+	}
+
+	for(void *p = get_all_lowl(antDefName, modeDefName, T_SUB_LO_SIDEBANDS, B_IF, v); p; p = get_all_lowl_next())
+	{
+		int link, name;
+		char *value, *units;
+	}
+
 
 	return nWarn;
 }
@@ -1058,7 +1068,7 @@ int collectFreqChannels(std::vector<VexChannel> &freqChannels, VexSetup &setup, 
 {
 	int nWarn = 0;
 	std::map<std::string,char> bbc2pol;
-	std::map<std::string,std::string> bbc2ifName;
+	std::map<std::string,std::string> bbc2ifLink;
 	int link, name;
 	char *value, *units;
 
@@ -1066,11 +1076,18 @@ int collectFreqChannels(std::vector<VexChannel> &freqChannels, VexSetup &setup, 
 	for(void *p = get_all_lowl(antDefName, modeDefName, T_BBC_ASSIGN, B_BBC, v); p; p = get_all_lowl_next())
 	{
 		vex_field(T_BBC_ASSIGN, p, 3, &link, &name, &value, &units);
-		VexIF &vif = setup.ifs[std::string(value)];
+		VexIF *vif = setup.getVexIFByLink(value);
 
+		if(vif == 0)
+		{
+			std::cerr << "Error: cannot find ifLink " << value << " in setup structure" << std::endl;
+			std::cerr << "Setup = " << setup << std::endl;
+
+			exit(EXIT_FAILURE);
+		}
 		vex_field(T_BBC_ASSIGN, p, 1, &link, &name, &value, &units);
-		bbc2pol[value] = vif.pol;
-		bbc2ifName[value] = vif.name;
+		bbc2pol[value] = vif->pol;
+		bbc2ifLink[value] = vif->ifLink;
 	}
 
 	freqChannels.clear();
@@ -1082,7 +1099,7 @@ int collectFreqChannels(std::vector<VexChannel> &freqChannels, VexSetup &setup, 
 		double freq;
 		double bandwidth;
 		std::string chanName;
-		std::string chanLinkName;
+		std::string chanLink;
 		std::string phaseCalName;
 
 		vex_field(T_CHAN_DEF, p, 2, &link, &name, &value, &units);
@@ -1095,7 +1112,7 @@ int collectFreqChannels(std::vector<VexChannel> &freqChannels, VexSetup &setup, 
 		fvex_double(&value, &units, &bandwidth);
 
 		vex_field(T_CHAN_DEF, p, 5, &link, &name, &value, &units);
-		chanLinkName = value;
+		chanLink = value;
 
 		vex_field(T_CHAN_DEF, p, 6, &link, &name, &bbcName, &units);
 		subbandId = mode.addSubband(freq, bandwidth, sideBand, bbc2pol[bbcName]);
@@ -1110,18 +1127,18 @@ int collectFreqChannels(std::vector<VexChannel> &freqChannels, VexSetup &setup, 
 		}
 		else // Fall back to hack use of the BBC link name as the channel name
 		{
-			chanName = chanLinkName;
+			chanName = chanLink;
 		}
 
 		freqChannels.push_back(VexChannel());
 		freqChannels.back().subbandId = subbandId;
-		freqChannels.back().ifName = bbc2ifName[bbcName];
+		freqChannels.back().ifLink = bbc2ifLink[bbcName];
 		freqChannels.back().bbcFreq = freq;
 		freqChannels.back().bbcBandwidth = bandwidth;
 		freqChannels.back().bbcSideBand = sideBand;
 		freqChannels.back().bbcName = bbcName;
-		freqChannels.back().name = chanName;
-		freqChannels.back().linkName = chanLinkName;
+		freqChannels.back().chanName = chanName;
+		freqChannels.back().chanLink = chanLink;
 		freqChannels.back().recordChan = -1;
 		freqChannels.back().phaseCalName = phaseCalName;
 	}
@@ -1129,11 +1146,11 @@ int collectFreqChannels(std::vector<VexChannel> &freqChannels, VexSetup &setup, 
 	return nWarn;
 }
 
-VexChannel *getVexChannelByLinkName(std::vector<VexChannel> &freqChannels, const std::string link)
+VexChannel *getVexChannelByLink(std::vector<VexChannel> &freqChannels, const std::string chanLink)
 {
 	for(std::vector<VexChannel>::iterator it = freqChannels.begin(); it != freqChannels.end(); ++it)
 	{
-		if(it->linkName == link)
+		if(it->chanLink == chanLink)
 		{
 			return &(*it);
 		}
@@ -1151,7 +1168,7 @@ static int getTracksSetup(VexSetup &setup, Vex *v, const char *antDefName, const
 	char *value, *units;
 	void *p;
 	void *trackFormat;
-	std::map<std::string,BitAssignments> ch2tracks;
+	std::map<std::string,BitAssignments> ch2tracks;		// indexed by channel link
 	int nBit = 1;
 	int nTrack = 0;
 
@@ -1171,12 +1188,12 @@ static int getTracksSetup(VexSetup &setup, Vex *v, const char *antDefName, const
 	{
 		for(p = get_all_lowl(antDefName, modeDefName, T_FANOUT_DEF, B_TRACKS, v); p; p = get_all_lowl_next())
 		{
-			std::string chanName;
+			std::string chanLink;
 			bool sign;
 			int dasNum;
 
 			vex_field(T_FANOUT_DEF, p, 2, &link, &name, &value, &units);
-			chanName = value;
+			chanLink = value;
 			vex_field(T_FANOUT_DEF, p, 3, &link, &name, &value, &units);
 			sign = (value[0] == 's');
 			vex_field(T_FANOUT_DEF, p, 4, &link, &name, &value, &units);
@@ -1192,12 +1209,12 @@ static int getTracksSetup(VexSetup &setup, Vex *v, const char *antDefName, const
 			chanNum += 32*(dasNum-1);
 			if(sign)
 			{
-				ch2tracks[chanName].sign.push_back(chanNum);
+				ch2tracks[chanLink].sign.push_back(chanNum);
 			}
 			else
 			{
 				nBit = 2;
-				ch2tracks[chanName].mag.push_back(chanNum);
+				ch2tracks[chanLink].mag.push_back(chanNum);
 			}
 		}
 	}
@@ -1205,12 +1222,12 @@ static int getTracksSetup(VexSetup &setup, Vex *v, const char *antDefName, const
 	{
 		for(p = get_all_lowl(antDefName, modeDefName, T_FANOUT_DEF, B_TRACKS, v); p; p = get_all_lowl_next())
 		{
-			std::string chanName;
+			std::string chanLink;
 			bool sign;
 			int dasNum;
 			
 			vex_field(T_FANOUT_DEF, p, 2, &link, &name, &value, &units);
-			chanName = value;
+			chanLink = value;
 			vex_field(T_FANOUT_DEF, p, 3, &link, &name, &value, &units);
 			sign = (value[0] == 's');
 			vex_field(T_FANOUT_DEF, p, 4, &link, &name, &value, &units);
@@ -1229,7 +1246,7 @@ static int getTracksSetup(VexSetup &setup, Vex *v, const char *antDefName, const
 				chanNum += 32*(dasNum-1);
 				if(sign)
 				{
-					ch2tracks[chanName].sign.push_back(chanNum);
+					ch2tracks[chanLink].sign.push_back(chanNum);
 				}
 				else
 				{
@@ -1241,7 +1258,7 @@ static int getTracksSetup(VexSetup &setup, Vex *v, const char *antDefName, const
 					{
 						nBit = stream.nBit;
 					}
-					ch2tracks[chanName].mag.push_back(chanNum);
+					ch2tracks[chanLink].mag.push_back(chanNum);
 				}
 			}
 		}
@@ -1277,7 +1294,7 @@ static int getTracksSetup(VexSetup &setup, Vex *v, const char *antDefName, const
 		setup.channels.push_back(*it);
 		VexChannel &channel = setup.channels.back();
 
-		recChanId = getRecordChannelFromTracks(antDefName, it->name, ch2tracks, stream, nRecordChan);
+		recChanId = getRecordChannelFromTracks(antDefName, it->chanLink, ch2tracks, stream, nRecordChan);
 		if(recChanId >= 0)
 		{
 			if(channel.bbcBandwidth - stream.sampRate/2 > 1e-6)
@@ -1339,8 +1356,6 @@ static int getBitstreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, c
 	int link, name;
 	char *value, *units;
 	void *p;
-	std::map<std::string,char> bbc2pol;
-	std::map<std::string,std::string> bbc2ifName;
 	std::map<std::string,BitAssignments> ch2bitstreams;
 	int nBit = 1;
 	int nBitstream = 0;
@@ -1350,17 +1365,6 @@ static int getBitstreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, c
 	{
 		vex_field(T_STREAM_SAMPLE_RATE, p, 1, &link, &name, &value, &units);
 		fvex_double(&value, &units, &stream.sampRate);
-	}
-
-	// Get BBC to pol map for this antenna
-	for(p = get_all_lowl(antDefName, modeDefName, T_BBC_ASSIGN, B_BBC, v); p; p = get_all_lowl_next())
-	{
-		vex_field(T_BBC_ASSIGN, p, 3, &link, &name, &value, &units);
-		VexIF &vif = setup.ifs[std::string(value)];
-
-		vex_field(T_BBC_ASSIGN, p, 1, &link, &name, &value, &units);
-		bbc2pol[value] = vif.pol;
-		bbc2ifName[value] = vif.name;
 	}
 
 	// Only Mark5B format is supported when using BITSTREAMS
@@ -1453,7 +1457,7 @@ static int getBitstreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, c
 		setup.channels.push_back(*it);
 		VexChannel &channel = setup.channels.back();
 
-		recChanId = getRecordChannelFromBitstreams(antDefName, it->name, ch2bitstreams, stream, nRecordChan);
+		recChanId = getRecordChannelFromBitstreams(antDefName, it->chanLink, ch2bitstreams, stream, nRecordChan);
 		if(recChanId >= 0)
 		{
 			if(channel.bbcBandwidth - stream.sampRate/2 > 1e-6)
@@ -1505,12 +1509,12 @@ static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, 
 
 			exit(EXIT_FAILURE);
 		}
-		stream.linkName = value;
+		stream.streamLink = value;
 
 		vex_field(T_DATASTREAM, p, 2, &link, &name, &value, &units);
 		if(!value)
 		{
-			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : datastream " << stream.linkName << " lacks a data format specification." << std::endl;
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : datastream " << stream.streamLink << " lacks a data format specification." << std::endl;
 
 			exit(EXIT_FAILURE);
 		}
@@ -1528,7 +1532,7 @@ static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, 
 		}
 		else
 		{
-			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : datastream " << stream.linkName << " has a data format specification that is not handled: " << value << " ." << std::endl;
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : datastream " << stream.streamLink << " has a data format specification that is not handled: " << value << " ." << std::endl;
 
 			exit(EXIT_FAILURE);
 		}
@@ -1538,7 +1542,7 @@ static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, 
 		vex_field(T_DATASTREAM, p, 3, &link, &name, &value, &units);
 		if(value && strlen(value) > 0)
 		{
-			stream.label = value;
+			stream.streamName = value;
 		}
 
 		++nStream;
@@ -1549,7 +1553,6 @@ static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, 
 	{
 		VexStream *stream;
 		int threadId;
-		char *threadLinkName;
 
 		vex_field(T_THREAD, p, 1, &link, &name, &value, &units);
 		if(!value)
@@ -1558,7 +1561,7 @@ static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, 
 
 			exit(EXIT_FAILURE);
 		}
-		stream = setup.getVexStreamByLinkName(value);
+		stream = setup.getVexStreamByLink(value);
 		if(!stream)
 		{
 			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : a thread parameter datastream link does not point to a datastream." << std::endl;
@@ -1582,8 +1585,7 @@ static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, 
 		}
 
 		vex_field(T_THREAD, p, 2, &link, &name, &value, &units);
-		threadLinkName = value;
-		T.linkName = threadLinkName;
+		T.threadLink = value;
 
 		vex_field(T_THREAD, p, 4, &link, &name, &value, &units);
 		T.nChan = atoi(value);
@@ -1680,7 +1682,7 @@ static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, 
 
 			exit(EXIT_FAILURE);
 		}
-		stream = setup.getVexStreamByLinkName(value);
+		stream = setup.getVexStreamByLink(value);
 		if(!stream)
 		{
 			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : has channel parameter with datastream link that does not correspond: " << value << " ." << std::endl;
@@ -1695,7 +1697,7 @@ static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, 
 
 			exit(EXIT_FAILURE);
 		}
-		thread = stream->getVexThreadByLinkName(value);
+		thread = stream->getVexThreadByLink(value);
 		if(!thread)
 		{
 			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : has channel parameter with a thread link that does not correspond: " << value << " ." << std::endl;
@@ -1726,10 +1728,15 @@ static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, 
 			exit(EXIT_FAILURE);
 		}
 
-		channel = getVexChannelByLinkName(freqChannels, chanLink);
+		channel = getVexChannelByLink(freqChannels, chanLink);
 		if(!channel)
 		{
 			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : referenced channel " << chanLink << " does not exist in $FREQ block." << std::endl;
+			std::cerr << "Freq block had the following entries:" << std::endl;
+			for(std::vector<VexChannel>::const_iterator it = freqChannels.begin(); it != freqChannels.end(); ++it)
+			{
+				std::cerr << "  " << *it << std::endl;
+			}
 
 			exit(EXIT_FAILURE);
 		}
@@ -1795,8 +1802,8 @@ static int getModes(VexData *V, Vex *v)
 
 			setup.type = type;
 
-			nWarn += collectFreqChannels(freqChannels, setup, mode, v, antDefName, modeDefName);
 			nWarn += collectIFInfo(setup, V, v, antDefName, modeDefName);
+			nWarn += collectFreqChannels(freqChannels, setup, mode, v, antDefName, modeDefName);
 			nWarn += collectPcalInfo(pcalMap, V, v, antDefName, modeDefName);
 
 			switch(type)

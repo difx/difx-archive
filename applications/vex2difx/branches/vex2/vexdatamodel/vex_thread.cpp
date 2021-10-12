@@ -34,9 +34,9 @@ std::ostream& operator << (std::ostream &os, const VexThread &x)
 {
 	os << "[id=" << x.threadId << ",sc=" << x.startRecordChan << ",nc=" << x.nChan << ",nb=" << x.nBit << ",data=" << x.dataBytes;
 
-	if(x.linkName.size() > 0)
+	if(!x.threadLink.empty())
 	{
-		os << ",link=" << x.linkName;
+		os << ",link=" << x.threadLink;
 	}
 
 	os << "]";
