@@ -375,6 +375,7 @@ static int getAntennas(VexData *V, Vex *v)
 	struct dvalue *r;
 	llist *block;
 	int nWarn = 0;
+	bool hasHighOrderClock = false;
 
 	block = find_block(B_CLOCK, v);
 
@@ -501,6 +502,32 @@ static int getAntennas(VexData *V, Vex *v)
 						clock.rate = atof(value);
 					}
 				}
+				vex_field(T_CLOCK_EARLY, c, 5, &link, &name, &value, &units);
+				if(value)
+				{
+					if(units)
+					{
+						fvex_double(&value, &units, &clock.rate);
+					}
+					else
+					{
+						clock.accel = atof(value);
+					}
+					hasHighOrderClock = true;
+				}
+				vex_field(T_CLOCK_EARLY, c, 6, &link, &name, &value, &units);
+				if(value)
+				{
+					if(units)
+					{
+						fvex_double(&value, &units, &clock.rate);
+					}
+					else
+					{
+						clock.jerk = atof(value);
+					}
+					hasHighOrderClock = true;
+				}
 			}
 			clock.flipSign();
 		}
@@ -566,6 +593,13 @@ static int getAntennas(VexData *V, Vex *v)
 				}
 			}
 		}
+	}
+
+	if(hasHighOrderClock)
+	{
+		std::cerr << "Warning: One or more antennas has a clock model with high order (beyond linear) terms.  These terms may be neglected at some point in the processing or reporting (e.g., in mpifxcorr, difx2fits, or difx2mark4)." << std::endl;
+	
+		++nWarn;
 	}
 
 	return nWarn;
@@ -889,7 +923,7 @@ static int collectIFInfo(VexSetup &setup, VexData *V, Vex *v, const char *antDef
 		}
 		else
 		{
-			if(strncmp(value, "IF_", 3) == 0)
+			if(strncmp(value, "IF_", 3) == 0 && strlen(value) > 3)
 			{
 				vif.name = value + 3;
 			}
@@ -1117,8 +1151,6 @@ static int getTracksSetup(VexSetup &setup, Vex *v, const char *antDefName, const
 	char *value, *units;
 	void *p;
 	void *trackFormat;
-	std::map<std::string,char> bbc2pol;
-	std::map<std::string,std::string> bbc2ifName;
 	std::map<std::string,BitAssignments> ch2tracks;
 	int nBit = 1;
 	int nTrack = 0;
@@ -1128,17 +1160,6 @@ static int getTracksSetup(VexSetup &setup, Vex *v, const char *antDefName, const
 	{
 		vex_field(T_SAMPLE_RATE, p, 1, &link, &name, &value, &units);
 		fvex_double(&value, &units, &stream.sampRate);
-	}
-
-	// Get BBC to pol map for this antenna
-	for(p = get_all_lowl(antDefName, modeDefName, T_BBC_ASSIGN, B_BBC, v); p; p = get_all_lowl_next())
-	{
-		vex_field(T_BBC_ASSIGN, p, 3, &link, &name, &value, &units);
-		VexIF &vif = setup.ifs[std::string(value)];
-
-		vex_field(T_BBC_ASSIGN, p, 1, &link, &name, &value, &units);
-		bbc2pol[value] = vif.pol;
-		bbc2ifName[value] = vif.name;
 	}
 
 	trackFormat = get_all_lowl(antDefName, modeDefName, T_TRACK_FRAME_FORMAT, B_TRACKS, v);
@@ -1480,18 +1501,18 @@ static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, 
 		vex_field(T_DATASTREAM, p, 1, &link, &name, &value, &units);
 		if(!value)
 		{
-			std::cerr << "YIKES 1" << std::endl;
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : a datastream parameter lacks a link name." << std::endl;
 
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 		stream.linkName = value;
 
 		vex_field(T_DATASTREAM, p, 2, &link, &name, &value, &units);
 		if(!value)
 		{
-			std::cerr << "YIKES 2" << std::endl;
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : datastream " << stream.linkName << " lacks a data format specification." << std::endl;
 
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 		if(strcasecmp(value, "VDIF") == 0)
 		{
@@ -1504,6 +1525,12 @@ static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, 
 		else if(strcasecmp(value, "CODIF") == 0)
 		{
 			stream.parseFormatString("CODIF");
+		}
+		else
+		{
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : datastream " << stream.linkName << " has a data format specification that is not handled: " << value << " ." << std::endl;
+
+			exit(EXIT_FAILURE);
 		}
 
 		stream.threads.clear();	// Just make sure these are left undefined; they will be completely defined in the code that follows
@@ -1527,26 +1554,25 @@ static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, 
 		vex_field(T_THREAD, p, 1, &link, &name, &value, &units);
 		if(!value)
 		{
-			std::cerr << "YIKES 3" << std::endl;
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : a thread parameter lacks a datastream link." << std::endl;
 
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 		stream = setup.getVexStreamByLinkName(value);
 		if(!stream)
 		{
-			std::cerr << "YIKES 4" << std::endl;
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : a thread parameter datastream link does not point to a datastream." << std::endl;
 
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 
 		vex_field(T_THREAD, p, 3, &link, &name, &value, &units);
 		threadId = atoi(value);
 		if(find(stream->threads.begin(), stream->threads.end(), threadId) != stream->threads.end())
 		{
-			// Bad: thread was already part of the stream
-			std::cerr << "YIKES 7" << std::endl;
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : a duplicate thread number was encountered." << std::endl;
 
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 		stream->threads.push_back(VexThread(threadId));
 		VexThread &T = stream->threads.back();
@@ -1571,9 +1597,9 @@ static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, 
 		}
 		else if(stream->sampRate != T.sampRate)
 		{
-			std::cerr << "YIKES 5" << std::endl;
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : sample rate mismatch: " << stream->sampRate << " Hz != " << T.sampRate << " Hz." << std::endl;
 
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 
 		vex_field(T_THREAD, p, 6, &link, &name, &value, &units);
@@ -1584,9 +1610,9 @@ static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, 
 		}
 		else if(stream->nBit != T.nBit)
 		{
-			std::cerr << "YIKES 6" << std::endl;
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : nBit mismatch: " << stream->nBit << " != " << T.nBit << " ." << std::endl;
 
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 
 		vex_field(T_THREAD, p, 7, &link, &name, &value, &units);
@@ -1606,9 +1632,9 @@ static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, 
 			}
 			else
 			{
-				std::cerr << "YIKES 8" << std::endl;
+				std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : data representation [" << value << "] is unrecognized.  Kegal values are 'real', 'complex' and 'complexDSV'." << std::endl;
 
-				exit(0);
+				exit(EXIT_FAILURE);
 			}
 		}
 
@@ -1650,62 +1676,62 @@ static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, 
 		vex_field(T_CHANNEL, p, 1, &link, &name, &value, &units);
 		if(!value)
 		{
-			std::cerr << "YIKES 11" << std::endl;
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : has channel parameter without datastream link." << std::endl;
 
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 		stream = setup.getVexStreamByLinkName(value);
 		if(!stream)
 		{
-			std::cerr << "YIKES 12" << std::endl;
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : has channel parameter with datastream link that does not correspond: " << value << " ." << std::endl;
 
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 
 		vex_field(T_CHANNEL, p, 2, &link, &name, &value, &units);
 		if(!value)
 		{
-			std::cerr << "YIKES 13" << std::endl;
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : has channel parameter without a thread link." << std::endl;
 
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 		thread = stream->getVexThreadByLinkName(value);
 		if(!thread)
 		{
-			std::cerr << "YIKES 14" << std::endl;
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : has channel parameter with a thread link that does not correspond: " << value << " ." << std::endl;
 
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 
 		vex_field(T_CHANNEL, p, 3, &link, &name, &chanLink, &units);
 		if(!chanLink || chanLink[0] == 0)
 		{
-			std::cerr << "YIKES 16" << std::endl;
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : has channel parameter without channel link." << std::endl;
 
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 
 		vex_field(T_CHANNEL, p, 4, &link, &name, &value, &units);
 		if(!value)
 		{
-			std::cerr << "YIKES 17" << std::endl;
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : has channel without thread number." << std::endl;
 
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 		threadChan = atoi(value);
 		if(threadChan < 0 || threadChan >= thread->nChan)
 		{
-			std::cerr << "YIKES 18" << std::endl;
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : has channel number," << threadChan << ", out of range [0.." << (thread->nChan-1) << "]." << std::endl;
 
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 
 		channel = getVexChannelByLinkName(freqChannels, chanLink);
 		if(!channel)
 		{
-			std::cerr << "YIKES 19" << std::endl;
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " : referenced channel " << chanLink << " does not exist in $FREQ block." << std::endl;
 
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 
 		setup.channels.push_back(*channel);
@@ -1713,7 +1739,7 @@ static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, 
 
 		if(channel->bbcBandwidth - stream->sampRate/2 > 1e-6)
 		{
-			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " has sample rate = " << stream->sampRate << " bandwidth = " << channel->bbcBandwidth << std::endl;
+			std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " has sample rate = " << stream->sampRate << " bandwidth = " << channel->bbcBandwidth << " ." << std::endl;
 			std::cerr << "Sample rate must be no less than twice the bandwidth in all cases." << std::endl;
 
 			exit(EXIT_FAILURE);

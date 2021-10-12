@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2015-2016 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2015-2021 by Walter Brisken & Adam Deller               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -35,16 +35,20 @@
 class VexClock
 {
 public:
-	VexClock() : mjdStart(0.0), offset(0.0), rate(0.0), offset_epoch(50000.0) {}
+	VexClock() : mjdStart(0.0), offset(0.0), rate(0.0), accel(0.0), jerk(0.0), offset_epoch(50000.0) {}
 	void flipSign() 
 	{ 
 		offset = -offset;
 		rate = -rate;
+		accel = -accel;
+		jerk = -jerk;
 	}
 
 	double mjdStart;	// [mjd]
 	double offset;		// [sec]
 	double rate;		// [sec/sec]
+	double accel;		// [sec/sec^2]	// Note: this and "jerk" kept as separate items to preserve backward compat.
+	double jerk;		// [sec/sec^3]
 	double offset_epoch;	// [mjd]
 };
 
