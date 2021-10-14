@@ -324,7 +324,18 @@ static void dump_fineprint(FILE *fp, struct type_dump *dp)
                 "undefined");
 
     fprintf(fp, "# ControlFile             '%s'\n", control_filename);
-    //FIXME -- yet morethings
+    if (dp->param->passband[0] != 0.0 || dp->param->passband[1] != 1.0E6)
+        fprintf(fp, "# PassbandInAvXPSpectrum  '%lf %lf'\n",
+            dp->status->xpnotchpband[0], dp->status->xpnotchpband[1]);
+    if (dp->param->nnotches > 0) {
+        fprintf(fp, "# NumberOfNotches         '%d'\n", dp->param->nnotches);
+        fprintf(fp, "# NotchesInAvXPSpectrum   '");
+        for (ii = 0; ii < dp->param->nnotches; ii++)
+            fprintf(fp, " %lf", dp->status->xpnotchpband[ii]);
+        fprintf(fp, "'\n");
+    }
+
+    //FIXME -- yet morethings that should be output
 }
 
 /*
@@ -720,6 +731,7 @@ void dump_plot_data2dir(struct type_dump *dump)
     if (rv < 0 && errno == ENOENT) {
         rv = mkdir(outdir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
         if (rv < 0) perror("dump_plot_data2dir:mkdir");
+        errno = 0;
     } else if (rv < 0) {
         perror("dump_plot_data2dir:stat");
     }
