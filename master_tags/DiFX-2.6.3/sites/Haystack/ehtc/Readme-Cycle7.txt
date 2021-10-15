@@ -45,9 +45,11 @@ export hays=/data-sc25/EHT_ARCHIVE/Hays_Output3
 export bonn=/data-sc25/EHT_ARCHIVE/Bonn_Output3
 #xport dsvn=/swc/difx/difx-svn
 export dsvn=/swc/difx/difx-svn/master_tags/DiFX-2.6.2/
+export dsv3=/swc/difx/difx-svn/master_tags/DiFX-2.6.3/
 # site vars: script area, correlator work dir and release directory
 #xport ehtc=$dsvn/sites/Haystack/ehtc
-export ehtc=/swc/scripts/ehtc
+#xport ehtc=/swc/scripts/ehtc
+export ehtc=$dsv3/sites/Haystack/ehtc
 export arch=$hays
 export corr=/data-sc15/difxoper
 # run polconvert on the same machine with the files
@@ -55,7 +57,7 @@ export work=/data-sc15/difxoper
 export work=/data-sc14/gbc
 
 # principal vars for tracking all the revisions and forth
-export exp=e18...
+export exp=e21...
 export vers=?       # major correlator top-level version
 export ctry=''      # minor correlator top-level version
 export subv=b?      # b1 b2 b3 b4
@@ -72,7 +74,7 @@ export dpfu=0.0308574   # band6
 
 # a list of stations in best order for polconvert plots
 #xport scmp='PV,MG,SW,AX,LM,SZ,GL,MM'
-export scmp='AX,MM,MG,GL,PV,SW,LM,SZ'
+export scmp='AX,MM,MG,GL,PV,SW,LM,SZ,KT,NN'
 # number of parallel grinds to schedule (< number physical cores)
 export npar=15
 # number of polconvert fringe plots to make
@@ -287,12 +289,15 @@ roots=`cd $expn ; ls */$target*` ; echo $roots
 # that should be fit (relative to A as first station).
 # Refer to the station codes file for the 2-letter to 1-letter codes.
 cd $expn ; cp ../$ers.conf .
-$ehtc/est_manual_phases.py -c $ers.conf \
+$ehtc/est_manual_phases.py -c $ers.conf -v \
     -r first-root -s A,x,y,z,...
 grep ^if.station $ers.conf | sort | uniq -c
-$ehtc/est_manual_phases.py -c $ers.conf \
+$ehtc/est_manual_phases.py -c $ers.conf -v \
     -r second-root -s A,p,q,r,...
 grep ^if.station $ers.conf | sort | uniq -c
+# The -v option turns on some progress so that you monitor progress.
+# It will declare some steps not done if full convergence is not
+# reached...this is generally not a problem.
 #...
 ### are all manual phases set up plausibly?  tell us what you think.
 for r in $roots ; do fourfit -bA? -c $ers.conf $r & done ; wait
@@ -392,9 +397,12 @@ cat $ers-fits-missing.txt | sed 's/^/### /'
 # Final steps ======================
 # generate some summary aedit pdfs
 $ehtc/ehtc-aeditjob.sh all
+[ `cat $ers-$expn.errors|wc -l` = "37" ] || echo check alist generation
 cp -p $ers-$expn-*-time.pdf $release/logs
+cp -p $ers-$expn.alist  $release/logs
 
 # verify that the per-scan antabs are in agreement with the QA2 estimates:
+# environment variables decimation, plotrange, dayoffset may be needed
 for pc in $plst
 do  $ehtc/ehtc-antab.sh $subv $pc $ers true
     cp -p $ers-$pc-antab.pdf $release/logs ; done
