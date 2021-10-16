@@ -740,9 +740,11 @@ static int getScans(VexData *V, Vex *v)
 		void *p;
 		std::string intent = "";
 		std::string tmpIntent;
+		std::string sourceDefName;
 
 		stations.clear();
 		recordEnable.clear();
+		sourceDefName.clear();
 
 		Llist *lowls = L;
 		lowls=find_lowl(lowls,T_COMMENT);
@@ -809,16 +811,7 @@ static int getScans(VexData *V, Vex *v)
 		}
 
 		std::string scanDefName(scanId);
-		std::string sourceDefName((char *)get_scan_source(L));
 		std::string modeDefName((char *)get_scan_mode(L));
-
-		const VexSource *src = V->getSourceByDefName(sourceDefName);
-		if(src == 0)
-		{
-			std::cerr << "Vex error! Scan " << scanDefName << " references source " << sourceDefName << " which is not in the source table." << std::endl;
-
-			exit(EXIT_FAILURE);
-		}
 
 		// Make scan
 		S = V->newScan();
@@ -827,9 +820,80 @@ static int getScans(VexData *V, Vex *v)
 		S->stations = stations;
 		S->recordEnable = recordEnable;
 		S->modeDefName = modeDefName;
-		S->sourceDefName = sourceDefName;
 		S->intent = intent;
 		S->mjdVex = mjd;
+
+		for(p = get_scan_source2(L); p; p = get_scan_source2_next())
+		{
+			bool point;
+			bool corr;
+
+			point = corr = true;
+
+			vex_field(T_SOURCE, p, 1, &link, &name, &value, &units);
+			sourceDefName = value;
+
+			const VexSource *src = V->getSourceByDefName(sourceDefName);
+			if(src == 0)
+			{
+				std::cerr << "Vex error! Scan " << scanDefName << " references source " << sourceDefName << " which is not in the source table." << std::endl;
+
+				exit(EXIT_FAILURE);
+			}
+
+			vex_field(T_SOURCE, p, 2, &link, &name, &value, &units);
+			if(value)
+			{
+				if(atoi(value) == 0)
+				{
+					point = false;
+				}
+			}
+			if(point)
+			{
+				if(S->sourceDefName.empty())
+				{
+					S->sourceDefName = sourceDefName;
+				}
+				else
+				{
+					std::cerr << "Vex error! Scan " << scanDefName << " has multiple pointing center sources." << std::endl;
+
+					exit(EXIT_FAILURE);
+				}
+			}
+			vex_field(T_SOURCE, p, 3, &link, &name, &value, &units);
+			if(value)
+			{
+				if(atoi(value) == 0)
+				{
+					corr = false;
+				}
+			}
+			if(corr)
+			{
+				S->phaseCenters.push_back(sourceDefName);
+			}
+		}
+
+		// capture intents
+		for(p = get_scan_intent(L); p; p = get_scan_intent(0))
+		{
+			char *src;
+			char *id;
+
+			vex_field(T_INTENT, p, 1, &link, &name, &src, &units);
+			vex_field(T_INTENT, p, 2, &link, &name, &id, &units);
+			vex_field(T_INTENT, p, 3, &link, &name, &value, &units);
+			S->scanIntent.push_back(VexIntent(src, id, value));
+		}
+
+		if(S->sourceDefName.empty())
+		{
+			std::cerr << "Vex error! Scan " << scanDefName << " has no pointing center sources." << std::endl;
+
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	return nWarn;

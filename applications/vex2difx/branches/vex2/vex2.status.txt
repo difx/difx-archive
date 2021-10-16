@@ -12,7 +12,9 @@ TODO: high priority
   X capture switched power information for use in controlling at sites
   - use switched power in vex2script
 * SCHED:
-  - multiple sources in beam
+  X multiple sources in beam (vexdatamodel)
+  - multiple sources in beam (vex2difx/src)
+    - if any .v2d phase centers supplied, all .vex ones are ignored
   - intents: Calcode and Qual (and calture other intents for possible other use)
 * SOURCE:
   - non-sidereal -- needs fix in the vex code?

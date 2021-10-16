@@ -25,6 +25,8 @@ libvexdatamodel_la_SOURCES = \
 	vex_exper.h \
 	vex_if.cpp \
 	vex_if.h \
+	vex_intent.cpp \
+	vex_intent.h \
 	vexload.cpp \
 	vexload.h \
 	vex_mode.cpp \

@@ -20,39 +20,30 @@
  * SVN properties (DO NOT CHANGE)
  *
  * $Id$
- * $HeadURL:  $
+ * $HeadURL: $
  * $LastChangedRevision$
  * $Author$
  * $LastChangedDate$
  *
  *==========================================================================*/
 
-#ifndef __VEX_THREAD_H__
-#define __VEX_THREAD_H__
+#ifndef __VEX_INTENT_H__
+#define __VEX_INTENT_H__
 
 #include <iostream>
 #include <string>
 
-class VexThread
+class VexIntent
 {
 public:
-	VexThread(int id) : threadId(id), startRecordChan(0), nChan(0), sampRate(0.0), nBit(0), dataBytes(0) {};
+	VexIntent(const char *src, const char *id, const char *val) : identifier(id), value(val), source((src == 0 ? "" : src)) {};
 
-	int threadId;
-	int startRecordChan;	// start record channel number, within datastream
-	int nChan;		// number of channels in this thread
-	double sampRate;	// [samples/sec]
-	std::string threadLink;
-	unsigned int nBit;
-	int dataBytes;		// size of one frame, excluding header
-
+	std::string identifier;		// must be non-blank
+	std::string value;		// must be non-blank
+	std::string source;		// if blank, applies to all sources in scan
 private:
 };
 
-std::ostream& operator << (std::ostream &os, const VexThread &x);
-
-bool operator < (const VexThread &T1, const VexThread &T2);
-
-bool operator == (const VexThread &T, int t);
+std::ostream& operator << (std::ostream &os, const VexIntent &x);
 
 #endif

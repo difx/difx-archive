@@ -33,13 +33,16 @@
 #include <ostream>
 #include <string>
 #include <map>
+#include <vector>
 #include "interval.h"
+#include "vex_intent.h"
 
 class VexScan : public Interval
 {
 public:
 	std::string defName;				// name of this scan
-	std::string intent;				// intent of this scan
+	std::string intent;				// intent of this scan (captured from comment).  This field is deprecated.
+	std::vector<VexIntent> scanIntent;		// "key=value" form of scan intent from vex2 $SCHED intent lines
 
 	std::string modeDefName;
 	std::string sourceDefName;			// pointing center
