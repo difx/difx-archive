@@ -8,16 +8,18 @@ TODO: high priority
   X handle missing Chan_Id field
 * IF: 
   X capture sub_lo_frequencies and sub_lo_sidebands which will be used to set first LO at antennas
-  - use sub_lo_frequencies and sub_lo_sidebands in vex2script
+  - use sub_lo_frequencies and sub_lo_sidebands in vex2script/src
   X capture switched power information for use in controlling at sites
-  - use switched power in vex2script
+  - use switched power in vex2script/src
 * SCHED:
   X multiple sources in beam (vexdatamodel)
   - multiple sources in beam (vex2difx/src)
     - if any .v2d phase centers supplied, all .vex ones are ignored
   - intents: Calcode and Qual (and calture other intents for possible other use)
 * SOURCE:
-  - non-sidereal -- needs fix in the vex code?
+  X non-sidereal 
+  - non-sidereal in vex2difx/src
+  - non-sidereal in vex2script
 
 -------------------------------------------
 

@@ -635,37 +635,71 @@ static int getSources(VexData *V, Vex *v)
 			{
 				if(S->type == VexSource::BSP)
 				{
-		// FIXME: this is not working yet
+					void *p2;
+
 					arg1 = arg2 = 0;
-					vex_field(T_BSP_FILE_NAME, p, 1, &link, &name, &arg1, &units);
-					vex_field(T_BSP_OBJECT_ID, p, 1, &link, &name, &arg2, &units);
+					p2 = get_source_lowl(src, T_BSP_FILE_NAME, v);
+					if(p2)
+					{
+						vex_field(T_BSP_FILE_NAME, p2, 1, &link, &name, &arg1, &units);
+					}
+					p2 = get_source_lowl(src, T_BSP_OBJECT_ID, v);
+					if(p2)
+					{
+						vex_field(T_BSP_OBJECT_ID, p2, 1, &link, &name, &arg2, &units);
+					}
 
 					if(arg1 && arg2)
 					{
 						S->setBSP(arg1, atoi(arg2));
 					}
+					else
+					{
+						std::cerr << "Error: BSP source type, but incomplete parameter set for source " << S->defName << std::endl;
+
+						exit(EXIT_FAILURE);
+					}
 				}
 				else if(S->type == VexSource::TLE)
 				{
-		// FIXME: this is not working yet
+					void *p2;
 					char *arg0 = 0;
 
 					arg1 = arg2 = 0;
-					vex_field(T_TLE0, p, 1, &link, &name, &arg0, &units);
-					vex_field(T_TLE1, p, 1, &link, &name, &arg1, &units);
-					vex_field(T_TLE2, p, 1, &link, &name, &arg2, &units);
+					p2 = get_source_lowl(src, T_TLE0, v);
+					if(p2)
+					{
+						vex_field(T_TLE0, p2, 1, &link, &name, &arg0, &units);
+					}
+					p2 = get_source_lowl(src, T_TLE1, v);
+					if(p2)
+					{
+						vex_field(T_TLE1, p2, 1, &link, &name, &arg1, &units);
+					}
+					p2 = get_source_lowl(src, T_TLE2, v);
+					if(p2)
+					{
+						vex_field(T_TLE2, p2, 1, &link, &name, &arg2, &units);
+					}
 
 					if(arg0)
 					{
 						S->setTLE(0, arg0);
 					}
-					if(arg1)
+					else
 					{
-						S->setTLE(0, arg1);
+						S->setTLE(0, S->defName.c_str());
 					}
-					if(arg2)
+					if(arg1 && arg2)
 					{
-						S->setTLE(0, arg2);
+						S->setTLE(1, arg1);
+						S->setTLE(2, arg2);
+					}
+					else
+					{
+						std::cerr << "Error: TLE source type, but incomplete ephemeris provided for source " << S->defName << std::endl;
+
+						exit(EXIT_FAILURE);
 					}
 				}
 			}
