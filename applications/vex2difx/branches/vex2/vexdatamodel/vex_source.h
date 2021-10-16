@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2015-2020 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2015-2021 by Walter Brisken & Adam Deller               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -42,29 +42,29 @@ public:
 	VexSource() : type(Unsupported), ra(0.0), dec(0.0), calCode(' ') {}
 	bool hasSourceName(const std::string &name) const;
 	bool setSourceType(const char *t1 = 0, const char *t2 = 0, const char *t3 = 0);
-	void setTLE(int lineNum, const char *line);		// lineNum must be 0, 1 or 2
+	void setTLE(int lineNum, const char *line);	// lineNum must be 0, 1 or 2
 	void setBSP(const char *fileName, int objectId);
 
 	enum Type type;
 
-	std::string defName;			// in the "def ... ;" line in Vex
+	std::string defName;				// in the "def ... ;" line in Vex
 	std::string sourceType1;
 	std::string sourceType2;
 	std::string sourceType3;
 
-	std::string tle[3];			// corresponds to rows 0 (20 chars), 1 (69 chars) and 2 (69 chars) of an embedded TLE
+	std::string tle[3];				// corresponds to rows 0 (20 chars), 1 (69 chars) and 2 (69 chars) of an embedded TLE
 
 	std::string bspFile;
 	int bspObject;
 	
-	std::vector<std::string> sourceNames;	// from source_name statements
-	double ra;		// (rad)
-	double dec;		// (rad)
+	std::vector<std::string> sourceNames;		// from source_name statements
+	double ra;					// (rad)
+	double dec;					// (rad)
 	// FIXME: add "ref_coord_frame" value here (e.g., J2000)
 
 	char calCode;
 
-	static const unsigned int MAX_SRCNAME_LENGTH = 12;
+	static const unsigned int MAX_SRCNAME_LENGTH = 16;
 };
 
 std::ostream& operator << (std::ostream &os, const VexSource &x);

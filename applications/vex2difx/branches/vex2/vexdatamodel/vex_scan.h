@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2015-2016 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2015-2021 by Walter Brisken & Adam Deller               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -42,7 +42,8 @@ public:
 	std::string intent;				// intent of this scan
 
 	std::string modeDefName;
-	std::string sourceDefName;	
+	std::string sourceDefName;			// pointing center
+	std::vector<std::string> phaseCenters;		// correlation centers; must include sourceDefName if that is to be correlated
 	std::map<std::string,Interval> stations;
 	std::map<std::string,bool> recordEnable;	// This is true if the drive number is non-zero
 	double size;					// [bytes] approx. correlated size

@@ -708,8 +708,7 @@ static int getSources(VexData *V, Vex *v)
 		p = (char *)get_source_lowl(src, T_REF_COORD_FRAME, v);
 		if(!p)
 		{
-			std::cerr << "Warning: Cannot find ref coord frame for source " << src << std::endl;
-			std::cerr << "Assuming J2000" << std::endl;
+			std::cerr << "Warning: Cannot find ref coord frame for source " << src << " .  Assuming J2000." << std::endl;
 
 			++nWarn;
 		}
@@ -1921,8 +1920,6 @@ static int getModes(VexData *V, Vex *v)
 			std::vector<VexChannel> freqChannels;		// list of channels from relevant $FREQ section
 
 			type = getSetupType(v, antDefName, modeDefName);
-
-			std::cout << "Setup(" << modeDefName << ", " << antDefName << ") has type " << VexSetup::setupTypeName[type] << std::endl;
 
 			if(type == VexSetup::SetupIncomplete)
 			{

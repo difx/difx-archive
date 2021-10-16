@@ -1,0 +1,186 @@
+
+TODO: high priority
+* CLOCK: 
+  X capture second/third derivative terms
+  - use high order terms to populate .input file (data structure is ready for this)
+  - verify high order terms through difx2fits (looks likely) and difx2mark4 (not checked)
+* FREQ:
+  X handle missing Chan_Id field
+* IF: 
+  X capture sub_lo_frequencies and sub_lo_sidebands which will be used to set first LO at antennas
+  - use sub_lo_frequencies and sub_lo_sidebands in vex2script
+  X capture switched power information for use in controlling at sites
+  - use switched power in vex2script
+* SCHED:
+  - multiple sources in beam
+  - intents: Calcode and Qual (and calture other intents for possible other use)
+* SOURCE:
+  - non-sidereal -- needs fix in the vex code?
+
+-------------------------------------------
+
+To do to support sched:
+* High Priority
+  - Multi-source support ($SCHED)
+  - Intents: for existing purposes ($SCHED)
+  - Intents: calcode and qualifier ($SCHED)
+  - LO chain: setting the unused LO (either with $EXTENSION or with $IF sub_lo_*)
+
+* Medium Priority
+  - Intents: pass along usage intents ($SCHED)
+  - 50cm filter bandwidth selector ($EXTENSION or $SCHED Intent)
+  - $EOP: support new parameters
+  - $IF: support switched power
+
+* Low Priority
+  - data_transfer ($SCHED)
+  - $SITE: 1-char codes
+
+* Very Low Priority / as needed
+  - pointing_offset ($SCHED)
+  _ $TAPELOG_OBS: stream selection
+
+-------------------------------------------
+
+$ANTENNA block
+
+* TODO: Capture acceleration
+
+* TODO: Capture pointing_sector
+
+* TODO: Capture nasmyth
+
+
+$BBC block: Unchanged for legacy systems, but somewhat different usage model for DBE-type systems.
+
+* No more changes needed.
+
+
+$BITSTREAMS block: This block was used internally by the JIVE correlator for use Mark 5B recordings with VEX1 and is now included in VEX2 with extensions to allow specification of sample rates and more than one recorder
+
+* Simple case of one recorder / playback is supported.
+
+
+$CLOCK block
+
+* Captured second and third order polynomials
+
+* TODO: Capture field 7 (but wait to get Ed's confirmation that this is peculiar_delay not fmtout2gps)
+  - not critical, can wait
+
+
+$DAS block: Substantial removal of old features and augmentation to allow detailed definitions of equipment, equipment settings, and signal connections between pieces of equipment. The latter capability allows a detailed specification of the signal path and equipment settings of the entire data-acquisition system from the IF to data recording/transmission subsystem.
+
+* Not used.  May be needed in future, but not anticipated to be needed for VNDA.
+
+
+$DATASTREAMS block: New $block in VEX2 to define VDIF data streams.
+
+* Initial code in place.
+
+* TODO implement merged_datastreams
+
+
+$EOP block
+
+* TODO: handle additional terms.  No hurry on this -- can wait
+
+
+$EXPER block
+
+* TODO [high priority]: Capture obs segment
+
+
+$EXTENSIONS block: A new block intended to provide a way to specify site/system-specific information and/or settings that are not otherwise covered in VEX.
+
+
+$FREQ block: The sample_rate parameter has been moved to the $TRACKS block. This is consistent with the sample rates being specified in the $BITSTREAMS and $DATASTREAMS block for those recording formats. This makes the approach in VEX2 consistently that the sample rate and bits per sample and type (real/complex) are always specified in the recording format blocks.
+
+* TODO: handle missing Chan_Id field properly (essentially capture as a non-recording channel)
+
+* TODO: capture channel name and propagate to vex2difx; allow baseband channel selection  [low priority]
+
+
+$IF block: Augmented to specify IF sample rate and remove Physical Connection. Also added optional parameters to further specify IF configuration at station.
+
+* Changed to not look for IF name for Vex2
+* Captured receiver name
+* Captured sub_lo_frequencies and sub_lo_sidebands which will be used to set first LO at antennas
+* Capture digital sample rate [low priority]
+* Capture switched power information for use in controlling at sites
+
+
+$PROCEDURES block: Deprecated.
+
+* Never used
+
+
+$SCHED block: Significantly augmentated to provide new features, particularly intent statements.
+
+* TODO: support multiple sources
+  - One identified as pointing center (used for observing)
+  - One or more identifed as correlation centers
+
+* TODO: capture data_transfer instructions
+
+* TODO: capture scan intents
+  - CAL CODE
+  - QUAL CODE
+
+* TODO: capture pointing offset commands
+
+
+$SITE block
+
+* TODO: capture site_id field 2, for eventual use in difx2mark4  [low priority]
+
+
+$SOURCE block: Augmented to provide new non-sidereal source types.
+
+* TODO: handle non-sidereal sources: capture parameters for optional downstream use
+
+
+$TAPELOG_OBS block
+
+* TODO: handle link to bitstream or datastream [low priority]
+
+
+$TRACKS block: Many obsolete features were removed and the sample_rate parameter for recording Mark IV data was moved here.
+
+* No more changed likely needed
+
+
+$HEAD_POS, $PASS_ORDER, $ROLL blocks were deleted.
+
+* Never used
+
+
+
+
+VEX2 is significantly different from VEX1 in that it allows much more flexibility in the number of back-ends and recorders and how they are interconnected. While VEX2 allows virtually any details of the configuration and wiring from the IF to the recording to be described, it is expected that this flexibility will only be used to specify necessary details of the systems that are not normally static. Few details need to be specified for most systems. In fact it is possible that systems are described adequately by a "virtual" configuration with no details of the physical system in use. What needs to be described is system specific.
+    The following parameters exist in both VEX1 and VEX2, but the VEX2 version is not backward compatible with VEX1:
+
+pointing_sector
+
+* Code is now tolerant of vex2 syntax
+
+chan_def
+
+* Code is now compliant with vex2 syntax
+
+if_def
+
+* Code is now compliant with vex2 syntax
+
+station
+
+* Code was already using the vex2 syntax
+
+sample_rate (changed blocks)
+
+* Code is now compliant with vex2 syntax
+
+fanout_def 
+
+* No changes needed, changed parameter was not used
+
