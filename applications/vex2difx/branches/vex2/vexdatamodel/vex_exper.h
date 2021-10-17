@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2015-2016 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2015-2021 by Walter Brisken & Adam Deller               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -39,6 +39,7 @@ public:
 	VexExper() : Interval(0.0, 1000000.0) {}
 
 	std::string name;
+	std::string segment;	// If empty, then name may have the segment code attached
 };
 
 std::ostream& operator << (std::ostream &os, const VexExper &x);

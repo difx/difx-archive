@@ -20,6 +20,10 @@ TODO: high priority
   X non-sidereal 
   - non-sidereal in vex2difx/src
   - non-sidereal in vex2script
+* EXPER:
+  - vexpeek to print segment code
+  - vex2difx to capture possible separate segment code
+  - vex2script to capture possible separate segment code
 
 -------------------------------------------
 
@@ -92,7 +96,9 @@ $EOP block
 
 $EXPER block
 
-* TODO [high priority]: Capture obs segment
+* Captured obs segment
+
+* TODO: Capture more content from this section (low priority)
 
 
 $EXTENSIONS block: A new block intended to provide a way to specify site/system-specific information and/or settings that are not otherwise covered in VEX.

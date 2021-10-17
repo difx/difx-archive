@@ -714,6 +714,14 @@ void VexData::removeBasebandData(const std::string &antName, int datastreamId)
 void VexData::setExper(const std::string &name, const Interval &experTimeRange)
 {
 	exper.name = name;
+	exper.segment = "";
+	exper.setTimeRange(experTimeRange);
+}
+
+void VexData::setExper(const std::string &name, const std::string &segment, const Interval &experTimeRange)
+{
+	exper.name = name;
+	exper.segment = segment;
 	exper.setTimeRange(experTimeRange);
 }
 

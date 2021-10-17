@@ -2303,12 +2303,15 @@ static int getExper(VexData *V, Vex *v)
 	else
 	{
 		std::string experimentName;
+		std::string experimentSegment;
 		
 		for(Llist *defs=((struct block *)block->ptr)->items; defs; defs=defs->next)
 		{
 			int statement;
 			Llist *lowls, *refs;
 			Exper_name *en;
+			int link, name;
+			char *value, *units;
 			
 			statement = ((Lowl *)defs->ptr)->statement;
 			if(statement == T_COMMENT || statement == T_COMMENT_TRAILING)
@@ -2327,6 +2330,7 @@ static int getExper(VexData *V, Vex *v)
 			en = (Exper_name *)(((Lowl *)lowls->ptr)->item);
 
 			experimentName = en->name;
+			experimentSegment = (en->segment ? en->segment : "");
 
 			lowls = find_lowl(refs, T_EXPER_NOMINAL_START);
 			if(lowls)
@@ -2368,8 +2372,9 @@ static int getExper(VexData *V, Vex *v)
 		}
 
 		Upper(experimentName);
+		Upper(experimentSegment);
 
-		V->setExper(experimentName, Interval(start, stop));
+		V->setExper(experimentName, experimentSegment, Interval(start, stop));
 	}
 
 	return nWarn;

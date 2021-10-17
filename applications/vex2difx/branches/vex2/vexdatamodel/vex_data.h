@@ -184,6 +184,7 @@ public:
 
 	const VexExper *getExper() const { return &exper; }
 	void setExper(const std::string &name, const Interval &experTimeRange);
+	void setExper(const std::string &name, const std::string &segment, const Interval &experTimeRange);
 
 	void setVersion(const std::string &ver);
 	void setVersion(double ver);
