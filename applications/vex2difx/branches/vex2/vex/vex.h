@@ -857,6 +857,18 @@ get_station_def_next();
 char *
 get_station_def(struct vex *vex_in);
 //new
+char *
+get_extensions_def_next();
+
+char *
+get_extensions_def(struct vex *vex_in);
+
+void *
+get_extension_lowl_next();
+
+void *
+get_extension_lowl(char *extensions_in, int statement_in, struct vex *vex_in);
+
 void *
 end_def();
 

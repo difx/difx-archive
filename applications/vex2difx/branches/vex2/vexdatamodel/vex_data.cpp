@@ -607,6 +607,33 @@ void VexData::addEOP(const VexEOP &e)
 	*E = e;
 }
 
+
+VexExtensionSet *VexData::newExtensionSet()
+{
+	extensionsets.push_back(VexExtensionSet());
+
+	return &extensionsets.back();
+}
+
+const VexExtensionSet *VexData::getExtensionSet(unsigned int num) const
+{
+	if(num > nExtensionSet())
+	{
+		return 0;
+	}
+
+	return &extensionsets[num];
+}
+
+void VexData::addExtensionSet(const VexExtensionSet &e)
+{
+	VexExtensionSet *E;
+
+	E = newExtensionSet();
+	*E = e;
+}
+
+
 bool VexData::usesAntenna(const std::string &antennaName) const
 {
 	unsigned int n = nAntenna();
@@ -1553,42 +1580,51 @@ double VexData::getVersion() const
 
 std::ostream& operator << (std::ostream &os, const VexData &x)
 {
-	int n = x.nSource();
+	size_t n;
 
 	os << "Vex " << x.getVersion() << ":" << std::endl;
 	os << *x.getExper() << std::endl;
+
+	n = x.nSource();
 	os << n << " sources:" << std::endl;
-	for(int i = 0; i < n; ++i)
+	for(size_t i = 0; i < n; ++i)
 	{
 		os << *x.getSource(i);
 	}
 
 	n = x.nScan();
 	os << n << " scans:" << std::endl;
-	for(int i = 0; i < n; ++i)
+	for(size_t i = 0; i < n; ++i)
 	{
 		os << *x.getScan(i);
 	}
 
 	n = x.nAntenna();
 	os << n << " antennas:" << std::endl;
-	for(int i = 0; i < n; ++i)
+	for(size_t i = 0; i < n; ++i)
 	{
 		os << *x.getAntenna(i);
 	}
 
 	n = x.nMode();
 	os << n << " modes:" << std::endl;
-	for(int i = 0; i < n; ++i)
+	for(size_t i = 0; i < n; ++i)
 	{
 		os << *x.getMode(i);
 	}
 
 	n = x.nEOP();
 	os << n << " eops:" << std::endl;
-	for(int i = 0; i < n; ++i)
+	for(size_t i = 0; i < n; ++i)
 	{
-		os << "   " << *x.getEOP(i) << std::endl;
+		os << "  " << *x.getEOP(i) << std::endl;
+	}
+
+	n = x.nExtensionSet();
+	os << n << " extensions:" << std::endl;
+	for(size_t i = 0; i < n; ++i)
+	{
+		os << "  " << *x.getExtensionSet(i);
 	}
 
 	return os;

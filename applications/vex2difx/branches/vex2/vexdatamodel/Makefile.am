@@ -23,6 +23,8 @@ libvexdatamodel_la_SOURCES = \
 	vex_eop.h \
 	vex_exper.cpp \
 	vex_exper.h \
+	vex_extension.cpp \
+	vex_extension.h \
 	vex_if.cpp \
 	vex_if.h \
 	vex_intent.cpp \

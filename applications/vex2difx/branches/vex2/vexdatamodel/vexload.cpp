@@ -352,6 +352,47 @@ double vexDate(char *value)
 	return mjd;
 }
 
+static int getExtensions(VexData *V, Vex *v)
+{
+	int nWarn = 0;
+
+	for(char *ext = get_extensions_def(v); ext; ext=get_extensions_def_next())
+	{
+		VexExtensionSet *ES;
+		
+		ES = V->newExtensionSet();
+		ES->defName = ext;
+
+		for(void *p = get_extension_lowl(ext, T_EXTENSION, v); p; p = (char *)get_extension_lowl_next())
+		{
+			char *value, *units;
+			int name, link;
+
+			vex_field(T_EXTENSION, p, 1, &link, &name, &value, &units);
+			if(value)
+			{
+				ES->extension.push_back(VexExtension());
+				VexExtension &E = ES->extension.back();
+				E.owner = value;
+
+				vex_field(T_EXTENSION, p, 2, &link, &name, &value, &units);
+				if(value)
+				{
+					E.name = value;
+				}
+				vex_field(T_EXTENSION, p, 3, &link, &name, &value, &units);
+				if(value)
+				{
+					E.value.push_back(value);
+					E.units.push_back( (units ? units : "") );
+				}
+			}
+		}
+	}
+
+	return nWarn;
+}
+
 static int getAntennas(VexData *V, Vex *v)
 {
 	struct dvalue *r;
@@ -418,10 +459,9 @@ static int getAntennas(VexData *V, Vex *v)
 		r = (struct dvalue *)get_station_lowl(stn, T_SITE_POSITION_EPOCH, B_SITE, v);
 		if(r)
 		{
-			char *value;
-			char *units;
-			int name;
-			int link;
+			char *value, *units;
+			int name, link;
+
 			vex_field(T_SITE_POSITION_EPOCH, (void *)r, 1, &link, &name, &value, &units);
 
 			A->posEpoch = vexDate(value);
@@ -443,10 +483,8 @@ static int getAntennas(VexData *V, Vex *v)
 
 		for(void *c = get_station_lowl(stn, T_CLOCK_EARLY, B_CLOCK, v); c; c = get_station_lowl_next())
 		{
-			char *value;
-			char *units;
-			int name;
-			int link;
+			char *value, *units;
+			int name, link;
 			double mjd;
 
 			vex_field(T_CLOCK_EARLY, c, 1, &link, &name, &value, &units);
@@ -2356,6 +2394,7 @@ VexData *loadVexFile(const std::string &vexFile, unsigned int *numWarnings)
 	V->setDirectory(vexFile.substr(0, vexFile.find_last_of('/')));
 
 	nWarn += getExper(V, v);
+	nWarn += getExtensions(V, v);
 	nWarn += getAntennas(V, v);
 	nWarn += getSources(V, v);
 	nWarn += getScans(V, v);

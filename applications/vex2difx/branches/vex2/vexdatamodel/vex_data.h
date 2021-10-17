@@ -51,6 +51,7 @@
 #include "vex_setup.h"
 #include "vex_mode.h"
 #include "vex_eop.h"
+#include "vex_extension.h"
 
 
 class VexData
@@ -62,6 +63,7 @@ private:
 	std::vector<VexMode> modes;
 	std::vector<VexAntenna> antennas;
 	std::vector<VexEOP> eops;
+	std::vector<VexExtensionSet> extensionsets;
 
 	std::string directory;
 
@@ -78,6 +80,7 @@ public:
 	VexMode *newMode();
 	VexAntenna *newAntenna();
 	VexEOP *newEOP();
+	VexExtensionSet *newExtensionSet();
 	void swapPolarization(const std::string &antName);
 	void setPhaseCalInterval(const std::string &antName, float phaseCalIntervalMHz);
 	void setPhaseCalBase(const std::string &antName, float phaseCalBaseMHz);
@@ -167,6 +170,10 @@ public:
 	const VexEOP *getEOP(unsigned int num) const;
 	const std::vector<VexEOP> &getEOPs() const { return eops; }
 
+	size_t nExtensionSet() const { return extensionsets.size(); }
+	void addExtensionSet(const VexExtensionSet &e);
+	const VexExtensionSet *getExtensionSet(unsigned int num) const;
+
 	bool usesAntenna(const std::string &antennaName) const;
 	bool usesMode(const std::string &modeDefName) const;
 
@@ -181,7 +188,6 @@ public:
 	void setVersion(const std::string &ver);
 	void setVersion(double ver);
 	double getVersion() const;
-
 };
 
 std::ostream& operator << (std::ostream &os, const VexData &x);
