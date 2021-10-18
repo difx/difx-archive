@@ -380,11 +380,14 @@ static int getExtensions(VexData *V, Vex *v)
 				{
 					E.name = value;
 				}
-				vex_field(T_EXTENSION, p, 3, &link, &name, &value, &units);
-				if(value)
+				for(int i = 3; value; ++i)
 				{
-					E.value.push_back(value);
-					E.units.push_back( (units ? units : "") );
+					vex_field(T_EXTENSION, p, i, &link, &name, &value, &units);
+					if(value)
+					{
+						E.value.push_back(value);
+						E.units.push_back( (units ? units : "") );
+					}
 				}
 			}
 		}
@@ -949,7 +952,7 @@ static int getScans(VexData *V, Vex *v)
 		}
 
 		// capture intents
-		for(p = get_scan_intent(L); p; p = get_scan_intent(0))
+		for(p = get_scan_intent(L); p; p = get_scan_intent_next())
 		{
 			char *src;
 			char *id;

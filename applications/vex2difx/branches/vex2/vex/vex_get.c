@@ -120,6 +120,12 @@ ldone:
 }
 /*---------------------------------------------------------------------------*/
 void *
+get_scan_intent_next()
+{
+  return get_scan_intent(NULL);
+}
+/*---------------------------------------------------------------------------*/
+void *
 get_scan_intent(Llist *lowls_scan_in)
 {
   Llist *lowls_this;
