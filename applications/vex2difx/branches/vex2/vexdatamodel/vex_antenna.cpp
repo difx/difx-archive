@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2015-2016 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2015-2021 by Walter Brisken & Adam Deller               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -137,6 +137,10 @@ std::ostream& operator << (std::ostream &os, const VexAntenna &x)
 		"\n  tcalFrequency=" << x.tcalFrequency << std::endl;
 
 	for(std::vector<VexClock>::const_iterator it = x.clocks.begin(); it != x.clocks.end(); ++it)
+	{
+		os << "  " << *it << std::endl;
+	}
+	for(std::vector<VexExtension>::const_iterator it = x.extensions.begin(); it != x.extensions.end(); ++it)
 	{
 		os << "  " << *it << std::endl;
 	}

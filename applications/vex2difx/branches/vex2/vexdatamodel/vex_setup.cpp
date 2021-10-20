@@ -501,6 +501,10 @@ std::ostream& operator << (std::ostream &os, const VexSetup &x)
 	{
 		os << "    Datastream: " << *it << std::endl;
 	}
+	for(std::vector<VexExtension>::const_iterator it = x.extensions.begin(); it != x.extensions.end(); ++it)
+	{
+		os << "    Extension: " << *it << std::endl;
+	}
 
 	return os;
 }

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2015-2016 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2015-2021 by Walter Brisken & Adam Deller               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -38,6 +38,7 @@
 #include "vex_clock.h"
 #include "vex_basebanddata.h"
 #include "vex_networkdata.h"
+#include "vex_extension.h"
 
 bool isVLBA(const std::string &antName);
 
@@ -69,6 +70,7 @@ public:
 	std::vector<VexBasebandData> vsns;	// indexed by vsn number
 	std::vector<VexBasebandData> files;	// indexed by file number
 	std::vector<VexNetworkData> ports;	// indexed by stream number
+	std::vector<VexExtension> extensions;	// extensions linked from $STATION block
 };
 
 bool usesCanonicalVDIF(const std::string &antName);

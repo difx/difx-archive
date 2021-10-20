@@ -608,28 +608,28 @@ void VexData::addEOP(const VexEOP &e)
 }
 
 
-VexExtensionSet *VexData::newExtensionSet()
+VexExtension *VexData::newExtension()
 {
-	extensionsets.push_back(VexExtensionSet());
+	extensions.push_back(VexExtension());
 
-	return &extensionsets.back();
+	return &extensions.back();
 }
 
-const VexExtensionSet *VexData::getExtensionSet(unsigned int num) const
+const VexExtension *VexData::getExtension(unsigned int num) const
 {
-	if(num > nExtensionSet())
+	if(num > nExtension())
 	{
 		return 0;
 	}
 
-	return &extensionsets[num];
+	return &extensions[num];
 }
 
-void VexData::addExtensionSet(const VexExtensionSet &e)
+void VexData::addExtension(const VexExtension &e)
 {
-	VexExtensionSet *E;
+	VexExtension *E;
 
-	E = newExtensionSet();
+	E = newExtension();
 	*E = e;
 }
 
@@ -1628,11 +1628,11 @@ std::ostream& operator << (std::ostream &os, const VexData &x)
 		os << "  " << *x.getEOP(i) << std::endl;
 	}
 
-	n = x.nExtensionSet();
+	n = x.nExtension();
 	os << n << " extensions:" << std::endl;
 	for(size_t i = 0; i < n; ++i)
 	{
-		os << "  " << *x.getExtensionSet(i);
+		os << "  " << *x.getExtension(i) << std::endl;
 	}
 
 	return os;

@@ -63,7 +63,7 @@ private:
 	std::vector<VexMode> modes;
 	std::vector<VexAntenna> antennas;
 	std::vector<VexEOP> eops;
-	std::vector<VexExtensionSet> extensionsets;
+	std::vector<VexExtension> extensions;	// this is for extensions captured in the $GLOBAL block
 
 	std::string directory;
 
@@ -80,7 +80,7 @@ public:
 	VexMode *newMode();
 	VexAntenna *newAntenna();
 	VexEOP *newEOP();
-	VexExtensionSet *newExtensionSet();
+	VexExtension *newExtension();
 	void swapPolarization(const std::string &antName);
 	void setPhaseCalInterval(const std::string &antName, float phaseCalIntervalMHz);
 	void setPhaseCalBase(const std::string &antName, float phaseCalBaseMHz);
@@ -170,9 +170,9 @@ public:
 	const VexEOP *getEOP(unsigned int num) const;
 	const std::vector<VexEOP> &getEOPs() const { return eops; }
 
-	size_t nExtensionSet() const { return extensionsets.size(); }
-	void addExtensionSet(const VexExtensionSet &e);
-	const VexExtensionSet *getExtensionSet(unsigned int num) const;
+	size_t nExtension() const { return extensions.size(); }
+	void addExtension(const VexExtension &e);
+	const VexExtension *getExtension(unsigned int num) const;
 
 	bool usesAntenna(const std::string &antennaName) const;
 	bool usesMode(const std::string &modeDefName) const;

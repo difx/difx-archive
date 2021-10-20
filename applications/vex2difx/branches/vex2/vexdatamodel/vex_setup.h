@@ -37,6 +37,7 @@
 #include "vex_if.h"
 #include "vex_channel.h"
 #include "vex_stream.h"
+#include "vex_extension.h"
 
 class VexSetup	// Container for all antenna-specific settings
 {
@@ -86,6 +87,7 @@ public:
 	std::map<std::string,VexIF> ifs;		// Indexed by name in the vex file, such as IF_A	FIXME: change to vector<> rather than map<> ?
 	std::vector<VexChannel> channels;
 	std::vector<VexStream> streams;			// or "datastreams".  
+	std::vector<VexExtension> extensions;		// extensions referenced from a $MODE block
 };
 
 std::ostream& operator << (std::ostream &os, const VexSetup &x);

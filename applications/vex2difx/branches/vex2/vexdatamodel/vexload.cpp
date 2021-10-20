@@ -352,42 +352,36 @@ double vexDate(char *value)
 	return mjd;
 }
 
+/* Gets extensions from the $GLOBAL block */
 static int getExtensions(VexData *V, Vex *v)
 {
 	int nWarn = 0;
 
-	for(char *ext = get_extensions_def(v); ext; ext=get_extensions_def_next())
+	for(void *p = get_global_lowl(T_EXTENSION, B_EXTENSIONS, v); p; p = get_global_lowl_next())
 	{
-		VexExtensionSet *ES;
-		
-		ES = V->newExtensionSet();
-		ES->defName = ext;
+		char *value, *units;
+		int name, link;
+		VexExtension *E;
 
-		for(void *p = get_extension_lowl(ext, T_EXTENSION, v); p; p = (char *)get_extension_lowl_next())
+		E = V->newExtension();
+
+		vex_field(T_EXTENSION, p, 1, &link, &name, &value, &units);
+		if(value)
 		{
-			char *value, *units;
-			int name, link;
+			E->owner = value;
 
-			vex_field(T_EXTENSION, p, 1, &link, &name, &value, &units);
+			vex_field(T_EXTENSION, p, 2, &link, &name, &value, &units);
 			if(value)
 			{
-				ES->extension.push_back(VexExtension());
-				VexExtension &E = ES->extension.back();
-				E.owner = value;
-
-				vex_field(T_EXTENSION, p, 2, &link, &name, &value, &units);
+				E->name = value;
+			}
+			for(int i = 3; value; ++i)
+			{
+				vex_field(T_EXTENSION, p, i, &link, &name, &value, &units);
 				if(value)
 				{
-					E.name = value;
-				}
-				for(int i = 3; value; ++i)
-				{
-					vex_field(T_EXTENSION, p, i, &link, &name, &value, &units);
-					if(value)
-					{
-						E.value.push_back(value);
-						E.units.push_back( (units ? units : "") );
-					}
+					E->value.push_back(value);
+					E->units.push_back( (units ? units : "") );
 				}
 			}
 		}
@@ -612,6 +606,35 @@ static int getAntennas(VexData *V, Vex *v)
 						
 						// vex has the opposite sign convention, so swap
 						clock.flipSign();
+					}
+				}
+			}
+		}
+		for(void *p = get_station_lowl(stn, T_EXTENSION, B_EXTENSIONS, v); p; p = get_station_lowl_next())
+		{
+			char *value, *units;
+			int name, link;
+			
+			A->extensions.push_back(VexExtension());
+			VexExtension &E = A->extensions.back();
+
+			vex_field(T_EXTENSION, p, 1, &link, &name, &value, &units);
+			if(value)
+			{
+				E.owner = value;
+
+				vex_field(T_EXTENSION, p, 2, &link, &name, &value, &units);
+				if(value)
+				{
+					E.name = value;
+				}
+				for(int i = 3; value; ++i)
+				{
+					vex_field(T_EXTENSION, p, i, &link, &name, &value, &units);
+					if(value)
+					{
+						E.value.push_back(value);
+						E.units.push_back( (units ? units : "") );
 					}
 				}
 			}
@@ -1408,6 +1431,43 @@ int collectFreqChannels(std::vector<VexChannel> &freqChannels, VexSetup &setup, 
 	return nWarn;
 }
 
+static int collectExtensions(VexSetup &setup, Vex *v, const char *antDefName, const char *modeDefName)
+{
+	int nWarn = 0;
+
+	for(void *p = get_mode_lowl(antDefName, modeDefName, T_EXTENSION, B_EXTENSIONS, v); p; p = get_mode_lowl_next())
+	{
+		char *value, *units;
+		int name, link;
+		
+		setup.extensions.push_back(VexExtension());
+		VexExtension &E = setup.extensions.back();
+
+		vex_field(T_EXTENSION, p, 1, &link, &name, &value, &units);
+		if(value)
+		{
+			E.owner = value;
+
+			vex_field(T_EXTENSION, p, 2, &link, &name, &value, &units);
+			if(value)
+			{
+				E.name = value;
+			}
+			for(int i = 3; value; ++i)
+			{
+				vex_field(T_EXTENSION, p, i, &link, &name, &value, &units);
+				if(value)
+				{
+					E.value.push_back(value);
+					E.units.push_back( (units ? units : "") );
+				}
+			}
+		}
+	}
+
+	return nWarn;
+}
+
 VexChannel *getVexChannelByLink(std::vector<VexChannel> &freqChannels, const std::string chanLink)
 {
 	for(std::vector<VexChannel>::iterator it = freqChannels.begin(); it != freqChannels.end(); ++it)
@@ -2074,6 +2134,7 @@ static int getModes(VexData *V, Vex *v)
 			nWarn += collectIFInfo(setup, V, v, antDefName, modeDefName);
 			nWarn += collectFreqChannels(freqChannels, setup, mode, v, antDefName, modeDefName);
 			nWarn += collectPcalInfo(pcalMap, V, v, antDefName, modeDefName);
+			nWarn += collectExtensions(setup, v, antDefName, modeDefName);
 
 			switch(type)
 			{
