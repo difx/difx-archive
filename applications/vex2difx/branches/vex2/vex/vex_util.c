@@ -33,11 +33,16 @@ extern struct vex *vex_ptr;
 
 struct vex_version vex_version;
 
-#define NEWSTRUCT(PTR,TYPE)	struct TYPE *PTR;\
+#define NEWSTRUCTDECLARE(PTR, TYPE) \
+            struct TYPE *PTR
+#define NEWSTRUCTALLOC(PTR,TYPE) \
 			PTR=(struct TYPE *) malloc(sizeof(struct TYPE));\
 			if(PTR == NULL) {\
-			fprintf(stderr,"out of memory allocating TYPE\n");\
+			    fprintf(stderr,"out of memory allocating type %s\n", #TYPE);\
 			exit(1);}
+#define NEWSTRUCT(PTR,TYPE)	\
+            NEWSTRUCTDECLARE(PTR, TYPE);\
+            NEWSTRUCTALLOC(PTR, TYPE)
 
 static int
 get_chan_def_field(Chan_def *chan_def,int n,int *link,int *name, 
@@ -217,7 +222,7 @@ static int
 get_datum_field(Datum *datum,int n,int *link,
 			  int *name, char **value, char **units);
 static int
-get_vector_field(Vector *vector,int n,int *link,
+get_vector_field(c_Vector *vector,int n,int *link,
 			  int *name, char **value, char **units);
 static int
 get_vsn_field(Vsn *vsn,int n,int *link,
@@ -236,6 +241,15 @@ get_vlba_frmtr_sys_trk_field(Vlba_frmtr_sys_trk *vlba_frmtr_sys_trk,int n,
 			     int *link, int *name, char **value, char **units);
 static int
 get_s2_data_source_field(S2_data_source *s2_data_source,int n,int *link,
+			  int *name, char **value, char **units);
+static int
+get_format_def_field(Format_def *format_def,int n,int *link,
+			  int *name, char **value, char **units);
+static int
+get_thread_def_field(Thread_def *thread_def,int n,int *link,
+			  int *name, char **value, char **units);
+static int
+get_channel_def_field(Channel_def *channel_def,int n,int *link,
 			  int *name, char **value, char **units);
 static int
 get_dvalue_field(Dvalue *dvalue,int n,int *link,int *name, char **value,
@@ -293,6 +307,7 @@ static struct {
   {"SOURCE", B_SOURCE},
   {"TAPELOG_OBS", B_TAPELOG_OBS},
   {"TRACKS", B_TRACKS},
+  {"THREADS", B_THREADS},
   {NULL, 0}
 };
 static  struct {
@@ -466,6 +481,11 @@ static  struct {
   
   {"fanin_def", T_FANIN_DEF},
   {"fanout_def", T_FANOUT_DEF},
+
+  {"format", T_FORMAT_DEF},
+  {"thread", T_THREAD_DEF},
+  {"channel", T_CHANNEL_DEF},
+
   {"track_frame_format", T_TRACK_FRAME_FORMAT},
   {"data_modulation", T_DATA_MODULATION},
   {"VLBA_frmtr_sys_trk", T_VLBA_FRMTR_SYS_TRK},
@@ -569,6 +589,8 @@ struct chan_def  *make_chan_def(char *band_id, struct dvalue *sky_freq,
 				char *chan_id, char *bbc_id,
 				char *pcal_id, struct llist *states)
 {
+  NEWSTRUCTDECLARE(new, chan_def);
+
   if(vex_version.lessthan2) {
       if(chan_id == NULL ||
       (states !=NULL && ((struct dvalue *) (states->ptr))->value == NULL)
@@ -577,7 +599,7 @@ struct chan_def  *make_chan_def(char *band_id, struct dvalue *sky_freq,
       }
   }
 
-  NEWSTRUCT(new,chan_def);
+  NEWSTRUCTALLOC(new,chan_def);
 
   new->band_id=band_id;
   new->sky_freq=sky_freq;
@@ -639,13 +661,15 @@ struct station  *make_station(char *key, struct dvalue *start,
 			      struct dvalue *stop, struct dvalue *start_pos,
 			      char *pass, char *sector, struct llist *drives)
 {
+  NEWSTRUCTDECLARE(new,station);
+
   if(pass != NULL && strlen(pass) != 0 ) {
    if(!vex_version.lessthan2) {
     yyerror("VEX1 station present");
    }
   }
 
-  NEWSTRUCT(new,station);
+  NEWSTRUCTALLOC(new,station);
 
   new->key=key;
   new->start=start;
@@ -1061,6 +1085,8 @@ struct if_def *make_if_def(char *if_id, char *physical, char *polar,
 			   struct dvalue *pcal_base,
                struct dvalue *samp_rate)
 {
+  NEWSTRUCTDECLARE(new,if_def);
+
   if(physical == NULL || strlen(physical) == 0 ) {
     if(vex_version.lessthan2) {
       yyerror("VEX2 if_def present");
@@ -1069,7 +1095,7 @@ struct if_def *make_if_def(char *if_id, char *physical, char *polar,
     yyerror("VEX1 if_def present");
   }
 
-  NEWSTRUCT(new,if_def);
+  NEWSTRUCTALLOC(new,if_def);
 
   new->if_id=if_id;
   new->physical=physical;
@@ -1301,7 +1327,7 @@ struct datum *make_datum(char *time, char *ra, char *dec,
 
   return new;
 }
-struct vector *make_vector(char *time,
+struct c_vector *make_vector(char *time,
                      struct dvalue *x,
                      struct dvalue *y,
                      struct dvalue *z,
@@ -1309,7 +1335,7 @@ struct vector *make_vector(char *time,
                      struct dvalue *vy,
                      struct dvalue *vz)
 {
-  NEWSTRUCT(new,vector);
+  NEWSTRUCT(new,c_vector);
 
   new->time=time;
   new->x=x;
@@ -1359,6 +1385,7 @@ struct fanout_def *make_fanout_def(char *subpass, struct llist *bitstream,
 
   return new;
 }
+
 struct vlba_frmtr_sys_trk *make_vlba_frmtr_sys_trk(struct dvalue *output,
 						   char *use,
 						   struct dvalue *start,
@@ -1385,6 +1412,57 @@ struct s2_data_source *make_s2_data_source(char *source,char *bbcx_id,
   return new;
 }
     
+struct format_def* make_format_def(char* format,
+				   char* extendedformat,
+				   struct dvalue* datarate)
+{
+  NEWSTRUCT(new,format_def);
+
+  new->format=format;
+  new->extendedformat=extendedformat;
+  new->datarate=datarate;
+
+  return new;
+}
+
+struct thread_def* make_thread_def(
+           struct dvalue* threadnr,
+				   struct dvalue* backendnr,
+				   struct dvalue* recordernr,
+				   struct dvalue* datarate,
+				   struct dvalue* numchan,
+				   struct dvalue* bitspersample,
+				   char*          format,
+				   char*          extendedformat,
+				   struct dvalue* bytesperpacket)
+{
+  NEWSTRUCT(new,thread_def);
+
+  new->threadnr = threadnr;
+  new->backendnr = backendnr;
+  new->recordernr = recordernr;
+  new->datarate = datarate;
+  new->numchan = numchan;
+  new->bitspersample = bitspersample;
+  new->format=format;
+  new->extendedformat=extendedformat;
+  new->bytesperpacket=bytesperpacket;
+
+  return new;
+}
+
+struct channel_def* make_channel_def(char* chanid,
+            struct dvalue* threadnr,
+            struct dvalue* channelnr)
+{
+  NEWSTRUCT(new,channel_def);
+
+  new->chanid = chanid;
+  new->threadnr = threadnr;
+  new->channelnr = channelnr;
+
+  return new;
+}
 
 int
 lowl2int(char *lowl)
@@ -1741,6 +1819,15 @@ char **units)
     break;
   case T_S2_DATA_SOURCE:
     ierr=get_s2_data_source_field(ptr,n,link,name,value,units);
+    break;
+  case T_FORMAT_DEF:
+    ierr=get_format_def_field(ptr,n,link,name,value,units);
+    break;
+  case T_THREAD_DEF:
+    ierr=get_thread_def_field(ptr,n,link,name,value,units);
+    break;
+  case T_CHANNEL_DEF:
+    ierr=get_channel_def_field(ptr,n,link,name,value,units);
     break;
   case T_LITERAL:
     ierr=get_svalue_list_field(ptr,n,link,name,value,units);
@@ -2338,8 +2425,7 @@ get_clock_early_field(Clock_early *clock_early,int n,int *link,
     break;
   case 4:
     *name=0;
-    if(clock_early->rate == NULL)
-    {
+    if(clock_early->rate == NULL) {
       if(clock_early->peculiar == NULL)
 	return -1;
       else
@@ -2350,8 +2436,7 @@ get_clock_early_field(Clock_early *clock_early,int n,int *link,
     break;
   case 5:
     *name=0;
-    if(clock_early->accel == NULL)
-    {
+    if(clock_early->accel == NULL) {
       if(clock_early->peculiar == NULL)
 	return -1;
       else
@@ -2362,8 +2447,7 @@ get_clock_early_field(Clock_early *clock_early,int n,int *link,
     break;
   case 6:
     *name=0;
-    if(clock_early->jerk == NULL)
-    {
+    if(clock_early->jerk == NULL) {
       if(clock_early->peculiar == NULL)
 	return -1;
       else
@@ -2899,8 +2983,7 @@ get_scheduling_software_field(Scheduling_software *scheduling_software,
     *value=scheduling_software->program;
     break;
   case 2:
-    if(scheduling_software->version==NULL)
-    {
+    if(scheduling_software->version==NULL) {
       if(scheduling_software->epoch==NULL)
 	return -1;
       else
@@ -2933,8 +3016,7 @@ get_vex_file_writer_field(Vex_file_writer *vex_file_writer,
     *value=vex_file_writer->program;
     break;
   case 2:
-    if(vex_file_writer->version==NULL)
-    {
+    if(vex_file_writer->version==NULL) {
       if(vex_file_writer->epoch==NULL)
 	return -1;
       else
@@ -3643,7 +3725,7 @@ get_datum_field(Datum *datum,int n,int *link,
   return 0;
 }
 int
-get_vector_field(Vector *vector,int n,int *link,
+get_vector_field(c_Vector *vector,int n,int *link,
 			  int *name, char **value, char **units)
 {
   *link=0;
@@ -3925,6 +4007,126 @@ get_s2_data_source_field(S2_data_source *s2_data_source,int n,int *link,
       return -1;
     *value=s2_data_source->bbcy_id;
     *link=1;
+    break;
+  default:
+    return -1;
+  }
+  return 0;
+}
+static int
+get_format_def_field(Format_def *format_def,int n,int *link,
+			  int *name, char **value, char **units)
+{
+  *link=0;
+  *name=1;
+  *units=NULL;
+  *value=NULL;
+
+  switch(n) {
+  case 1:
+    *value=format_def->format;
+    break;
+  case 2:
+    *value=format_def->extendedformat;
+    break;
+  case 3:
+    if(format_def->datarate==NULL)
+      return 0;
+    *value=format_def->datarate->value;
+    *units=format_def->datarate->units;
+    *name=0;
+    break;
+  default:
+    return -1;
+  }
+  return 0;
+}
+static int
+get_thread_def_field(Thread_def *thread_def,int n,int *link,
+			  int *name, char **value, char **units)
+{
+  *link=0;
+  *name=1;
+  *units=NULL;
+  *value=NULL;
+
+  switch(n) {
+  case 1:
+    *value=thread_def->threadnr->value;
+    *units=thread_def->threadnr->units;
+    *name=0;
+    break;
+  case 2:
+    *value=thread_def->backendnr->value;
+    *units=thread_def->backendnr->units;
+    *name=0;
+    break;
+  case 3:
+    *value=thread_def->recordernr->value;
+    *units=thread_def->recordernr->units;
+    *name=0;
+    break;
+  case 4:
+    *value=thread_def->datarate->value;
+    *units=thread_def->datarate->units;
+    *name=0;
+    break;
+  case 5:
+    *value=thread_def->numchan->value;
+    *units=thread_def->numchan->units;
+    *name=0;
+    break;
+  case 6:
+    *value=thread_def->bitspersample->value;
+    *units=thread_def->bitspersample->units;
+    *name=0;
+    break;
+  case 7:
+    if(thread_def->format == NULL)
+      return 0;
+    *value=thread_def->format;
+    break;
+  case 8:
+    if(thread_def->extendedformat == NULL)
+      return 0;
+    *value=thread_def->extendedformat;
+    break;
+  case 9:
+    if(thread_def->bytesperpacket == NULL)
+      return 0;
+    *value=thread_def->extendedformat;
+    *value=thread_def->bytesperpacket->value;
+    *units=thread_def->bytesperpacket->units;
+    *name=0;
+    break;
+  default:
+    return -1;
+  }
+  return 0;
+}
+static int
+get_channel_def_field(Channel_def *channel_def,int n,int *link,
+			  int *name, char **value, char **units)
+{
+  *link=0;
+  *name=1;
+  *units=NULL;
+  *value=NULL;
+
+  switch(n) {
+  case 1:
+    *value=channel_def->chanid;
+    *link=1;
+    break;
+  case 2:
+    *value=channel_def->threadnr->value;
+    *units=channel_def->threadnr->units;
+    *name=0;
+    break;
+  case 3:
+    *value=channel_def->channelnr->value;
+    *units=channel_def->channelnr->units;
+    *name=0;
     break;
   default:
     return -1;

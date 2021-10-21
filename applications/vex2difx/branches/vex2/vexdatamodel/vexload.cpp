@@ -2374,8 +2374,6 @@ static int getExper(VexData *V, Vex *v)
 			int statement;
 			Llist *lowls, *refs;
 			Exper_name *en;
-			int link, name;
-			char *value, *units;
 			
 			statement = ((Lowl *)defs->ptr)->statement;
 			if(statement == T_COMMENT || statement == T_COMMENT_TRAILING)

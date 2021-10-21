@@ -522,127 +522,6 @@ lstate:
   return ((Def *)((Lowl *)defs_this->ptr)->item)->name;  
 }
 /*---------------------------------------------------------------------------*/
-char *
-get_extensions_def_next()
-{
-  return get_extensions_def(NULL);
-}
-/*---------------------------------------------------------------------------*/
-char *
-get_extensions_def(struct vex *vex_in)
-{
-  static Llist *defs;
-
-  Llist *blocks, *defs_this;
-  
-  static struct vex *vex;
-  static int state=0;
-
-  if(vex_in==NULL && !state)
-     return NULL;
-
-  if(vex_in!=NULL) {
-    vex=vex_in;
-    state=0;
-  }
-  if(state)
-    goto lstate;
-
-  /* find $EXTENSION block */
-
-  blocks=find_block(B_EXTENSIONS, vex);
-  if(blocks==NULL)
-    return NULL;
-
-  defs=((struct block *)blocks->ptr)->items;
- 
-  /* find a station */
-
-  state=TRUE;
-
-lstate:
-  defs=find_next_def(defs);
-
-  if(defs==NULL) {
-    state=FALSE;
-    return NULL;
-  }
-
-  defs_this=defs;
-  defs=defs->next;
-
-  return ((Def *)((Lowl *)defs_this->ptr)->item)->name;  
-}
-/*---------------------------------------------------------------------------*/
-void *
-get_extension_lowl_next()
-{
-  return get_extension_lowl(NULL,0,NULL);
-}
-/*---------------------------------------------------------------------------*/
-void *
-get_extension_lowl(char *extensions_in, int statement_in, struct vex *vex_in)
-{
-
-  static Llist *blocks;
-  static Llist *lowls;
-
-  Llist *lowls_this;
-  Llist *defs;
-
-  static char *extensions;
-  static struct vex *vex;
-  static int statement;
-
-  static int state=FALSE;
-
-  if(extensions_in==NULL && !state)
-     return NULL;
-
-  if(extensions_in!=NULL) {
-    extensions=extensions_in;
-    vex=vex_in;
-    statement=statement_in;
-    state=FALSE;
-  }
-
-  if(state)
-    goto lstate;
- 
-  /* find $SOURCE block */
-
-  blocks=find_block(B_EXTENSIONS, vex);
-  if(blocks==NULL)
-    goto ldone;
-
-  defs=((struct block *)blocks->ptr)->items;
- 
-  /* find this def */
-
-  defs=find_def(defs,extensions);
-  if (defs==NULL)
-    goto ldone;
-
-  lowls=((Def *)((Lowl *)defs->ptr)->item)->refs;
-
-lstate:
-  lowls=find_lowl(lowls,statement);
-  if(lowls==NULL)
-    goto lend;
-
-  state=TRUE;
-
-  lowls_this=lowls;
-  lowls=lowls->next;
-  return ((Lowl *)lowls_this->ptr)->item;
-
-lend:
-
-ldone:
-  state=FALSE;
-  return NULL;
-}
-/*---------------------------------------------------------------------------*/
 void *
 get_all_lowl_next()
 {
@@ -1337,7 +1216,7 @@ get_a_literal(struct llist *literals, char **text)
   return literals->next;
 }
 /*---------------------------------------------------------------------------*/
-void *
+void
 get_all_literals(struct llist *literals, char *array[])
 {
   int i=0;
@@ -1358,8 +1237,6 @@ get_all_literals(struct llist *literals, char *array[])
     i++;
     literals = get_literal_lowl_next();
   }
-
-  return 0;
 }
 /*---------------------------------------------------------------------------*/
 void *
