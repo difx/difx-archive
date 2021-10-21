@@ -206,6 +206,7 @@ create_vex(char *str) /* str = filename) */
   scan_flag =0;
   in_def_flag=0;
   in_scan_flag=0;
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -252,6 +253,7 @@ create_block(char *str)
   block_id=(char *)strdup(str);
   blk=block2int(block_id);
   block_flag = 1;
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -271,6 +273,7 @@ create_def(char *str)
   def_str=(char *)strdup(str);
   def_flag = 1;
   in_def_flag= 1;
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -286,7 +289,9 @@ end_def()
   qref_flag=0;
   def_str=NULL;
   in_def_flag = 0;
+  return(NULL);
 }
+
 /*-------------------------------------------------------------------*/
 void *
 create_ref(char *str, char *str2)
@@ -301,6 +306,7 @@ create_ref(char *str, char *str2)
 		       keyword,
 		       NULL)));
   qref_flag = 1;
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -308,6 +314,7 @@ create_qref(char *str, char *str2)
 {
   string[0]=(char *)strdup(str);
   string[1]=(char *)strdup(str2);
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -333,6 +340,7 @@ create_qref_qualifier(char *str)
                            q_list)));
       q_list=NULL;
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -347,6 +355,7 @@ create_external_ref(char *str, char *str2, char *str3)
 				 make_external(ext_file,
                                  block2int(primitive),
                                  keyword)));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -360,6 +369,7 @@ create_version(char *str)
 			  make_lowl(T_VEX_REV, 
 			  make_dvalue(version_number,NULL)));
   b_list=NULL;
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -382,6 +392,7 @@ create_scan(char *str)
   scan_str=(char *)strdup(str);
   scan_flag = 1;
   in_scan_flag = 1;
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -399,6 +410,7 @@ end_scan()
   q_list=NULL;
   scan_str=NULL;
   in_scan_flag = 0;
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -411,7 +423,7 @@ create_comment(char *str, char *str2)
 
   if(!block_flag)
     list=&version_list;
-  else if(in_def_flag||in_scan_flag||!def_flag&&!scan_flag) {
+  else if(in_def_flag||in_scan_flag||(!def_flag&&!scan_flag)) {
     list=&qref_list;
     qref_flag = 1;
   } else
@@ -428,6 +440,7 @@ create_comment(char *str, char *str2)
 				     comment));
     }
 
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 /* SCHEDULE block builders                                           */
@@ -439,6 +452,7 @@ create_start(char *str)
 
   scan_start=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_START,scan_start));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -448,6 +462,7 @@ create_mode(char *str)
 
   scan_mode=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_MODE,scan_mode));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -457,6 +472,7 @@ create_source(char *str)
 
   scan_source=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_SOURCE,scan_source));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -474,6 +490,7 @@ create_station(char *str, char *str2, char *str3, char *str4,
   string[7] = (char *)strdup(str8);
   string[8] = (char *)strdup(str9);
   q_list=NULL;
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -519,7 +536,7 @@ create_station_drive_list(char *str)
 				     q_list)));
       q_list=NULL;
     }
-
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -555,6 +572,7 @@ create_data_transfer(char *str, char *str2, char *str3, char *str4,
 			             data_transfer_stop_units),
 			 data_transfer_options)));
   q_list=NULL;
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 /* ANTENNA block builders                                            */
@@ -577,6 +595,7 @@ create_antenna_diam(char *str, char *str2)
       qref_list = add_list(qref_list,make_lowl(T_ANTENNA_DIAM,
 				     make_dvalue(diam_value,diam_units)));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -598,6 +617,7 @@ create_axis_type(char *str, char *str2)
 				     make_axis_type(axis_type_az,
 				     axis_type_el)));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -619,6 +639,7 @@ create_axis_offset(char *str, char *str2)
 				     make_dvalue(axis_offset_value,
                                      axis_offset_units)));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -651,7 +672,7 @@ create_antenna_motion(char *str, char *str2, char *str3, char *str4,
 				     make_dvalue(slew_value,slew_units),
 				     make_dvalue(settle_value,settle_units))));
   }
-
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -713,6 +734,7 @@ create_pointing_sector(char *str, char *str2, char *str3, char *str4,
 				     make_dvalue(hilimit2_value,
 						 hilimit2_units))));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 /* BBC block builders                                                */
@@ -740,6 +762,7 @@ create_bbc_assign(char *str, char *str2, char *str3)
 				   make_dvalue(bbc_physical_id,NULL),
 				   bbc_if_id)));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 /* CLOCK block builders                                              */
@@ -812,6 +835,7 @@ create_clock(char *str, char *str2, char *str3, char *str4, char *str5)
 				         make_dvalue(rate,NULL))));
 	}
     }  
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 /* DAS block builders                                                */
@@ -831,6 +855,7 @@ create_record_transport_type(char *str)
       s1=(char *)strdup(str);
       qref_list = add_list(qref_list,make_lowl(T_RECORD_TRANSPORT_TYPE,s1));
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -848,6 +873,7 @@ create_electronics_rack_type(char *str)
       s1=(char *)strdup(str);
       qref_list = add_list(qref_list,make_lowl(T_ELECTRONICS_RACK_TYPE,s1));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -866,6 +892,7 @@ create_number_drives(char *str)
       qref_list = add_list(qref_list,make_lowl(T_NUMBER_DRIVES,
 		  		     make_dvalue(s1,NULL)));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -889,6 +916,7 @@ create_headstack(char *str, char *str2, char *str3)
 				     rw,
 				     make_dvalue(drive_offset,NULL))));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -908,6 +936,7 @@ create_record_density(char *str, char *str2)
       qref_list = add_list(qref_list,make_lowl(T_RECORD_DENSITY,
 					       make_dvalue(type,speed)));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -942,6 +971,7 @@ create_tape_length(char *str, char *str2, char *str3, char *str4)
                                      speed,
 				     make_dvalue(tape,NULL))));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -960,6 +990,7 @@ create_recording_system_id(char *str)
       qref_list = add_list(qref_list,make_lowl(T_RECORDING_SYSTEM_ID,
 		 		     make_dvalue(s1,NULL)));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -1012,6 +1043,7 @@ create_tape_motion(char *str, char *str2, char *str3, char *str4,
 				         make_dvalue(s6,s7))));
 	}
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -1029,6 +1061,7 @@ create_tape_control(char *str)
       s1=(char *)strdup(str);
       qref_list = add_list(qref_list,make_lowl(T_TAPE_CONTROL,s1));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 /* EOP block builders                                                */
@@ -1051,6 +1084,7 @@ create_tai_utc(char *str, char *str2)
       qref_list = add_list(qref_list,make_lowl(T_TAI_UTC,
 				     make_dvalue(s1,s2)));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -1071,6 +1105,7 @@ create_a1_tai(char *str, char *str2)
       qref_list = add_list(qref_list,make_lowl(T_A1_TAI,
 				     make_dvalue(s1,s2)));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -1088,6 +1123,7 @@ create_eop_ref_epoch(char *str)
       s1=(char *)strdup(str);
       qref_list = add_list(qref_list,make_lowl(T_EOP_REF_EPOCH,s1));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -1106,6 +1142,7 @@ create_num_eop_points(char *str)
       qref_list = add_list(qref_list,make_lowl(T_NUM_EOP_POINTS,
 				     make_dvalue(s1,NULL)));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -1126,6 +1163,7 @@ create_eop_interval(char *str, char *str2)
       qref_list = add_list(qref_list,make_lowl(T_EOP_INTERVAL,
 				     make_dvalue(s1,s2)));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -1146,6 +1184,7 @@ create_ut1_utc(char *str, char *str2)
       qref_list = add_list(qref_list,make_lowl(T_UT1_UTC, q_list));
       q_list=NULL;
     }
+  return(NULL);
 } 
 /*-------------------------------------------------------------------*/
 void *
@@ -1166,6 +1205,7 @@ create_x_wobble(char *str, char *str2)
       qref_list = add_list(qref_list,make_lowl(T_X_WOBBLE, q_list));
       q_list=NULL;
     }
+  return(NULL);
 } 
 /*-------------------------------------------------------------------*/
 void *
@@ -1186,6 +1226,7 @@ create_y_wobble(char *str, char *str2)
       qref_list = add_list(qref_list,make_lowl(T_Y_WOBBLE, q_list));
       q_list=NULL;
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -1203,6 +1244,7 @@ create_nut_ref_epoch(char *str)
       s1=(char *)strdup(str);
       qref_list = add_list(qref_list,make_lowl(T_NUT_REF_EPOCH,s1));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -1221,6 +1263,7 @@ create_num_nut_points(char *str)
       qref_list = add_list(qref_list,make_lowl(T_NUM_NUT_POINTS,
 				     make_dvalue(s1,NULL)));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -1241,6 +1284,7 @@ create_nut_interval(char *str, char *str2)
       qref_list = add_list(qref_list,make_lowl(T_NUT_INTERVAL,
 				     make_dvalue(s1,s2)));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -1260,6 +1304,7 @@ create_delta_psi(char *str, char *str2)
       qref_list = add_list(qref_list,make_lowl(T_DELTA_PSI, q_list));
       q_list=NULL;
     }
+  return(NULL);
 } 
 /*-------------------------------------------------------------------*/
 void *
@@ -1279,6 +1324,7 @@ create_delta_eps(char *str, char *str2)
       qref_list = add_list(qref_list,make_lowl(T_DELTA_EPS, q_list));
       q_list=NULL;
     }
+  return(NULL);
 } 
 /*-------------------------------------------------------------------*/
 void *
@@ -1296,6 +1342,7 @@ create_nut_model(char *str)
       s1=(char *)strdup(str);
       qref_list = add_list(qref_list,make_lowl(T_NUT_MODEL,s1));
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 /* EXPER block builders                                              */
@@ -1315,6 +1362,7 @@ create_exper_name(char *str)
       s1=(char *)strdup(str);
       qref_list = add_list(qref_list,make_lowl(T_EXPER_NAME,s1));
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1333,6 +1381,7 @@ create_exper_num(char *str)
       qref_list = add_list(qref_list,make_lowl(T_EXPER_NUM,
                                      make_dvalue(s1,NULL)));
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1350,6 +1399,7 @@ create_exper_description(char *str)
       s1=(char *)strdup(str);
       qref_list = add_list(qref_list,make_lowl(T_EXPER_DESCRIPTION,s1));
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1367,6 +1417,7 @@ create_exper_nominal_start(char *str)
       s1=(char *)strdup(str);
       qref_list = add_list(qref_list,make_lowl(T_EXPER_NOMINAL_START,s1));
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1384,6 +1435,7 @@ create_exper_nominal_stop(char *str)
       s1=(char *)strdup(str);
       qref_list = add_list(qref_list,make_lowl(T_EXPER_NOMINAL_STOP,s1));
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1401,6 +1453,7 @@ create_pi_name(char *str)
       s1=(char *)strdup(str);
       qref_list = add_list(qref_list,make_lowl(T_PI_NAME,s1));
     }
+  return(NULL);
 }
 /*---------------------------------------------------------------------------*/
 void *
@@ -1418,6 +1471,7 @@ create_pi_email(char *str)
       s1=(char *)strdup(str);
       qref_list = add_list(qref_list,make_lowl(T_PI_EMAIL,s1));
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1435,6 +1489,7 @@ create_contact_name(char *str)
       s1=(char *)strdup(str);
       qref_list = add_list(qref_list,make_lowl(T_CONTACT_NAME,s1));
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1452,6 +1507,7 @@ create_contact_email(char *str)
       s1=(char *)strdup(str);
       qref_list = add_list(qref_list,make_lowl(T_CONTACT_EMAIL,s1));
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1469,6 +1525,7 @@ create_scheduler_name(char *str)
       s1=(char *)strdup(str);
       qref_list = add_list(qref_list,make_lowl(T_SCHEDULER_NAME,s1));
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1486,6 +1543,7 @@ create_scheduler_email(char *str)
       s1=(char *)strdup(str);
       qref_list = add_list(qref_list,make_lowl(T_SCHEDULER_EMAIL,s1));
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1503,6 +1561,7 @@ create_target_correlator(char *str)
       s1=(char *)strdup(str);
       qref_list = add_list(qref_list,make_lowl(T_TARGET_CORRELATOR,s1));
     }
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 /* FREQ block builders                                               */
@@ -1528,6 +1587,7 @@ create_chan_def(char *str, char *str2, char *str3, char *str4,
   string[6] = (char *)strdup(str7);
   string[7] = (char *)strdup(str8);
   string[8] = (char *)strdup(str9);
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1582,6 +1642,7 @@ create_chan_def_states(char *str)
 	  q_list=NULL;
 	}
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1602,6 +1663,7 @@ create_sample_rate(char *str, char *str2)
       qref_list = add_list(qref_list,make_lowl(T_SAMPLE_RATE,
 				     make_dvalue(s1,s2)));
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1620,13 +1682,14 @@ create_bits_per_sample(char *str)
       qref_list = add_list(qref_list,make_lowl(T_BITS_PER_SAMPLE,
 				     make_dvalue(s1,NULL)));
     }
-
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
 create_switching_cycle(char *str)
 {
   string[0] = (char *)strdup(str);
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1649,6 +1712,7 @@ create_cycle(char *str, char *str2)
 			  	     q_list)));
       q_list=NULL;
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 /* HEAD_POS block builders                                           */
@@ -1657,6 +1721,7 @@ void *
 create_headstack_reference(char *str)
 {
   string[0] = (char *)strdup(str);
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1681,6 +1746,7 @@ create_headstack_pos(char *str, char *str2)
 				     q_list)));
       q_list=NULL;
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 /* IF block builders                                                 */
@@ -1751,6 +1817,7 @@ create_if_def(char *str, char *str2, char *str3, char *str4,
 				     make_dvalue(s9,s10),
 					s11)));
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 /* PASS_ORDER block builders                                         */
@@ -1771,6 +1838,7 @@ create_pass_order(char *str)
       qref_list = add_list(qref_list,make_lowl(T_PASS_ORDER, q_list));
       q_list=NULL;
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1789,6 +1857,7 @@ create_s2_group_order(char *str)
       qref_list = add_list(qref_list,make_lowl(T_S2_GROUP_ORDER, q_list));
       q_list=NULL;
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 /* PHASE_CAL_DETECT block builders                                   */
@@ -1798,6 +1867,7 @@ void *
 create_phase_cal_detect(char *str)
 {
   string[0] = (char *)strdup(str);
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1819,6 +1889,7 @@ create_phase_cal_detect_list(char *str)
 				     q_list)));
       q_list=NULL;
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 /* PROCEDURE block builders                                          */
@@ -1832,6 +1903,7 @@ create_tape_change(char *str, char *str2)
   s2=(char *)strdup(str2);
   qref_list = add_list(qref_list,make_lowl(T_TAPE_CHANGE,
 				 make_dvalue(s1,s2)));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1843,6 +1915,7 @@ create_headstack_motion(char *str, char *str2)
   s2=(char *)strdup(str2);
   qref_list = add_list(qref_list,make_lowl(T_HEADSTACK_MOTION,
 				 make_dvalue(s1,s2)));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1854,6 +1927,7 @@ create_new_source_command(char *str, char *str2)
   s2=(char *)strdup(str2);
   qref_list = add_list(qref_list,make_lowl(T_NEW_SOURCE_COMMAND,
 				 make_dvalue(s1,s2)));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1865,6 +1939,7 @@ create_new_tape_setup(char *str, char *str2)
   s2=(char *)strdup(str2);
   qref_list = add_list(qref_list,make_lowl(T_NEW_TAPE_SETUP,
 				 make_dvalue(s1,s2)));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1878,6 +1953,7 @@ create_setup_always(char *str, char *str2, char *str3)
   qref_list = add_list(qref_list,make_lowl(T_SETUP_ALWAYS,
 				 make_setup_always(s1,
 				 make_dvalue(s2,s3))));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -1891,6 +1967,7 @@ create_parity_check(char *str, char *str2, char *str3)
   qref_list = add_list(qref_list,make_lowl(T_PARITY_CHECK,
 				 make_parity_check(s1,
 				 make_dvalue(s2,s3))));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -1904,6 +1981,7 @@ create_tape_prepass(char *str, char *str2, char *str3)
   qref_list = add_list(qref_list,make_lowl(T_TAPE_PREPASS,
 				 make_tape_prepass(s1,
 				 make_dvalue(s2,s3))));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -1918,6 +1996,7 @@ create_preob_cal(char *str, char *str2, char *str3, char *str4)
   qref_list = add_list(qref_list,make_lowl(T_PREOB_CAL,
 				 make_preob_cal(s1,
 				 make_dvalue(s2,s3),s4)));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -1932,6 +2011,7 @@ create_midob_cal(char *str, char *str2, char *str3, char *str4)
   qref_list = add_list(qref_list,make_lowl(T_MIDOB_CAL,
 				 make_midob_cal(s1,
 				 make_dvalue(s2,s3),s4)));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -1946,6 +2026,7 @@ create_postob_cal(char *str, char *str2, char *str3, char *str4)
   qref_list = add_list(qref_list,make_lowl(T_POSTOB_CAL,
 				 make_postob_cal(s1,
 				 make_dvalue(s2,s3),s4)));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -1955,6 +2036,7 @@ create_procedure_name_prefix(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_PROCEDURE_NAME_PREFIX,s1));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 /* ROLL block builders                                               */
@@ -1966,6 +2048,7 @@ create_roll(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_ROLL,s1));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -1977,6 +2060,7 @@ create_roll_reinit_period(char *str, char *str2)
   s2=(char *)strdup(str2);
   qref_list = add_list(qref_list,make_lowl(T_ROLL_REINIT_PERIOD,
 				 make_dvalue(s1,s2)));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -1987,7 +2071,7 @@ create_roll_inc_period(char *str)
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_ROLL_INC_PERIOD,
 				 make_dvalue(s1,NULL)));
-
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -2006,6 +2090,7 @@ create_roll_def(char *str)
       qref_list = add_list(qref_list,make_lowl(T_ROLL_DEF, q_list));
       q_list=NULL;
     }
+  return(NULL);
 }
 /* -------------------------------------------------------------------*/
 /* SCHEDULING_PARAMS block builders     using literals               */
@@ -2026,6 +2111,7 @@ create_literal(char *str)
       qref_list = add_list(qref_list,make_lowl(T_LITERAL, q_list));
       q_list=NULL;
     }
+  return(NULL);
 } 
 /*-------------------------------------------------------------------*/
 /* SEFD_MODEL block builders                                         */
@@ -2037,6 +2123,7 @@ create_sefd_model(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_SEFD_MODEL,s1));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -2045,6 +2132,7 @@ create_sefd(char *str, char *str2, char *str3)
   string[0] = (char *)strdup(str);
   string[1] = (char *)strdup(str2);
   string[2] = (char *)strdup(str3);
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2069,6 +2157,7 @@ create_sefd_model_parameter(char *str)
 				     q_list)));
       q_list=NULL;
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 /* SITE block builders                                               */
@@ -2080,6 +2169,7 @@ create_site_name(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_SITE_NAME,s1));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -2089,6 +2179,7 @@ create_site_type(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_SITE_TYPE,s1));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -2098,6 +2189,7 @@ create_site_ID(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_SITE_ID,s1));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -2116,6 +2208,7 @@ create_site_position(char *str, char *str2, char *str3, char *str4,
 				 make_site_position(make_dvalue(s1,s2),
 				 make_dvalue(s3,s4),
 				 make_dvalue(s5,s6))));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -2125,6 +2218,7 @@ create_site_position_epoch(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_SITE_POSITION_EPOCH,s1));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -2134,6 +2228,7 @@ create_site_position_ref(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_SITE_POSITION_REF,s1));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -2153,6 +2248,7 @@ create_site_velocity(char *str, char *str2, char *str3, char *str4,
 				 make_dvalue(s1,s2),
 				 make_dvalue(s3,s4),
 				 make_dvalue(s5,s6))));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -2163,6 +2259,7 @@ create_horizon_map(char *str, char *str2)
   s1=(char *)strdup(str);
   s2=(char *)strdup(str2);
   q_list = add_list(q_list,make_dvalue(s1,s2));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2170,6 +2267,7 @@ create_horizon_map_az()
 {
   qref_list = add_list(qref_list,make_lowl(T_HORIZON_MAP_AZ, q_list));
   q_list=NULL;
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2177,6 +2275,7 @@ create_horizon_map_el()
 {
   qref_list = add_list(qref_list,make_lowl(T_HORIZON_MAP_EL, q_list));
   q_list=NULL;
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2188,6 +2287,7 @@ create_zen_atmos(char *str, char *str2)
   s2=(char *)strdup(str2);
   qref_list = add_list(qref_list,make_lowl(T_ZEN_ATMOS,
 				 make_dvalue(s1,s2)));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2203,6 +2303,7 @@ create_ocean_load_vert(char *str, char *str2, char *str3, char *str4)
 				 make_ocean_load_vert(
 				 make_dvalue(s1,s2),
 				 make_dvalue(s3,s4))));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -2218,6 +2319,7 @@ create_ocean_load_horiz(char *str, char *str2, char *str3, char *str4)
 				 make_ocean_load_horiz(
                                  make_dvalue(s1,s2),
 				 make_dvalue(s3,s4))));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -2227,6 +2329,7 @@ create_occupation_code(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_OCCUPATION_CODE,s1));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2238,6 +2341,7 @@ create_inclination(char *str, char *str2)
   s2=(char *)strdup(str2);
   qref_list = add_list(qref_list,make_lowl(T_INCLINATION,
 				 make_dvalue(s1,s2)));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2248,7 +2352,7 @@ create_eccentricity(char *str)
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_ECCENTRICITY,
 				 make_dvalue(s1,NULL)));
-
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2260,6 +2364,7 @@ create_arg_perigee(char *str, char *str2)
   s2=(char *)strdup(str2);
   qref_list = add_list(qref_list,make_lowl(T_ARG_PERIGEE,
 				 make_dvalue(s1,s2)));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2271,6 +2376,7 @@ create_ascending_node(char *str, char *str2)
   s2=(char *)strdup(str2);
   qref_list = add_list(qref_list,make_lowl(T_ASCENDING_NODE,
 				 make_dvalue(s1,s2)));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2282,6 +2388,7 @@ create_mean_anomaly(char *str, char *str2)
   s2=(char *)strdup(str2);
   qref_list = add_list(qref_list,make_lowl(T_MEAN_ANOMALY,
 				 make_dvalue(s1,s2)));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2293,6 +2400,7 @@ create_semi_major_axis(char *str, char *str2)
   s2=(char *)strdup(str2);
   qref_list = add_list(qref_list,make_lowl(T_SEMI_MAJOR_AXIS,
 				 make_dvalue(s1,s2)));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2303,7 +2411,7 @@ create_mean_motion(char *str)
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_MEAN_MOTION,
 				 make_dvalue(s1,NULL)));
-
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2313,6 +2421,7 @@ create_orbit_epoch(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_ORBIT_EPOCH,s1));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 /* SOURCE block builders                                             */
@@ -2334,6 +2443,7 @@ create_source_type(char *str, char *str2)
     }
   qref_list = add_list(qref_list,make_lowl(T_SOURCE_TYPE,q_list));
   q_list=NULL;
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2343,6 +2453,7 @@ create_source_name(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_SOURCE_NAME,s1));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -2352,6 +2463,7 @@ create_ra(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_RA,s1));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -2361,6 +2473,7 @@ create_IAU_name(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_IAU_NAME,s1));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -2370,6 +2483,7 @@ create_dec(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_DEC,s1));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -2379,6 +2493,7 @@ create_ref_coord_frame(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_REF_COORD_FRAME,s1));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -2388,6 +2503,7 @@ create_source_position_ref(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_SOURCE_POSITION_REF,s1));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -2397,6 +2513,7 @@ create_source_position_epoch(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_SOURCE_POSITION_EPOCH,s1));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -2408,6 +2525,7 @@ create_ra_rate(char *str, char *str2)
   s2=(char *)strdup(str2);
   qref_list = add_list(qref_list,make_lowl(T_RA_RATE,
 				 make_dvalue(s1,s2)));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2419,6 +2537,7 @@ create_dec_rate(char *str, char *str2)
   s2=(char *)strdup(str2);
   qref_list = add_list(qref_list,make_lowl(T_DEC_RATE,
 				 make_dvalue(s1,s2)));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2430,6 +2549,7 @@ create_velocity_wrt_LSR(char *str, char *str2)
   s2=(char *)strdup(str2);
   qref_list = add_list(qref_list,make_lowl(T_VELOCITY_WRT_LSR,
 				 make_dvalue(s1,s2)));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2464,6 +2584,7 @@ create_source_model(char *str, char *str2, char *str3, char *str4,
 				 make_dvalue(s8,s9),
 				 make_dvalue(s10,s11),
 				 make_dvalue(s12,s13))));
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 /* TAPELOG_OBS block builders                                        */
@@ -2480,6 +2601,7 @@ create_vsn(char *str, char *str2, char *str3, char *str4)
   qref_list = add_list(qref_list,make_lowl(T_VSN,
 				 make_vsn(make_dvalue(s1,NULL),
 				 s2,s3,s4)));
+  return(NULL);
 }  
 
 /*-------------------------------------------------------------------*/
@@ -2493,6 +2615,7 @@ create_fanin_def(char *str, char *str2, char *str3)
   string[0] = (char *)strdup(str);
   string[1] = (char *)strdup(str2);
   string[2] = (char *)strdup(str3);
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2517,18 +2640,21 @@ create_fanin_def_list(char *str)
 				     q_list)));
       q_list=NULL;
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
 create_fanout_def_subpass(char *str)
 {
   string[0] = (char *)strdup(str);
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
 create_fanout_def_headstack(char *str)
 {
   string[1] = (char *)strdup(str);
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2541,6 +2667,7 @@ create_fanout_bitstream_list(char *str)
       s1=(char *)strdup(str);
       q_list = add_list(q_list,s1);
     }  
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2566,6 +2693,7 @@ create_fanout_trksID_list(char *str)
       q_list=NULL;
       q2_list=NULL;
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2575,6 +2703,7 @@ create_track_frame_format(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_TRACK_FRAME_FORMAT,s1));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2584,6 +2713,7 @@ create_data_modulation(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_DATA_MODULATION,s1));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2614,6 +2744,7 @@ create_vlba_frmtr_sys_trk(char *str, char *str2, char *str3, char *str4)
                                      make_dvalue(s3,NULL),
                                      make_dvalue(s4,NULL))));
     }
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2627,6 +2758,7 @@ create_vlba_trnsprt_sys_trk(char *str, char *str2)
   q_list = add_list(q_list,make_dvalue(s2,NULL));
   qref_list = add_list(qref_list,make_lowl(T_VLBA_TRNSPRT_SYS_TRK,q_list));
   q_list=NULL;
+  return(NULL);
 }  
 /*-------------------------------------------------------------------*/
 void *
@@ -2636,6 +2768,7 @@ create_s2_recording_mode(char *str)
 
   s1=(char *)strdup(str);
   qref_list = add_list(qref_list,make_lowl(T_S2_RECORDING_MODE,s1));
+  return(NULL);
 }
 /*-------------------------------------------------------------------*/
 void *
@@ -2658,6 +2791,7 @@ create_s2_data_source(char *str, char *str2, char *str3)
       qref_list = add_list(qref_list,make_lowl(T_S2_DATA_SOURCE,
 			   	     make_s2_data_source(s1,s2,s3)));
     }
+  return(NULL);
 }
 
 
