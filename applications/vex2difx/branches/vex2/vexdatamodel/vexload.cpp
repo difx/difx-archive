@@ -53,6 +53,26 @@ public:
 	std::vector<int> mag;
 };
 
+std::ostream& operator << (std::ostream &os, const BitAssignments &x)
+{
+	int s = x.sign.size();
+	int m = x.mag.size();
+
+	os << "[ ";
+	for(int i = 0; i < s; ++i)
+	{
+		os << "(" << x.sign[i];
+		if(i < m)
+		{
+			os << " " << x.mag[i];
+		}
+		os << ") ";
+	}
+	os << "]";
+
+	return os;
+}
+
 int reorderBitAssignments(std::map<std::string,BitAssignments> &bitAssignements, int startSlotNumber)
 {
 	const int MaxSlotNumber = 66;
@@ -105,7 +125,7 @@ int reorderBitAssignments(std::map<std::string,BitAssignments> &bitAssignements,
 	int newSlotNumber = startSlotNumber;
 	for(int i = 0; i < 67; ++i)
 	{
-		if(order[i] == 1)
+		if(order[i] == -1)
 		{
 			order[i] = newSlotNumber;
 			++newSlotNumber;
@@ -2141,7 +2161,7 @@ static int getModes(VexData *V, Vex *v)
 			}
 
 			// if we made it this far the antenna is involved in this mode
-			VexSetup &setup = mode.setups[V->getAntenna(a)->defName];	// This creates the new entry
+			VexSetup &setup = mode.setups[V->getAntenna(a)->name];	// This creates the new entry  FIXME: really this should be defName, not name...
 
 			setup.type = type;
 
