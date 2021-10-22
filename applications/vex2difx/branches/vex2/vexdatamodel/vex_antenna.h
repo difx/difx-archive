@@ -55,7 +55,9 @@ public:
 	void setAntennaPolConvert(bool doConvert) { polConvert = doConvert; }
 
 	std::string name;
-	std::string defName;	// Sometimes names get changed
+	std::string defName;		// if name != defName, things may be very confused...
+	std::string twoCharSiteCode;	// Not likely used...
+	std::string oneCharSiteCode;	// Used by mark4 data processing path; set to NULL if not provided
 
 	double x, y, z;		// (m) antenna position in ITRF
 	double dx, dy, dz;	// (m/sec) antenna velocity

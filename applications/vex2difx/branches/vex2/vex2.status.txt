@@ -16,6 +16,7 @@ TODO: high priority
   - multiple sources in beam (vex2difx/src)
     - if any .v2d phase centers supplied, all .vex ones are ignored
   - intents: Calcode and Qual (and calture other intents for possible other use)
+  - capture and use pointing offset
 * SOURCE:
   X non-sidereal 
   - non-sidereal in vex2difx/src
@@ -32,13 +33,13 @@ To do to support sched:
   - Multi-source support ($SCHED)
   - Intents: for existing purposes ($SCHED)
   - Intents: calcode and qualifier ($SCHED)
-  - LO chain: setting the unused LO (either with $EXTENSION or with $IF sub_lo_*)
+  - LO chain: setting the unused LO (with $EXTENSION)
 
 * Medium Priority
   - Intents: pass along usage intents ($SCHED)
-  - 50cm filter bandwidth selector ($EXTENSION or $SCHED Intent)
+  - 50cm filter bandwidth selector ($EXTENSION)
   - $EOP: support new parameters
-  - $IF: support switched power
+  - $IF: support switched power configuration
 
 * Low Priority
   - data_transfer ($SCHED)
@@ -133,21 +134,19 @@ $SCHED block: Significantly augmentated to provide new features, particularly in
 
 * TODO: capture data_transfer instructions
 
-* TODO: capture scan intents
-  - CAL CODE
-  - QUAL CODE
+* Captured scan intents
 
 * TODO: capture pointing offset commands
 
 
 $SITE block
 
-* TODO: capture site_id field 2, for eventual use in difx2mark4  [low priority]
+* captured site_id field 2, for eventual use in difx2mark4  [low priority]
 
 
 $SOURCE block: Augmented to provide new non-sidereal source types.
 
-* TODO: handle non-sidereal sources: capture parameters for optional downstream use
+* Captured info
 
 
 $TAPELOG_OBS block

@@ -127,7 +127,7 @@ bool usesCanonicalVDIF(const std::string &antName)
 
 std::ostream& operator << (std::ostream &os, const VexAntenna &x)
 {
-	os << "Antenna " << x.name <<
+	os << "Antenna " << x.name << " [" << x.twoCharSiteCode << " " << x.oneCharSiteCode << "]" <<
 		"\n  x=" << x.x << "  dx/dt=" << x.dx <<
 		"\n  y=" << x.y << "  dy/dt=" << x.dy <<
 		"\n  z=" << x.z << "  dz/dt=" << x.dz <<

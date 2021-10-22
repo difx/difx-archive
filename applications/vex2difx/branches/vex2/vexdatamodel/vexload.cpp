@@ -403,15 +403,29 @@ static int getAntennas(VexData *V, Vex *v)
 	{
 		struct site_position *p;
 		struct axis_type *q;
+		struct site_id* s;
 		VexAntenna *A;
 
 		std::string antName(stn);
 		Upper(antName);
 
 		A = V->newAntenna();
-		A->name = stn;
 		A->defName = stn;
+		A->name = A->defName;
 		Upper(A->name);
+
+		s = (struct site_id *)get_station_lowl(stn, T_SITE_ID, B_SITE, v);
+		if(s != 0)
+		{
+			if(s->code2)
+			{
+				A->twoCharSiteCode = s->code2;
+			}
+			if(s->code1)
+			{
+				A->oneCharSiteCode = s->code1;
+			}
+		}
 
 		p = (struct site_position *)get_station_lowl(stn, T_SITE_POSITION, B_SITE, v);
 		if(p == 0)
@@ -2127,7 +2141,7 @@ static int getModes(VexData *V, Vex *v)
 			}
 
 			// if we made it this far the antenna is involved in this mode
-			VexSetup &setup = mode.setups[V->getAntenna(a)->name];	// This creates the new entry
+			VexSetup &setup = mode.setups[V->getAntenna(a)->defName];	// This creates the new entry
 
 			setup.type = type;
 
