@@ -44,16 +44,31 @@
 #ifdef __APPLE__
 #define OSX
 #define OPENOPTIONS O_WRONLY|O_CREAT|O_TRUNC
+#ifdef SWAPENDIAN
 #include <libkern/OSByteOrder.h>
-#define bswap_16(x) OSSwapInt16(x)
-#define bswap_32(x) OSSwapInt32(x)
-#define bswap_64(x) OSSwapInt64(x)
+#define byteswap_16(x) OSSwapInt16(x)
+#define byteswap_32(x) OSSwapInt32(x)
+#define byteswap_64(x) OSSwapInt64(x)
+#else
+#define byteswap_16(x) x
+#define byteswap_32(x) x
+#define byteswap_64(x) x
+#endif
 #else
 #define LINUX
 #define _LARGEFILE_SOURCE 
 #define _LARGEFILE64_SOURCE
 #define OPENOPTIONS O_WRONLY|O_CREAT|O_TRUNC|O_LARGEFILE|O_EXCL
+#ifdef SWAPENDIAN
 #include <byteswap.h>
+#define byteswap_16(x) bswap_16(x)
+#define byteswap_32(x) bswap_32(x)
+#define byteswap_64(x) bswap_64(x)
+#else
+#define byteswap_16(x) x
+#define byteswap_32(x) x
+#define byteswap_64(x) x
+#endif
 #endif
 
 #include <stdlib.h>
@@ -335,17 +350,17 @@ int main (int argc, char * const argv[]) {
 
     // Convert header then data to little endian
     for (i=0; i<8; i++) {
-      h64[i] = bswap_64(h64[i]);
+      h64[i] = byteswap_64(h64[i]);
     }
     if (invert) {
       for (i=0; i<(nread-CODIF_HEADER_BYTES)/sizeof(int16_t);i++) {
-	cdata[i] = bswap_16(cdata[i]);
+	cdata[i] = byteswap_16(cdata[i]);
 	i++;
-	cdata[i] = -bswap_16(cdata[i]);
+	cdata[i] = -byteswap_16(cdata[i]);
       }
     } else {
       for (i=0; i<(nread-CODIF_HEADER_BYTES)/sizeof(int16_t);i++) {
-	cdata[i] = bswap_16(cdata[i]);
+	cdata[i] = byteswap_16(cdata[i]);
       }
     }
     t2 = tim();
