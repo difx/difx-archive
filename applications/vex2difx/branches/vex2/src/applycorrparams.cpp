@@ -72,12 +72,12 @@ int applyCorrParams(VexData *V, const CorrParams &params, unsigned int &nWarn, u
 	}
 
 	// apply source parameters
-	for(unsigned int s = 0; s < V->nSource(); ++s)
+	for(unsigned int sourceNum = 0; sourceNum < V->nSource(); ++sourceNum)
 	{
-		const VexSource *S = V->getSource(s);
+		const VexSource *S = V->getSource(sourceNum);
 		if(!S)
 		{
-			std::cerr << "Developer error: applyCorrParams: Source number " << s << " cannot be gotten even though nSource() reports " << V->nSource() << std::endl;
+			std::cerr << "Developer error: applyCorrParams: Source number " << sourceNum << " cannot be gotten even though nSource() reports " << V->nSource() << std::endl;
 
 			exit(EXIT_FAILURE);
 		}
@@ -89,10 +89,50 @@ int applyCorrParams(VexData *V, const CorrParams &params, unsigned int &nWarn, u
 			{
 				V->setSourceCalCode(S->defName, ss->pointingCentre.calCode);
 			}
+
+			// If a SourceSetup with a list of phase centers matches the name of a scan pointing center, 
+			// that scan gets all of its .vex pointing centers replaced by the SourceSetup list
+			if(!ss->phaseCentres.empty())
+			{
+				unsigned int nScan;
+
+				// Loop over ss->phaseCentres, add to list of VexSources if they are missing
+				// Note that if a source with that name already exists, it won't be updated.
+				for(std::vector<PhaseCentre>::const_iterator pc = ss->phaseCentres.begin(); pc != ss->phaseCentres.end(); ++pc)
+				{
+					if(V->getSourceByDefName(pc->difxName))
+					{
+						// FIXME: add a test to make sure the RA and Dec match?
+						continue;
+					}
+					else
+					{
+						V->newSource(pc->difxName, pc->ra, pc->dec);
+					}
+				}
+
+				// Completely override the list of phase centers provided in the .vex file in any scan with this source as the pointing source
+
+				nScan = V->nScan();
+				for(unsigned int scanNum = 0; scanNum < nScan; ++scanNum)
+				{
+					if(V->getScan(scanNum)->sourceDefName != S->defName)
+					{
+						continue;
+					}
+					
+					V->deletePhaseCenters(scanNum);
+					if(ss->doPointingCentre)
+					{
+						V->addPhaseCenter(scanNum, ss->vexName);
+					}
+					for(std::vector<PhaseCentre>::const_iterator pc = ss->phaseCentres.begin(); pc != ss->phaseCentres.end(); ++pc)
+					{
+						V->addPhaseCenter(scanNum, pc->difxName);
+					}
+				}
+			}
 		}
-
-		// FIXME: here put multiphasecenter things, eventually
-
 	}
 
 	// remove scans that are not linked from v2d setups

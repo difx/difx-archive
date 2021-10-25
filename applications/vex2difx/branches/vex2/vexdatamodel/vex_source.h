@@ -40,6 +40,7 @@ public:
 	enum Type { Star, EarthSatellite, BSP, TLE, Ephemeris, Unsupported };
 
 	VexSource() : type(Unsupported), ra(0.0), dec(0.0), calCode(' ') {}
+	VexSource(std::string name, double ra1, double dec1) : type(Star), defName(name), ra(ra1), dec(dec1), calCode(' ') {}
 	bool hasSourceName(const std::string &name) const;
 	bool setSourceType(const char *t1 = 0, const char *t2 = 0, const char *t3 = 0);
 	void setTLE(int lineNum, const char *line);	// lineNum must be 0, 1 or 2

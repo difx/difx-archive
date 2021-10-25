@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009-2019 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2009-2021 by Walter Brisken & Adam Deller               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -57,7 +57,7 @@ using namespace std;
 
 const string version(VERSION);
 const string program("vex2difx");
-const string verdate("20210112");
+const string verdate("20211025");
 const string author("Walter Brisken/Adam Deller");
 
 const int defaultMaxNSBetweenACAvg = 2000000;	// 2ms, good default for use with transient detection
@@ -215,16 +215,17 @@ static DifxAntenna *makeDifxAntennas(const Job &J, const VexData *V, const CorrP
 		A[i].Y = ant->y + ant->dy*(mjd-ant->posEpoch)*86400.0;
 		A[i].Z = ant->z + ant->dz*(mjd-ant->posEpoch)*86400.0;
 		A[i].mount = stringToMountType(ant->axisType.c_str());
-		clockrefmjd = ant->getVexClocks(J.mjdStart, A[i].clockcoeff);
+		clockrefmjd = ant->getVexClocks(J.mjdStart, A[i].clockcoeff, &A[i].clockorder, MAX_MODEL_ORDER);
 		if(clockrefmjd < 0.0 && !P->fakeDatasource)
 		{
 			cerr << "Warning: Job " << J.jobSeries << " " << J.jobId << ": no clock offsets being applied to antenna " << *a << endl;
 			cerr << "          Unless this is intentional, your results will suffer!" << endl;
 		}
 		A[i].clockrefmjd = clockrefmjd;
-		A[i].clockorder = 1;
-		A[i].clockcoeff[0] *= 1.0e6;	// convert to us from sec
-		A[i].clockcoeff[1] *= 1.0e6;	// convert to us/sec from sec/sec
+		for(int j = 0; j <= A[i].clockorder; ++j)
+		{
+			A[i].clockcoeff[j] *= 1.0e6;	// convert to us/sec^j from sec/sec^j
+		}
 		A[i].offset[0] = ant->axisOffset;
 		A[i].offset[1] = 0.0;
 		A[i].offset[2] = 0.0;
@@ -240,22 +241,36 @@ static DifxAntenna *makeDifxAntennas(const Job &J, const VexData *V, const CorrP
 
 			// FIXME: below here should probably be done in the applyCorrParams function
 			A[i].clockcoeff[0] += antSetup->deltaClock*1.0e6;	// convert to us from sec
-			A[i].clockcoeff[1] += antSetup->deltaClockRate*1.0e6;	// convert to us/sec from sec/sec
-			A[i].clockorder  = antSetup->clockorder;
-			switch(A[i].clockorder)
+			if(antSetup->deltaClockRate != 0)
 			{
-			case 5:
-				A[i].clockcoeff[5] = antSetup->clock5*1.0e6; // convert to us/sec^5 from sec/sec^5
-			case 4:
-				A[i].clockcoeff[4] = antSetup->clock4*1.0e6; // convert to us/sec^4 from sec/sec^4
-			case 3:
-				A[i].clockcoeff[3] = antSetup->clock3*1.0e6; // convert to us/sec^3 from sec/sec^3
-			case 2:
-				A[i].clockcoeff[2] = antSetup->clock2*1.0e6; // convert to us/sec^2 from sec/sec^2
-			case 1:
-				break;
-			default:
-				cerr << "Crazy clock order " << A[i].clockorder << "!" << endl;
+				A[i].clockcoeff[1] += antSetup->deltaClockRate*1.0e6;	// convert to us/sec from sec/sec
+				if(A[i].clockorder < 1)
+				{
+					A[i].clockorder = 1;
+				}
+			}
+			if(antSetup->clockorder > 1)
+			{
+				if(antSetup->clockorder > A[i].clockorder)
+				{
+					A[i].clockorder = antSetup->clockorder;
+				}
+				if(A[i].clockorder >= 5)
+				{
+					A[i].clockcoeff[5] += antSetup->clock5*1.0e6; // convert to us/sec^5 from sec/sec^5
+				}
+				if(A[i].clockorder >= 4)
+				{
+					A[i].clockcoeff[4] += antSetup->clock4*1.0e6; // convert to us/sec^4 from sec/sec^4
+				}
+				if(A[i].clockorder >= 3)
+				{
+					A[i].clockcoeff[3] += antSetup->clock3*1.0e6; // convert to us/sec^3 from sec/sec^3
+				}
+				if(A[i].clockorder >= 2)
+				{
+					A[i].clockcoeff[2] += antSetup->clock2*1.0e6; // convert to us/sec^2 from sec/sec^2
+				}
 			}
 		}
 	}

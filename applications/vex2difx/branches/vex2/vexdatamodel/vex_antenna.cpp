@@ -37,7 +37,14 @@
 // means not found.  Also fills in the first two coeffs, returned in seconds
 double VexAntenna::getVexClocks(double mjd, double *coeffs) const
 {
+	static bool first = true;
 	double epoch = -1.0;
+
+	if(first)
+	{
+		std::cerr << "Developer Warning: VexAntenna::getVexClocks with 2 arguments is deprecated; use the 4 argument one!" << std::endl;
+		first = false;
+	}
 
 	for(std::vector<VexClock>::const_iterator it = clocks.begin(); it != clocks.end(); ++it)
 	{
@@ -46,6 +53,65 @@ double VexAntenna::getVexClocks(double mjd, double *coeffs) const
 			epoch = it->offset_epoch;
 			coeffs[0] = it->offset;
 			coeffs[1] = it->rate;
+		}
+	}
+
+	return epoch;
+}
+
+// get the clock epoch as a MJD value (with fractional component), negative 
+// means not found.  Also fills in the first two coeffs, returned in seconds
+double VexAntenna::getVexClocks(double mjd, double *coeffs, int *clockorder, int maxorder) const
+{
+	double epoch = -1.0;
+
+	for(std::vector<VexClock>::const_iterator it = clocks.begin(); it != clocks.end(); ++it)
+	{
+		if(it->mjdStart <= mjd)
+		{
+			int n = 1;
+			bool bad = false;
+
+			epoch = it->offset_epoch;
+			if(coeffs)
+			{
+				coeffs[0] = it->offset;
+				coeffs[1] = it->rate;
+				if(it->accel != 0.0 || it->jerk != 0.0)
+				{
+					if(maxorder > 1)
+					{
+						coeffs[2] = it->accel;
+						n = 2;
+					}
+					else
+					{
+						bad = true;
+					}
+					if(it->jerk != 0.0)
+					{
+						if(maxorder > 2)
+						{
+							coeffs[3] = it->jerk;
+							n = 3;
+						}
+						else
+						{
+							bad = true;
+						}
+					}
+				}
+
+				if(bad)
+				{
+					std::cerr << "Developer Error: maxorder=" << maxorder << " is too small for the supplied clock model.  Output is truncated." << std::endl;
+				}
+			}
+
+			if(clockorder)
+			{
+				*clockorder = n;
+			}
 		}
 	}
 

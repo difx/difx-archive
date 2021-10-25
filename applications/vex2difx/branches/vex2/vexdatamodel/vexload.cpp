@@ -558,11 +558,13 @@ static int getAntennas(VexData *V, Vex *v)
 				{
 					if(units)
 					{
-						fvex_double(&value, &units, &clock.rate);
+						fvex_double(&value, &units, &clock.accel);
 					}
 					else
 					{
 						clock.accel = atof(value);
+						std::cerr << "Warning: second order clock term did not have units." << std::endl;
+						++nWarn;
 					}
 					hasHighOrderClock = true;
 				}
@@ -571,11 +573,13 @@ static int getAntennas(VexData *V, Vex *v)
 				{
 					if(units)
 					{
-						fvex_double(&value, &units, &clock.rate);
+						fvex_double(&value, &units, &clock.jerk);
 					}
 					else
 					{
 						clock.jerk = atof(value);
+						std::cerr << "Warning: third order clock term did not have units." << std::endl;
+						++nWarn;
 					}
 					hasHighOrderClock = true;
 				}
@@ -636,6 +640,17 @@ static int getAntennas(VexData *V, Vex *v)
 								clock.rate = atof(C->rate->value);
 							}
 							clock.offset_epoch = vexDate(C->origin);
+
+							if(C->accel)
+							{
+								fvex_double(&(C->accel->value), &(C->accel->units), &clock.accel);
+								hasHighOrderClock = true;
+							}
+							if(C->jerk)
+							{
+								fvex_double(&(C->jerk->value), &(C->jerk->units), &clock.jerk);
+								hasHighOrderClock = true;
+							}
 						}
 						
 						// vex has the opposite sign convention, so swap

@@ -32,3 +32,15 @@ x. Need ant velocities and pos'n epoch in vex file
 x. Need to get module shelf location from track 
 3. Calcode/Qualifier in vex
 x. Get exper_nominal_{start,stop} in vex files
+
+After vex2 is in good shape
+
+1. Renormalize how clocks are handled
+   - get rid of offset,rate,accel,jerk and replace with vector
+   - clarify in .v2d whether supplied clock relaces or augments .vex values
+   - vex2obs: properly link
+
+2. EOPs
+   - generalize to all parameters
+   - vex2obs: properly link
+

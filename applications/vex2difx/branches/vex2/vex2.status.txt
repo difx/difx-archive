@@ -2,7 +2,7 @@
 TODO: high priority
 * CLOCK: 
   X capture second/third derivative terms
-  - use high order terms to populate .input file (data structure is ready for this)
+  X use high order terms to populate .input file (data structure is ready for this)
   - verify high order terms through difx2fits (looks likely) and difx2mark4 (not checked)
 * FREQ:
   X handle missing Chan_Id field

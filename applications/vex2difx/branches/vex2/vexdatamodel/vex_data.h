@@ -76,6 +76,7 @@ public:
 	int sanityCheck();
 
 	VexSource *newSource();
+	VexSource *newSource(const std::string &name, double ra, double dec);
 	VexScan *newScan();
 	VexMode *newMode();
 	VexAntenna *newAntenna();
@@ -145,6 +146,8 @@ public:
 	void getScanList(std::list<std::string> &scans) const;
 	unsigned int nAntennasWithRecordedData(const VexScan &scan) const;
 	bool removeScan(const std::string name);	// Note: cannot pass name as reference!
+	void deletePhaseCenters(unsigned int num);
+	void addPhaseCenter(unsigned int num, const std::string &name);
 
 	size_t nAntenna() const { return antennas.size(); }
 	int getAntennaIdByName(const std::string &antName) const;

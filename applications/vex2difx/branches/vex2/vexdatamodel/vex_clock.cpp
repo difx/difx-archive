@@ -32,13 +32,13 @@
 std::ostream& operator << (std::ostream &os, const VexClock &x)
 {
 	os << "Clock(" << x.mjdStart << ": " << x.offset << ", " << x.rate;
-	if(x.accel != 0.0)
+	if(x.accel != 0.0 || x.jerk != 0.0)
 	{
-		os << ", " << x.accel << ")";
+		os << ", " << x.accel;
 	}
 	if(x.jerk != 0.0)
 	{
-		os << ", " << x.jerk << ")";
+		os << ", " << x.jerk;
 	}
 	
 	os << ", " << x.offset_epoch << ")";

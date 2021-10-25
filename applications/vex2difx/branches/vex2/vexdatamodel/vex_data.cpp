@@ -90,6 +90,13 @@ VexSource *VexData::newSource()
 	return &sources.back();
 }
 
+VexSource *VexData::newSource(const std::string &name, double ra, double dec)
+{
+	sources.push_back(VexSource(name, ra, dec));
+
+	return &sources.back();
+}
+
 const VexSource *VexData::getSource(unsigned int num) const
 {
 	if(num >= nSource())
@@ -373,6 +380,26 @@ bool VexData::removeScan(const std::string name)
 	}
 
 	return removed;
+}
+
+void VexData::deletePhaseCenters(unsigned int num)
+{
+	if(num >= nScan())
+	{
+		std::cerr << "Developer error: VexData::deletePhaseCentres() : num=" << num << " nScan=" << nScan() << std::endl;
+	}
+
+	scans[num].phaseCenters.clear();
+}
+
+void VexData::addPhaseCenter(unsigned int num, const std::string &name)
+{
+	if(num >= nScan())
+	{
+		std::cerr << "Developer error: VexData::addPhaseCentre() : num=" << num << " nScan=" << nScan() << std::endl;
+	}
+
+	scans[num].phaseCenters.push_back(name);
 }
 
 VexAntenna *VexData::newAntenna()
