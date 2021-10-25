@@ -87,6 +87,7 @@ public:
 	void setPhaseCalBase(const std::string &antName, float phaseCalBaseMHz);
 	void selectTones(const std::string &antName, enum ToneSelection selection, double guardBandMHz);
 	void setClock(const std::string &antName, const VexClock &clock);
+	void adjustClock(const std::string &antName, double deltaClock, double deltaClockRate);
 	void setTcalFrequency(const std::string &antName, int tcalFrequency);
 	void addExperEvents(std::list<Event> &events) const;
 	void addClockEvents(std::list<Event> &events) const;
@@ -161,6 +162,7 @@ public:
 	int getNumAntennaRecChans(const std::string &name) const;
 	bool removeAntenna(const std::string name);	// Note: cannot pass name as reference!
 	void setAntennaPolConvert(const std::string &name, bool doConvert);
+	void setAntennaDifxName(const std::string &name, const std::string &difxName);
 
 	size_t nMode() const { return modes.size(); }
 	int getModeIdByDefName(const std::string &defName) const;

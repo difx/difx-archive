@@ -190,7 +190,31 @@ static DifxJob *makeDifxJob(string directory, const Job& J, int nAntenna, const 
 	return job;
 }
 
-static DifxAntenna *makeDifxAntennas(const Job &J, const VexData *V, const CorrParams *P, int *n)
+static unsigned int getSpacecraftSet(const VexData *V, std::set<std::string> const &sourceSet, std::set<std::string> &spacecraftSet)
+{
+	spacecraftSet.clear();
+
+	for(std::set<std::string>::const_iterator it = sourceSet.begin(); it != sourceSet.end(); ++it)
+	{
+		const VexSource *S;
+
+		S = V->getSourceByDefName(*it);
+		if(!S)
+		{
+			cerr << "Developer error: getSpacecraftSet() : source " << *it << " not found in vex data model." << endl;
+
+			exit(EXIT_FAILURE);
+		}
+		if(S->type == VexSource::EarthSatellite || S->type == VexSource::BSP || S->type == VexSource::TLE || S->type == VexSource::Ephemeris)
+		{
+			spacecraftSet.insert(*it);
+		}
+	}
+
+	return spacecraftSet.size();
+}
+
+static DifxAntenna *makeDifxAntennas(const Job &J, const VexData *V, int *n)
 {
 	DifxAntenna *A;
 	double mjd;
@@ -206,22 +230,14 @@ static DifxAntenna *makeDifxAntennas(const Job &J, const VexData *V, const CorrP
 	// Note: the vsns vector here is used even for non-module corrlation.  It will map an antenna to a non-allowed VSN name which won't be used in case of non-module correlation.
 	for(i = 0, a = J.jobAntennas.begin(); a != J.jobAntennas.end(); ++i, ++a)
 	{
-		double clockrefmjd;
-		
 		const VexAntenna *ant = V->getAntenna(*a);
 		
-		snprintf(A[i].name, DIFXIO_NAME_LENGTH, "%s", a->c_str());
+		snprintf(A[i].name, DIFXIO_NAME_LENGTH, "%s", ant->difxName.c_str());
 		A[i].X = ant->x + ant->dx*(mjd-ant->posEpoch)*86400.0;
 		A[i].Y = ant->y + ant->dy*(mjd-ant->posEpoch)*86400.0;
 		A[i].Z = ant->z + ant->dz*(mjd-ant->posEpoch)*86400.0;
 		A[i].mount = stringToMountType(ant->axisType.c_str());
-		clockrefmjd = ant->getVexClocks(J.mjdStart, A[i].clockcoeff, &A[i].clockorder, MAX_MODEL_ORDER);
-		if(clockrefmjd < 0.0 && !P->fakeDatasource)
-		{
-			cerr << "Warning: Job " << J.jobSeries << " " << J.jobId << ": no clock offsets being applied to antenna " << *a << endl;
-			cerr << "          Unless this is intentional, your results will suffer!" << endl;
-		}
-		A[i].clockrefmjd = clockrefmjd;
+		A[i].clockrefmjd = ant->getVexClocks(J.mjdStart, A[i].clockcoeff, &A[i].clockorder, MAX_MODEL_ORDER);
 		for(int j = 0; j <= A[i].clockorder; ++j)
 		{
 			A[i].clockcoeff[j] *= 1.0e6;	// convert to us/sec^j from sec/sec^j
@@ -229,50 +245,6 @@ static DifxAntenna *makeDifxAntennas(const Job &J, const VexData *V, const CorrP
 		A[i].offset[0] = ant->axisOffset;
 		A[i].offset[1] = 0.0;
 		A[i].offset[2] = 0.0;
-
-		/* override with antenna setup values? */
-		const AntennaSetup *antSetup = P->getAntennaSetup(*a);
-		if(antSetup)
-		{
-			if(!antSetup->difxName.empty())
-			{
-				snprintf(A[i].name, DIFXIO_NAME_LENGTH, "%s", antSetup->difxName.c_str());
-			}
-
-			// FIXME: below here should probably be done in the applyCorrParams function
-			A[i].clockcoeff[0] += antSetup->deltaClock*1.0e6;	// convert to us from sec
-			if(antSetup->deltaClockRate != 0)
-			{
-				A[i].clockcoeff[1] += antSetup->deltaClockRate*1.0e6;	// convert to us/sec from sec/sec
-				if(A[i].clockorder < 1)
-				{
-					A[i].clockorder = 1;
-				}
-			}
-			if(antSetup->clockorder > 1)
-			{
-				if(antSetup->clockorder > A[i].clockorder)
-				{
-					A[i].clockorder = antSetup->clockorder;
-				}
-				if(A[i].clockorder >= 5)
-				{
-					A[i].clockcoeff[5] += antSetup->clock5*1.0e6; // convert to us/sec^5 from sec/sec^5
-				}
-				if(A[i].clockorder >= 4)
-				{
-					A[i].clockcoeff[4] += antSetup->clock4*1.0e6; // convert to us/sec^4 from sec/sec^4
-				}
-				if(A[i].clockorder >= 3)
-				{
-					A[i].clockcoeff[3] += antSetup->clock3*1.0e6; // convert to us/sec^3 from sec/sec^3
-				}
-				if(A[i].clockorder >= 2)
-				{
-					A[i].clockcoeff[2] += antSetup->clock2*1.0e6; // convert to us/sec^2 from sec/sec^2
-				}
-			}
-		}
 	}
 
 	return A;
@@ -280,7 +252,7 @@ static DifxAntenna *makeDifxAntennas(const Job &J, const VexData *V, const CorrP
 
 // NOTE: FIXME: before this gets called, all datasource=NONE datastreams should be stripped.
 
-static DifxDatastream *makeDifxDatastreams(const Job& J, const VexData *V, const CorrParams *P, int nSet, DifxAntenna *difxAntennas, const Shelves &shelves)
+static DifxDatastream *makeDifxDatastreams(const Job& J, const VexData *V, int nSet, DifxAntenna *difxAntennas, const Shelves &shelves)
 {
 	DifxDatastream *datastreams;
 	int nDatastream;
@@ -714,7 +686,7 @@ static void populateFreqTable(DifxInput *D, const vector<freq>& freqs, const vec
 	}
 }
 
-static double populateBaselineTable(DifxInput *D, const CorrParams *P, const CorrSetup *corrSetup, vector<set <int> > blockedfreqids)
+static double populateBaselineTable(DifxInput *D, const CorrParams *P, const CorrSetup *corrSetup, vector<set<int> > blockedfreqids)
 {	
 	int n1, n2;
 	int nPol;
@@ -1760,7 +1732,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 	D->outputFormat = P->outputFormat;
 	D->nDataSegments = P->nDataSegments;
 
-	D->antenna = makeDifxAntennas(J, V, P, &(D->nAntenna));
+	D->antenna = makeDifxAntennas(J, V, &(D->nAntenna));
 	D->job = makeDifxJob(V->getDirectory(), J, D->nAntenna, V->getExper()->name, &(D->nJob), nDigit, ext, P);
 	
 	D->nScan = J.scans.size();
@@ -1969,6 +1941,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 		snprintf(scan->identifier, DIFXIO_NAME_LENGTH, "%s", S->defName.c_str());
 		snprintf(scan->obsModeName, DIFXIO_NAME_LENGTH, "%s", S->modeDefName.c_str());
 
+// FIXME: replace below with call to getSpacecraftSet(V, sourceSet, spacecraftSet)
 		if(sourceSetup->pointingCentre.isSpacecraft())
 		{
 			spacecraftSet.insert(sourceSetup->pointingCentre.difxName);
@@ -1998,7 +1971,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 	// configure datastreams
 	
 	// Shelves are a bit awkward...  They are currently tied to an antenna, but really they belong to a datastream.
-	D->datastream = makeDifxDatastreams(J, V, P, D->nConfig, D->antenna, shelves);
+	D->datastream = makeDifxDatastreams(J, V, D->nConfig, D->antenna, shelves);
 	D->nDatastream = 0;
 	for(int configId = 0; configId < D->nConfig; ++configId)
 	{

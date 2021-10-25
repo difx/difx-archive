@@ -44,3 +44,13 @@ After vex2 is in good shape
    - generalize to all parameters
    - vex2obs: properly link
 
+3. Multi-phase-center
+   - update wiki and code: require source name
+   - pass through cal code
+
+
+vex2 issues to resolve:
+
+* currently calCode is affixed to a source, but vex2 associates with a phase center within a scan
+
+* EOPs: need to support different "eop origin" values per EOP value; keep individual measurements separate, or bundle to degree possible?

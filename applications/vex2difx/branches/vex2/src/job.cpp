@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2015-2017 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2015-2021 by Walter Brisken & Adam Deller               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -31,6 +31,7 @@
 #include <fstream>
 #include <vexdatamodel.h>
 #include <algorithm>
+#include <set>
 #include "job.h"
 #include "jobflag.h"
 
@@ -130,6 +131,18 @@ bool Job::hasScan(const std::string &scanName) const
 {
 	// if find returns .end(), then it was not found
 	return find(scans.begin(), scans.end(), scanName) != scans.end();
+}
+
+unsigned int Job::getCorrelationSourceSet(const VexData *V, std::set<std::string> &sourceSet) const
+{
+	sourceSet.clear();
+
+	for(std::vector<std::string>::const_iterator it = scans.begin(); it != scans.end(); ++it)
+	{
+		V->getScanByDefName(*it)->addToSourceSet(sourceSet, false);
+	}
+
+	return sourceSet.size();
 }
 
 struct iless

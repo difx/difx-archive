@@ -55,6 +55,19 @@ bool VexScan::getRecordEnable(const std::string &antName) const
 	}
 }
 
+void VexScan::addToSourceSet(std::set<std::string> &sourceSet, bool incPointingCenter) const
+{
+	if(incPointingCenter)
+	{
+		sourceSet.insert(sourceDefName);
+	}
+
+	for(std::vector<std::string>::const_iterator it = phaseCenters.begin(); it != phaseCenters.end(); ++it)
+	{
+		sourceSet.insert(*it);
+	}
+}
+
 std::ostream& operator << (std::ostream &os, const VexScan &x)
 {
 	os << "Scan " << x.defName << 

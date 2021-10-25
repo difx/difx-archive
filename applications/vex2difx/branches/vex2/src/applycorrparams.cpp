@@ -30,10 +30,8 @@
 #include <cstdlib>
 #include "applycorrparams.h"
 
-int applyCorrParams(VexData *V, const CorrParams &params, unsigned int &nWarn, unsigned int &nError, std::set<std::string> &canonicalVDIFUsers)
+static void applyCorrParams_EOP(VexData *V, const CorrParams &params, unsigned int &nWarn, unsigned int &nError)
 {
-	VexStream tmpVS;	// used to hold output of format parsing
-
 	// merge sets of EOPs from vex and corr params file
 	if(!params.eops.empty())
 	{
@@ -48,16 +46,17 @@ int applyCorrParams(VexData *V, const CorrParams &params, unsigned int &nWarn, u
 			V->addEOP(*e);
 		}
 	}
+}
 
+static void applyCorrParams_RemoveUnusedAntennas(VexData *V, const CorrParams &params, unsigned int &nWarn, unsigned int &nError)
+{
 	// remove unwanted antennas
-	for(unsigned int a = 0; a < V->nAntenna(); )
+	for(unsigned int a = 0; a < V->nAntenna(); ++a)
 	{
-		const VexAntenna *A;
-
-		A = V->getAntenna(a);
+		const VexAntenna *A = V->getAntenna(a);
 		if(!A)
 		{
-			std::cerr << "Developer error: applyCorrParams: Antenna number " << a << " cannot be gotten even though nAntenna() reports " << V->nAntenna() << std::endl;
+			std::cerr << "Developer error: applyCorrParams_Antenna: Antenna number " << a << " cannot be gotten even though nAntenna() reports " << V->nAntenna() << std::endl;
 
 			exit(EXIT_FAILURE);
 		}
@@ -70,7 +69,34 @@ int applyCorrParams(VexData *V, const CorrParams &params, unsigned int &nWarn, u
 			++a;
 		}
 	}
+}
 
+static void applyCorrParams_Clock(VexData *V, const CorrParams &params, unsigned int &nWarn, unsigned int &nError)
+{
+	// capture clock information
+	for(unsigned int a = 0; a < V->nAntenna(); ++a)
+	{
+		const VexAntenna *A = V->getAntenna(a);
+		const AntennaSetup *antSetup = params.getAntennaSetup(A->defName);
+
+		if(antSetup)
+		{
+			if(antSetup->clock.mjdStart > 0.0)
+			{
+				V->setClock(A->name, antSetup->clock);
+			}
+			V->adjustClock(A->name, antSetup->deltaClock, antSetup->deltaClockRate);
+
+			if(!antSetup->difxName.empty())
+			{
+				V->setAntennaDifxName(A->name, antSetup->difxName);
+			}
+		}
+	}
+}
+
+static void applyCorrParams_Source(VexData *V, const CorrParams &params, unsigned int &nWarn, unsigned int &nError)
+{
 	// apply source parameters
 	for(unsigned int sourceNum = 0; sourceNum < V->nSource(); ++sourceNum)
 	{
@@ -89,6 +115,9 @@ int applyCorrParams(VexData *V, const CorrParams &params, unsigned int &nWarn, u
 			{
 				V->setSourceCalCode(S->defName, ss->pointingCentre.calCode);
 			}
+
+			// Source type parameters
+
 
 			// If a SourceSetup with a list of phase centers matches the name of a scan pointing center, 
 			// that scan gets all of its .vex pointing centers replaced by the SourceSetup list
@@ -134,7 +163,10 @@ int applyCorrParams(VexData *V, const CorrParams &params, unsigned int &nWarn, u
 			}
 		}
 	}
+}
 
+static void applyCorrParams_RemoveUnusedScans(VexData *V, const CorrParams &params, unsigned int &nWarn, unsigned int &nError)
+{
 	// remove scans that are not linked from v2d setups
 	for(unsigned int s = 0; s < V->nScan(); )
 	{
@@ -172,6 +204,17 @@ int applyCorrParams(VexData *V, const CorrParams &params, unsigned int &nWarn, u
 			++s;
 		}
 	}
+}
+
+void applyCorrParams(VexData *V, const CorrParams &params, unsigned int &nWarn, unsigned int &nError, std::set<std::string> &canonicalVDIFUsers)
+{
+	VexStream tmpVS;	// used to hold output of format parsing
+
+	applyCorrParams_EOP(V, params, nWarn, nError);
+	applyCorrParams_RemoveUnusedAntennas(V, params, nWarn, nError);
+	applyCorrParams_Clock(V, params, nWarn, nError);
+	applyCorrParams_Source(V, params, nWarn, nError);
+	applyCorrParams_RemoveUnusedScans(V, params, nWarn, nError);
 
 	// remove scans with too few antennas or with scans outside the specified time range
 	V->reduceScans(params.minSubarraySize, params);
@@ -607,12 +650,6 @@ int applyCorrParams(VexData *V, const CorrParams &params, unsigned int &nWarn, u
 			continue;
 		}
 
-		const VexClock *paramClock = params.getAntennaClock(A->name);
-		if(paramClock)
-		{
-			V->setClock(A->name, *paramClock);
-		}
-
 		if(as->X != ANTENNA_COORD_NOT_SET || as->Y != ANTENNA_COORD_NOT_SET || as->Z != ANTENNA_COORD_NOT_SET)
 		{
 			if(as->X == ANTENNA_COORD_NOT_SET || as->Y == ANTENNA_COORD_NOT_SET || as->Z == ANTENNA_COORD_NOT_SET)
@@ -639,6 +676,4 @@ int applyCorrParams(VexData *V, const CorrParams &params, unsigned int &nWarn, u
 
 	// remove any datastreams with no data source
 	V->removeStreamsWithNoDataSource();
-
-	return 0;
 }

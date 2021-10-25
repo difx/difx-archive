@@ -807,6 +807,30 @@ void VexData::setClock(const std::string &antName, const VexClock &clock)
 	}
 }
 
+// deltaClock in sec and deltaClockRate in sec/sec
+void VexData::adjustClock(const std::string &antName, double deltaClock, double deltaClockRate)
+{
+	for(std::vector<VexAntenna>::iterator it = antennas.begin(); it != antennas.end(); ++it)
+	{
+		for(std::vector<VexClock>::iterator c = it->clocks.begin(); c != it->clocks.end(); ++c)
+		{
+			c->offset += deltaClock;	// [sec]
+			c->rate += deltaClockRate;	// [sec/sec]
+		}
+	}
+}
+
+void VexData::setAntennaDifxName(const std::string &name, const std::string &difxName)
+{
+	for(std::vector<VexAntenna>::iterator it = antennas.begin(); it != antennas.end(); ++it)
+	{
+		if(it->name == name)
+		{
+			it->difxName = difxName;
+		}
+	}
+}
+
 void VexData::setTcalFrequency(const std::string &antName, int tcalFrequency)
 {
 	for(std::vector<VexAntenna>::iterator it = antennas.begin(); it != antennas.end(); ++it)

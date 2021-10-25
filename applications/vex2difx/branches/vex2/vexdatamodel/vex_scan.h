@@ -34,6 +34,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <set>
 #include "interval.h"
 #include "vex_intent.h"
 
@@ -55,6 +56,7 @@ public:
 	VexScan(): size(0), mjdVex(0.0) {};
 	const Interval *getAntennaInterval(const std::string &antName) const;
 	bool getRecordEnable(const std::string &antName) const;
+	void addToSourceSet(std::set<std::string> &sourceSet, bool incPointingCenter) const;
 };
 
 std::ostream& operator << (std::ostream &os, const VexScan &x);

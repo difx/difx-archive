@@ -415,7 +415,6 @@ static int getAntennas(VexData *V, Vex *v)
 	struct dvalue *r;
 	llist *block;
 	int nWarn = 0;
-	bool hasHighOrderClock = false;
 
 	block = find_block(B_CLOCK, v);
 
@@ -433,6 +432,7 @@ static int getAntennas(VexData *V, Vex *v)
 		A->defName = stn;
 		A->name = A->defName;
 		Upper(A->name);
+		A->difxName = A->name;
 
 		s = (struct site_id *)get_station_lowl(stn, T_SITE_ID, B_SITE, v);
 		if(s != 0)
@@ -566,7 +566,6 @@ static int getAntennas(VexData *V, Vex *v)
 						std::cerr << "Warning: second order clock term did not have units." << std::endl;
 						++nWarn;
 					}
-					hasHighOrderClock = true;
 				}
 				vex_field(T_CLOCK_EARLY, c, 6, &link, &name, &value, &units);
 				if(value)
@@ -581,7 +580,6 @@ static int getAntennas(VexData *V, Vex *v)
 						std::cerr << "Warning: third order clock term did not have units." << std::endl;
 						++nWarn;
 					}
-					hasHighOrderClock = true;
 				}
 			}
 			clock.flipSign();
@@ -644,12 +642,10 @@ static int getAntennas(VexData *V, Vex *v)
 							if(C->accel)
 							{
 								fvex_double(&(C->accel->value), &(C->accel->units), &clock.accel);
-								hasHighOrderClock = true;
 							}
 							if(C->jerk)
 							{
 								fvex_double(&(C->jerk->value), &(C->jerk->units), &clock.jerk);
-								hasHighOrderClock = true;
 							}
 						}
 						
@@ -688,13 +684,6 @@ static int getAntennas(VexData *V, Vex *v)
 				}
 			}
 		}
-	}
-
-	if(hasHighOrderClock)
-	{
-		std::cerr << "Warning: One or more antennas has a clock model with high order (beyond linear) terms.  These terms may be neglected at some point in the processing or reporting (e.g., in mpifxcorr, difx2fits, or difx2mark4)." << std::endl;
-	
-		++nWarn;
 	}
 
 	return nWarn;

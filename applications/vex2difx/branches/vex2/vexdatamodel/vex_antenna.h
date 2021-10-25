@@ -49,14 +49,16 @@ public:
 
 	double getVexClocks(double mjd, double *coeffs) const;		// This version of the function is deprecated
 	double getVexClocks(double mjd, double *coeffs, int *clockorder, int maxorder) const;
+	bool hasClockModel() const { return (!clocks.empty()); }
 	bool hasData(const Interval &timerange) const;
 	void removeBasebandData(int streamId);
 	bool hasVSNs() const { return !vsns.empty(); }
 	bool isVLBA() const { return ::isVLBA(defName); }
 	void setAntennaPolConvert(bool doConvert) { polConvert = doConvert; }
 
-	std::string name;
+	std::string name;		// Deprecated
 	std::string defName;		// if name != defName, things may be very confused...
+	std::string difxName;		// Name to be used in difx
 	std::string twoCharSiteCode;	// Not likely used...
 	std::string oneCharSiteCode;	// Used by mark4 data processing path; set to NULL if not provided
 
@@ -74,6 +76,9 @@ public:
 	std::vector<VexBasebandData> files;	// indexed by file number
 	std::vector<VexNetworkData> ports;	// indexed by stream number
 	std::vector<VexExtension> extensions;	// extensions linked from $STATION block
+
+	// Some antenna/site things that are not based on vex parameters (but could be carried as an extension)
+
 };
 
 bool usesCanonicalVDIF(const std::string &antName);

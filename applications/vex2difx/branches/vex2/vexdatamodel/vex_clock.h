@@ -40,8 +40,14 @@ public:
 	{ 
 		offset = -offset;
 		rate = -rate;
-		accel = -accel;
-		jerk = -jerk;
+		if(accel != 0.0)	// don't negate 0.0 to prevent equality test from failing
+		{
+			accel = -accel;
+		}
+		if(jerk != 0.0)
+		{
+			jerk = -jerk;
+		}
 	}
 
 	double mjdStart;	// [mjd]

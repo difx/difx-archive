@@ -61,6 +61,12 @@ std::ostream& operator << (std::ostream &os, const VexSource &x)
 		os << "    line1='" << x.tle[1] << "'" << std::endl;
 		os << "    line2='" << x.tle[2] << "'" << std::endl;
 		break;
+	case VexSource::Fixed:
+		os << "  Type=Fixed" << std::endl;
+		os << "    X = " << x.X << " m" << std::endl;
+		os << "    Y = " << x.Y << " m" << std::endl;
+		os << "    Z = " << x.Z << " m" << std::endl;
+		break;
 	default:
 		os << "  Type: unsupported" << std::endl;
 		break;
@@ -120,4 +126,12 @@ void VexSource::setBSP(const char *fileName, int objectId)
 	type = BSP;
 	bspFile = fileName;
 	bspObject = objectId;
+}
+
+void VexSource::setFixed(double x, double y, double z)
+{
+	type = Fixed;
+	X = x;	// (m)
+	Y = y;	// (m)
+	Z = z;	// (m)
 }
