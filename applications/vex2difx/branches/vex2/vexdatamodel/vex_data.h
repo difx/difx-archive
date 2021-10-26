@@ -137,7 +137,7 @@ public:
 	const VexSource *getSourceByDefName(const std::string &defName) const;
 	const VexSource *getSourceBySourceName(const std::string &name) const;
 	void setSourceCalCode(const std::string &name, char calCode);
-	void setSourceEphemerisFile(const std::string &name, const std::string &ephemFile, int ephemObject);
+	void setSourceEphemerisFile(const std::string &name, const std::string &ephemFile, const std::string &ephemObject);
 	void setSourceITRFCoordinates(const std::string &name, double X, double Y, double Z);	// (X, Y, Z in meters)
 	void setSourceCoordinates(const std::string &name, double ra, double dec);	// (ra, dec in radians)
 

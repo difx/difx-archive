@@ -157,11 +157,14 @@ void VexData::setSourceCalCode(const std::string &name, char calCode)
 	}
 }
 
-void VexData::setSourceEphemerisFile(const std::string &name, const std::string &ephemFile, int ephemObject)
+void VexData::setSourceEphemerisFile(const std::string &name, const std::string &ephemFile, const std::string &ephemObject)
 {
 	for(std::vector<VexSource>::iterator it = sources.begin(); it != sources.end(); ++it)
 	{
-
+		if(it->defName == name)
+		{
+			it->setBSP(ephemFile.c_str(), ephemObject.c_str());
+		}
 	}
 }
 
@@ -170,7 +173,10 @@ void VexData::setSourceITRFCoordinates(const std::string &name, double X, double
 {
 	for(std::vector<VexSource>::iterator it = sources.begin(); it != sources.end(); ++it)
 	{
-		it->setFixed(X, Y, Z);
+		if(it->defName == name)
+		{
+			it->setFixed(X, Y, Z);
+		}
 	}
 }
 
@@ -179,9 +185,12 @@ void VexData::setSourceCoordinates(const std::string &name, double ra, double de
 {
 	for(std::vector<VexSource>::iterator it = sources.begin(); it != sources.end(); ++it)
 	{
-		it->type = VexSource::Star;
-		it->ra = ra;
-		it->dec = dec;
+		if(it->defName == name)
+		{
+			it->type = VexSource::Star;
+			it->ra = ra;
+			it->dec = dec;
+		}
 	}
 }
 

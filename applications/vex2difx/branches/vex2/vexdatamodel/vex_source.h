@@ -46,7 +46,7 @@ public:
 	bool hasSourceName(const std::string &name) const;
 	bool setSourceType(const char *t1 = 0, const char *t2 = 0, const char *t3 = 0);
 	void setTLE(int lineNum, const char *line);	// lineNum must be 0, 1 or 2
-	void setBSP(const char *fileName, int objectId);
+	void setBSP(const char *fileName, const char *objectId);
 	void setFixed(double x, double y, double z);
 
 	enum Type type;
@@ -58,7 +58,7 @@ public:
 
 	std::string tle[3];				// corresponds to rows 0 (20 chars), 1 (69 chars) and 2 (69 chars) of an embedded TLE
 	std::string bspFile;
-	int bspObject;
+	std::string bspObject;				// normally an integer, but could be arbitrary string
 	double ephemDeltaT;				// tabulated ephem. interval (seconds, default 24)
 	double ephemStellarAber;			// 0 = don't apply (default), 1 = apply, other: scale correction accordingly
 	double ephemClockError;				// (sec) 0.0 is no error

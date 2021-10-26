@@ -730,7 +730,7 @@ static int getSources(VexData *V, Vex *v)
 			ok = S->setSourceType(arg1, arg2, arg3);
 			if(!ok && V->getVersion() < 1.8)
 			{
-				S->setBSP(arg1, atoi(arg2));	// A hack used pre-Vex2 at VLBA
+				S->setBSP(arg1, arg2);	// A hack used pre-Vex2 at VLBA
 			}
 
 			if(V->getVersion() >= 1.8)
@@ -753,7 +753,7 @@ static int getSources(VexData *V, Vex *v)
 
 					if(arg1 && arg2)
 					{
-						S->setBSP(arg1, atoi(arg2));
+						S->setBSP(arg1, arg2);
 					}
 					else
 					{

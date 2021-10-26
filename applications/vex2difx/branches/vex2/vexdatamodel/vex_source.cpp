@@ -121,7 +121,7 @@ void VexSource::setTLE(int lineNum, const char *line)
 	}
 }
 
-void VexSource::setBSP(const char *fileName, int objectId)
+void VexSource::setBSP(const char *fileName, const char *objectId)
 {
 	type = BSP;
 	bspFile = fileName;

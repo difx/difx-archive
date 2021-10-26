@@ -121,7 +121,7 @@ static void applyCorrParams_Source(VexData *V, const CorrParams &params, unsigne
 			// Source type parameters
 			if(pc.isSpacecraft())
 			{
-				V->setSourceEphemerisFile(S->defName, pc.ephemFile, atoi(pc.ephemObject.c_str()));
+				V->setSourceEphemerisFile(S->defName, pc.ephemFile, pc.ephemObject);
 			}
 			else if(pc.isFixedSource())
 			{

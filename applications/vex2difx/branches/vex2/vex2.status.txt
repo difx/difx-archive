@@ -13,13 +13,13 @@ TODO: high priority
   - use switched power in vex2script/src
 * SCHED:
   X multiple sources in beam (vexdatamodel)
-  - multiple sources in beam (vex2difx/src)
-    - if any .v2d phase centers supplied, all .vex ones are ignored
+  X multiple sources in beam (vex2difx/src)
+    X if any .v2d phase centers supplied, all .vex ones are ignored
   - intents: Calcode and Qual (and calture other intents for possible other use)
   - capture and use pointing offset
 * SOURCE:
   X non-sidereal 
-  - non-sidereal in vex2difx/src
+  . non-sidereal in vex2difx/src (partial)
   - non-sidereal in vex2script
 * EXPER:
   - vexpeek to print segment code

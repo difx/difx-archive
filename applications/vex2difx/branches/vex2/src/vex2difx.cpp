@@ -484,10 +484,10 @@ static int getToneSetId(vector<vector<unsigned int> > &toneSets, const vector<un
 // It is this number of present channels that is reported in the .input files as "recorded channels", so some room for confusion here.
 
 // FIXME: the name "startBand" is confusing.  
-static int setFormat(DifxInput *D, int dsId, vector<freq>& freqs, vector<vector<unsigned int> >& toneSets, const VexMode *mode, const string &antName, unsigned int startBand, const VexSetup &setup, const VexStream &stream, const CorrSetup *corrSetup, enum V2D_Mode v2dMode)
+static unsigned int setFormat(DifxInput *D, int dsId, vector<freq>& freqs, vector<vector<unsigned int> >& toneSets, const VexMode *mode, const string &antName, unsigned int startBand, const VexSetup &setup, const VexStream &stream, const CorrSetup *corrSetup, enum V2D_Mode v2dMode)
 {
 	vector<pair<int,int> > bandMap;
-	int streamPresentChan = 0;	// "present channel" index
+	unsigned int streamPresentChan = 0;	// "present channel" index
 
 	if(mode == 0)
 	{
@@ -1653,26 +1653,252 @@ static int fixDatastreamTable(DifxInput *D)
 	return nFix;
 }
 
+static void populateSourceTable(DifxInput *D, const Job& J, const VexData *V, set<string> &sourceSet)
+{
+	J.getCorrelationSourceSet(V, sourceSet);
+
+	allocateSourceTable(D, sourceSet.size());	// returns empty allocated array (e.g., D->nSource is set to 0)
+
+	for(set<string>::const_iterator it = sourceSet.begin(); it != sourceSet.end(); ++it)
+	{
+		const VexSource *S = V->getSourceBySourceName(*it);
+		if(!S)
+		{
+			std::cerr << "Developer error: populateSourceTable(): soruce " << *it << " not found in VexData" << std::endl;
+
+			exit(EXIT_FAILURE);
+		}
+		
+		snprintf(D->source[D->nSource].name, DIFXIO_NAME_LENGTH, "%s", S->defName.c_str());
+		D->source[D->nSource].ra = S->ra;
+		D->source[D->nSource].dec = S->dec;
+		D->source[D->nSource].calCode[0] = S->calCode;
+		
+		++D->nSource;
+	}
+}
+
+static void populateScanTable(DifxInput *D, const Job& J, const VexData *V, const CorrParams *P, const CorrSetup *corrSetup, vector<pair<string,string> > &configs, unsigned int &maxScanPhaseCentres)
+{
+	maxScanPhaseCentres = 0;
+
+	D->nScan = J.scans.size();
+	D->scan = newDifxScanArray(D->nScan);
+	DifxScan *difxScan = D->scan;
+	for(vector<string>::const_iterator si = J.scans.begin(); si != J.scans.end(); ++si, ++difxScan)
+	{
+		int fftDurNS;
+
+		const VexScan *vexScan = V->getScanByDefName(*si);
+		if(!vexScan)
+		{
+			cerr << "Developer error: source[" << *si << "] not found!  This cannot be!" << endl;
+			
+			exit(EXIT_FAILURE);
+		}
+
+		// Determine interval where scan and job overlap
+		Interval scanInterval(*vexScan);
+		scanInterval.logicalAnd(J);
+
+		if(vexScan->phaseCenters.size() > maxScanPhaseCentres)
+		{
+			maxScanPhaseCentres = vexScan->phaseCenters.size();
+		}
+
+		difxScan->pointingCentreSrc = DifxInputGetSourceId(D, vexScan->sourceDefName.c_str());
+		if(difxScan->pointingCentreSrc)
+		{
+			std::cerr << "Developer error: DifxInputGetSourceId(D, " << vexScan->sourceDefName << ") returned " << difxScan->pointingCentreSrc << " for pointing center." << std::endl;
+
+			exit(EXIT_FAILURE);
+		}
+
+		for(unsigned int pc = 0; pc < vexScan->phaseCenters.size(); ++pc)
+		{
+			difxScan->phsCentreSrcs[pc] = DifxInputGetSourceId(D, vexScan->phaseCenters[pc].c_str());
+			if(difxScan->phsCentreSrcs[pc] < 0)
+			{
+				std::cerr << "Developer error: DifxInputGetSourceId(D, " << vexScan->phaseCenters[pc] << ") returned " << difxScan->phsCentreSrcs[pc] << " for phase center source index " << pc << "." << std::endl;
+
+				exit(EXIT_FAILURE);
+			}
+		}
+		difxScan->nPhaseCentres = vexScan->phaseCenters.size();
+
+		difxScan->mjdStart = scanInterval.mjdStart;
+		difxScan->mjdEnd = scanInterval.mjdStop;
+		difxScan->startSeconds = static_cast<int>((scanInterval.mjdStart - J.mjdStart)*86400.0 + 0.01);
+		difxScan->durSeconds = static_cast<int>(scanInterval.duration_seconds() + 0.01);
+		if(difxScan->durSeconds == 0)
+		{
+			difxScan->durSeconds = 1;
+		}
+		difxScan->configId = getConfigIndex(configs, D, V, P, vexScan);
+		difxScan->maxNSBetweenUVShifts = corrSetup->maxNSBetweenUVShifts;
+		fftDurNS = static_cast<int>(1000000000.0/corrSetup->FFTSpecRes);  
+		if(corrSetup->maxNSBetweenACAvg > 0)
+		{
+			difxScan->maxNSBetweenACAvg = corrSetup->maxNSBetweenACAvg;
+		}
+		else
+		{
+			difxScan->maxNSBetweenACAvg = defaultMaxNSBetweenACAvg;
+		}
+		if(corrSetup->numBufferedFFTs*fftDurNS > difxScan->maxNSBetweenACAvg)
+		{
+			if(corrSetup->maxNSBetweenACAvg != 0)	// Only print warning if explicitly overriding user value
+			{
+				cout << "Adjusting maxNSBetweenACAvg since the number of buffered FFTs (";
+				cout << corrSetup->numBufferedFFTs << ") gives a duration of ";
+				cout << corrSetup->numBufferedFFTs*fftDurNS << ", longer that that specified (";
+				cout << corrSetup->maxNSBetweenACAvg << ")" << endl;
+			}
+			difxScan->maxNSBetweenACAvg = corrSetup->numBufferedFFTs*fftDurNS;
+		}
+		if(corrSetup->numBufferedFFTs*fftDurNS > corrSetup->maxNSBetweenUVShifts)
+		{
+			cout << "The number of buffered FFTs (" << corrSetup->numBufferedFFTs;
+			cout << ") gives a duration of " << corrSetup->numBufferedFFTs*fftDurNS;
+			cout << ", longer that that specified for the UV shift interval (";
+			cout << corrSetup->maxNSBetweenUVShifts;
+			cout << "). Reduce FFT buffering or increase allowed interval!" << endl;
+
+			exit(EXIT_FAILURE);
+		}
+
+		snprintf(difxScan->identifier, DIFXIO_NAME_LENGTH, "%s", vexScan->defName.c_str());
+		snprintf(difxScan->obsModeName, DIFXIO_NAME_LENGTH, "%s", vexScan->modeDefName.c_str());
+	}
+}
+
+static void populateSpacecraftTable(DifxInput *D, const VexData *V, const std::set<std::string> &spacecraftSet, int verbose)
+{
+	DifxSpacecraft *ds;
+	int v;
+
+	D->spacecraft = newDifxSpacecraftArray(spacecraftSet.size());
+	D->nSpacecraft = spacecraftSet.size();
+	
+	ds = D->spacecraft;
+
+	for(set<string>::const_iterator s = spacecraftSet.begin(); s != spacecraftSet.end(); ++s, ++ds)
+	{
+		const VexSource *vexSource = V->getSourceByDefName(*s);
+		if(!vexSource)
+		{
+			cerr << "Developer error: couldn't find spacecraft " << *s << " in the source table, aborting!)" << endl;
+			
+			exit(EXIT_FAILURE);
+		}
+
+		const long int deltaT = vexSource->ephemDeltaT;	// seconds -- interval between ephemeris calculations.  24 sec is normal
+		const int intMJD = static_cast<int>(D->mjdStart);
+		// start time in seconds rounded down to nearest 2 minute boundary, and then one more
+		const int secStart = (static_cast<int>((D->mjdStart - intMJD)*720.0) - 1)*120;
+		// end time in seconds rounded up to nearest 2 minute boundary, and then one more
+		const int secEnd = static_cast<int>((D->mjdStop - intMJD)*720.0 + 1.999)*120;
+		const int nPoint = (secEnd - secStart)/deltaT + 1;
+		const double mjd0 = intMJD + secStart/86400.0;
+
+		/* initialize state vector structure with evaluation times */
+		ds->nPoint = nPoint;
+		ds->pos = (sixVector *)calloc(ds->nPoint, sizeof(sixVector));
+		for(int p = 0; p < nPoint; ++p)
+		{
+			sixVectorSetTime(ds->pos + p, intMJD, secStart + p*deltaT);
+		}
+
+		if(vexSource->type == VexSource::BSP)		// process a .bsp file through spice
+		{
+			if(verbose > 0)
+			{
+				cout << "Computing ephemeris for source: " << *vexSource << endl;
+				cout << "  start mjd = " << intMJD << "  sec = " << secStart << endl;
+				cout << "  nPoint = " << nPoint << endl;
+			}
+
+			v = populateSpiceLeapSecondsFromEOP(D->eop, D->nEOP);
+			if(v != 0)
+			{
+				cerr << "Error: populateSpiceLeapSecondsFromEOP returned " << v << endl;
+
+				exit(EXIT_FAILURE);
+			}
+
+			v = computeDifxSpacecraftEphemeris(ds, mjd0, deltaT/86400.0, nPoint, 
+				vexSource->bspObject.c_str(),
+				0,
+				vexSource->bspFile.c_str(), 
+				vexSource->ephemStellarAber,
+				vexSource->ephemClockError);
+			if(v != 0)
+			{
+				cerr << "Error: ephemeris calculation failed.  Must stop." << endl;
+				
+				exit(EXIT_FAILURE);
+			}
+		}
+		else if(vexSource->type == VexSource::TLE)
+		{
+			cerr << "Error: TLE not yet supported." << endl;
+
+			exit(EXIT_FAILURE);
+		}
+		else if(vexSource->type == VexSource::Fixed)
+		{
+			v = computeDifxSpacecraftEphemerisFromXYZ(ds, mjd0, deltaT/86400.0, nPoint, 
+				vexSource->X, vexSource->Y, vexSource->Z,
+				0,
+				vexSource->ephemClockError);
+			if(v != 0)
+			{
+				cerr << "Error: ephemeris calculation failed.  Must stop." << endl;
+				
+				exit(EXIT_FAILURE);
+			}
+		}
+		else
+		{
+			cerr << "Developer error: unknown source type; don't know how to compute state vectors." << endl;
+
+			exit(EXIT_FAILURE);
+		}
+
+		// give the spacecraft table the right name so it can be linked to the source
+		snprintf(ds->name, DIFXIO_NAME_LENGTH, "%s", vexSource->defName.c_str());
+	}
+
+	// Fill in the spacecraft IDs in the DifxInput object
+	for(int s = 0; s < D->nSource; ++s)
+	{
+		for(int sc = 0; sc < D->nSpacecraft; ++sc)
+		{
+			if(strcmp(D->spacecraft[sc].name, D->source[s].name) == 0)
+			{
+				D->source[s].spacecraftId = sc;
+				
+				break;
+			}
+		}
+	}
+}
+
 static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const std::list<Event> &events, const Shelves &shelves, int verbose, ofstream *of, int nDigit, char ext, int strict)
 {
 	DifxInput *D;
-	DifxScan *scan;
 	const CorrSetup *corrSetup;
-	const SourceSetup *sourceSetup;
-	const PhaseCentre *phaseCentre;
-	const PhaseCentre * pointingCentre;
 	const AntennaSetup *antennaSetup;
-	const VexScan *S;
+	const VexScan *vexScan;
 	set<string> configSet;
+	set<string> sourceSet;
 	set<string> spacecraftSet;
 	vector<pair<string,string> > configs;
 	vector<freq> freqs;
 	vector<vector<unsigned int> > toneSets;
 	int nPulsar=0;
-	int nTotalPhaseCentres, nbin, maxPulsarBins, maxScanPhaseCentres, fftDurNS;
-	double srcra, srcdec, radiff, decdiff;
-	const double MAX_POS_DIFF = 5e-9; //radians, approximately equal to 1 mas
-	int pointingSrcIndex, foundSrcIndex, atSource;
+	int nbin, maxPulsarBins;
+	unsigned int maxScanPhaseCentres;
 	int nZoomBands, fqId, polcount, zoomChans = 0, minChans;
 	int decimation, worstcaseguardns;
 	DifxDatastream *dd;
@@ -1691,14 +1917,14 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 		exit(EXIT_FAILURE);
 	}
 	
-	S = V->getScanByDefName(J.scans.front());
-	if(!S)
+	vexScan = V->getScanByDefName(J.scans.front());
+	if(!vexScan)
 	{
 		cerr << "Developer error: writeJob() top: scan[" << J.scans.front() << "] = 0" << endl;
 
 		exit(EXIT_FAILURE);
 	}
-	const std::string &corrSetupName = P->findSetup(S->defName, S->sourceDefName, S->modeDefName);
+	const std::string &corrSetupName = P->findSetup(vexScan->defName, vexScan->sourceDefName, vexScan->modeDefName);
 	corrSetup = P->getCorrSetup(corrSetupName);
 	if(!corrSetup)
 	{
@@ -1712,14 +1938,14 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 	{
 		string configName;
 
-		S = V->getScanByDefName(*si);
-		if(!S)
+		vexScan = V->getScanByDefName(*si);
+		if(!vexScan)
 		{
 			cerr << "Developer error: writeJob() loop: scan[" << *si << "] = 0" << endl;
 
 			exit(EXIT_FAILURE);
 		}
-		configName = S->modeDefName + string("_") + corrSetupName;
+		configName = vexScan->modeDefName + string("_") + corrSetupName;
 		configSet.insert(configName);
 	}
 
@@ -1735,226 +1961,27 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 	D->antenna = makeDifxAntennas(J, V, &(D->nAntenna));
 	D->job = makeDifxJob(V->getDirectory(), J, D->nAntenna, V->getExper()->name, &(D->nJob), nDigit, ext, P);
 	
-	D->nScan = J.scans.size();
-	D->scan = newDifxScanArray(D->nScan);
 	D->nConfig = configSet.size();
 	D->config = newDifxConfigArray(D->nConfig);
 
 	blockedfreqids.resize(D->nAntenna);
 
-	// Allocate space for the source table - first work out how many sources we'll need
 	maxPulsarBins = 0;
 	maxScanPhaseCentres = 0;
-	nTotalPhaseCentres = 0;
-	for(vector<SourceSetup>::const_iterator ss=P->sourceSetups.begin(); ss != P->sourceSetups.end(); ++ss)
-	{
-		nTotalPhaseCentres += ss->phaseCentres.size()+1;
-		pointingCentre = &(ss->pointingCentre);
-		if((pointingCentre->difxName.compare(PhaseCentre::DEFAULT_NAME) != 0) ||
-		   (pointingCentre->ra > PhaseCentre::DEFAULT_RA) ||
-		   (pointingCentre->dec > PhaseCentre::DEFAULT_DEC))
-		{
-			++nTotalPhaseCentres;
-		}
-	}
-	allocateSourceTable(D, nTotalPhaseCentres);
 
 	// Make rule table
 	populateRuleTable(D, P);
 
+	// put all the sources (both pointing sources and phase centers) into the destination DiFX source table
+	populateSourceTable(D, J, V, sourceSet);
+
+	getSpacecraftSet(V, sourceSet, spacecraftSet);
+
 	// now run through all scans, populating things as we go
-	scan = D->scan;
-	for(vector<string>::const_iterator si = J.scans.begin(); si != J.scans.end(); ++si, ++scan)
-	{
-		S = V->getScanByDefName(*si);
-		if(!S)
-		{
-			cerr << "Developer error: source[" << *si << "] not found!  This cannot be!" << endl;
-			
-			exit(EXIT_FAILURE);
-		}
+	populateScanTable(D, J, V, P, corrSetup, configs, maxScanPhaseCentres);
 
-		const VexSource *src = V->getSourceByDefName(S->sourceDefName);
 
-		// Determine interval where scan and job overlap
-		Interval scanInterval(*S);
-		scanInterval.logicalAnd(J);
-
-		corrSetup = P->getCorrSetup(corrSetupName);
-		sourceSetup = P->getSourceSetup(src->sourceNames);
-		if(!sourceSetup)
-		{
-			cerr << "Error: no source setup for " << S->sourceDefName << ".  Aborting!" << endl;
-
-			exit(EXIT_FAILURE);
-		}
-		pointingCentre = &(sourceSetup->pointingCentre);
-		scan->nPhaseCentres = sourceSetup->phaseCentres.size();
-		if(sourceSetup->doPointingCentre)
-		{
-			++scan->nPhaseCentres;
-		}
-		if(scan->nPhaseCentres > maxScanPhaseCentres)
-		{
-			maxScanPhaseCentres = scan->nPhaseCentres;
-		}
-		atSource = 0;
-		pointingSrcIndex = -1;
-		srcra = src->ra;
-		srcdec = src->dec;
-		if(pointingCentre->ra > PhaseCentre::DEFAULT_RA)
-		{
-			srcra = pointingCentre->ra;
-		}
-		if(pointingCentre->dec > PhaseCentre::DEFAULT_DEC)
-		{
-			srcdec = pointingCentre->dec;
-		}
-		for(int i = 0; i < D->nSource; ++i)
-		{
-			radiff  = fabs(D->source[i].ra - srcra);
-			decdiff = fabs(D->source[i].dec - srcdec);
-			if(radiff < MAX_POS_DIFF && decdiff < MAX_POS_DIFF &&
-			   D->source[i].calCode[0] == pointingCentre->calCode &&
-			   D->source[i].qual == pointingCentre->qualifier)
-			 {
-			 	if(pointingCentre->difxName.compare(PhaseCentre::DEFAULT_NAME) != 0)
-				{
-					if(strcmp(D->source[i].name, pointingCentre->difxName.c_str()) == 0)
-					{
-						pointingSrcIndex = i;
-						break;
-					}
-				}
-				else
-				{
-					if(strcmp(D->source[i].name, src->defName.c_str()) == 0)
-					{
-						pointingSrcIndex = i;
-						break;
-					}
-				}
-			}
-#warning "FIXME: There might be something fishy in the source name comparison above."
-			// What happens if the source is renamed?  A better infrastructure for this is needed.
-			// Also, code now compares against the def name in case that is the name basis
-		}
-		if(pointingSrcIndex == -1)
-		{
-			pointingSrcIndex = D->nSource;
-			// below we take the first source name index by default
-			snprintf(D->source[pointingSrcIndex].name, DIFXIO_NAME_LENGTH, "%s", src->sourceNames[0].c_str());
-			D->source[pointingSrcIndex].ra = src->ra;
-			D->source[pointingSrcIndex].dec = src->dec;
-			D->source[pointingSrcIndex].calCode[0] = pointingCentre->calCode;
-			D->source[pointingSrcIndex].qual = pointingCentre->qualifier;
-			//overwrite with stuff from the source setup if it exists
-			if(pointingCentre->difxName.compare(PhaseCentre::DEFAULT_NAME) != 0)
-			{
-				snprintf(D->source[pointingSrcIndex].name, DIFXIO_NAME_LENGTH, "%s", pointingCentre->difxName.c_str());
-			}
-			if(pointingCentre->ra > PhaseCentre::DEFAULT_RA)
-			{
-				D->source[pointingSrcIndex].ra = pointingCentre->ra;
-			}
-			if(pointingCentre->dec > PhaseCentre::DEFAULT_DEC)
-			{
-				D->source[pointingSrcIndex].dec = pointingCentre->dec;
-			}
-			++D->nSource;
-		}
-		scan->pointingCentreSrc = pointingSrcIndex;
-		if(sourceSetup->doPointingCentre)
-		{
-			scan->phsCentreSrcs[atSource] = pointingSrcIndex;
-			++atSource;
-		}
-		for(vector<PhaseCentre>::const_iterator p=sourceSetup->phaseCentres.begin(); p != sourceSetup->phaseCentres.end(); ++p)
-		{
-			foundSrcIndex = -1;
-			for(int i = 0; i < D->nSource; ++i)
-			{
-				if(D->source[i].ra == p->ra && D->source[i].dec == p->dec &&
-					D->source[i].calCode[0] == p->calCode &&
-					D->source[i].qual == p->qualifier     &&
-					strcmp(D->source[i].name, p->difxName.c_str()) == 0)
-				{
-					foundSrcIndex = i;
-					break;
-				}
-			}
-			if(foundSrcIndex == -1)
-			{
-				foundSrcIndex = D->nSource;
-				snprintf(D->source[foundSrcIndex].name, DIFXIO_NAME_LENGTH, "%s", p->difxName.c_str());
-				D->source[foundSrcIndex].ra = p->ra;
-				D->source[foundSrcIndex].dec = p->dec;
-				D->source[foundSrcIndex].calCode[0] = p->calCode;
-				D->source[foundSrcIndex].qual = p->qualifier;
-				++D->nSource;
-			}
-			scan->phsCentreSrcs[atSource] = foundSrcIndex; 
-			++atSource;
-		}
-
-		scan->mjdStart = scanInterval.mjdStart;
-		scan->mjdEnd = scanInterval.mjdStop;
-		scan->startSeconds = static_cast<int>((scanInterval.mjdStart - J.mjdStart)*86400.0 + 0.01);
-		scan->durSeconds = static_cast<int>(scanInterval.duration_seconds() + 0.01);
-		if(scan->durSeconds == 0)
-		{
-			scan->durSeconds = 1;
-		}
-		scan->configId = getConfigIndex(configs, D, V, P, S);
-		scan->maxNSBetweenUVShifts = corrSetup->maxNSBetweenUVShifts;
-		fftDurNS = static_cast<int>(1000000000.0/corrSetup->FFTSpecRes);  
-		if(corrSetup->maxNSBetweenACAvg > 0)
-		{
-			scan->maxNSBetweenACAvg = corrSetup->maxNSBetweenACAvg;
-		}
-		else
-		{
-			scan->maxNSBetweenACAvg = defaultMaxNSBetweenACAvg;
-		}
-		if(corrSetup->numBufferedFFTs*fftDurNS > scan->maxNSBetweenACAvg)
-		{
-			if(corrSetup->maxNSBetweenACAvg != 0)	// Only print warning if explicitly overriding user value
-			{
-				cout << "Adjusting maxNSBetweenACAvg since the number of buffered FFTs (";
-				cout << corrSetup->numBufferedFFTs << ") gives a duration of ";
-				cout << corrSetup->numBufferedFFTs*fftDurNS << ", longer that that specified (";
-				cout << corrSetup->maxNSBetweenACAvg << ")" << endl;
-			}
-			scan->maxNSBetweenACAvg = corrSetup->numBufferedFFTs*fftDurNS;
-		}
-		if(corrSetup->numBufferedFFTs*fftDurNS > corrSetup->maxNSBetweenUVShifts)
-		{
-			cout << "The number of buffered FFTs (" << corrSetup->numBufferedFFTs;
-			cout << ") gives a duration of " << corrSetup->numBufferedFFTs*fftDurNS;
-			cout << ", longer that that specified for the UV shift interval (";
-			cout << corrSetup->maxNSBetweenUVShifts;
-			cout << "). Reduce FFT buffering or increase allowed interval!" << endl;
-
-			exit(EXIT_FAILURE);
-		}
-
-		snprintf(scan->identifier, DIFXIO_NAME_LENGTH, "%s", S->defName.c_str());
-		snprintf(scan->obsModeName, DIFXIO_NAME_LENGTH, "%s", S->modeDefName.c_str());
-
-// FIXME: replace below with call to getSpacecraftSet(V, sourceSet, spacecraftSet)
-		if(sourceSetup->pointingCentre.isSpacecraft())
-		{
-			spacecraftSet.insert(sourceSetup->pointingCentre.difxName);
-		}
-		for(vector<PhaseCentre>::const_iterator p=sourceSetup->phaseCentres.begin(); p != sourceSetup->phaseCentres.end(); ++p)
-		{
-			if(p->isSpacecraft())
-			{
-				spacecraftSet.insert(p->difxName);
-			}
-		}
-	}
-
+	// look for pulsars
 	for(int configId = 0; configId < D->nConfig; ++configId)
 	{
 		corrSetup = P->getCorrSetup(configs[configId].second);
@@ -2292,125 +2319,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 	// Populate spacecraft table
 	if(!spacecraftSet.empty())
 	{
-		DifxSpacecraft *ds;
-		int v;
-
-		D->spacecraft = newDifxSpacecraftArray(spacecraftSet.size());
-		D->nSpacecraft = spacecraftSet.size();
-		
-		ds = D->spacecraft;
-
-		for(set<string>::const_iterator s = spacecraftSet.begin(); s != spacecraftSet.end(); ++s, ++ds)
-		{
-			phaseCentre = P->getPhaseCentre(*s);
-			if(!phaseCentre)
-			{
-				cerr << "Developer error: couldn't find " << *s << " in the spacecraft table, aborting!)" << endl;
-				
-				exit(EXIT_FAILURE);
-			}
-
-			const long int deltaT = phaseCentre->ephemDeltaT;	// seconds -- interval between ephemeris calculations.  24 sec is normal
-			const int intMJD = static_cast<int>(D->mjdStart);
-			// start time in seconds rounded down to nearest 2 minute boundary, and then one more
-			const int secStart = (static_cast<int>((D->mjdStart - intMJD)*720.0) - 1)*120;
-			// end time in seconds rounded up to nearest 2 minute boundary, and then one more
-			const int secEnd = static_cast<int>((D->mjdStop - intMJD)*720.0 + 1.999)*120;
-			const int nPoint = (secEnd - secStart)/deltaT + 1;
-			const double mjd0 = intMJD + secStart/86400.0;
-
-			/* initialize state vector structure with evaluation times */
-			ds->nPoint = nPoint;
-			ds->pos = (sixVector *)calloc(ds->nPoint, sizeof(sixVector));
-			for(int p = 0; p < nPoint; ++p)
-			{
-				sixVectorSetTime(ds->pos + p, intMJD, secStart + p*deltaT);
-			}
-
-			if(!phaseCentre->ephemObject.empty())		// process a .bsp file through spice
-			{
-				const char *naifFile;
-
-				if(verbose > 0)
-				{
-					cout << "Computing ephemeris:" << endl;
-					cout << "  source name = " << phaseCentre->difxName << endl;
-					cout << "  ephem object name = " << phaseCentre->ephemObject << endl;
-					cout << "  start mjd = " << intMJD << "  sec = " << secStart << endl;
-					cout << "  deltaT = " << phaseCentre->ephemDeltaT << " sec" << endl;
-					cout << "  nPoint = " << nPoint << endl;
-					cout << "  ephemFile = " << phaseCentre->ephemFile << endl;
-					cout << "  naifFile = " << phaseCentre->naifFile << endl;
-					cout << "  ephemStellarAber = " << phaseCentre->ephemStellarAber << endl;
-					cout << "  ephemClockError = " << phaseCentre->ephemClockError << endl;
-				}
-
-				if(phaseCentre->naifFile.empty())
-				{
-					v = populateSpiceLeapSecondsFromEOP(D->eop, D->nEOP);
-					if(v != 0)
-					{
-						cerr << "Error: populateSpiceLeapSecondsFromEOP returned " << v << endl;
-
-						exit(EXIT_FAILURE);
-					}
-					naifFile = 0;
-				}
-				else
-				{
-					naifFile = phaseCentre->naifFile.c_str();
-				}
-
-				v = computeDifxSpacecraftEphemeris(ds, mjd0, deltaT/86400.0, nPoint, 
-					phaseCentre->ephemObject.c_str(),
-					naifFile,
-					phaseCentre->ephemFile.c_str(), 
-					phaseCentre->ephemStellarAber,
-					phaseCentre->ephemClockError);
-				if(v != 0)
-				{
-					cerr << "Error: ephemeris calculation failed.  Must stop." << endl;
-					
-					exit(EXIT_FAILURE);
-				}
-			}
-			else if(phaseCentre->isFixedSource())
-			{
-				v = computeDifxSpacecraftEphemerisFromXYZ(ds, mjd0, deltaT/86400.0, nPoint, 
-					phaseCentre->X, phaseCentre->Y, phaseCentre->Z,
-					phaseCentre->naifFile.c_str(),
-					phaseCentre->ephemClockError);
-				if(v != 0)
-				{
-					cerr << "Error: ephemeris calculation failed.  Must stop." << endl;
-					
-					exit(EXIT_FAILURE);
-				}
-			}
-			else
-			{
-				cerr << "Developer error: unknown source type; don't know how to compute state vectors." << endl;
-
-				exit(EXIT_FAILURE);
-			}
-
-			// give the spacecraft table the right name so it can be linked to the source
-			snprintf(ds->name, DIFXIO_NAME_LENGTH, "%s", phaseCentre->difxName.c_str());
-		}
-
-		//Fill in the spacecraft IDs in the DifxInput object
-		for(int s = 0; s < D->nSource; ++s)
-		{
-			for(int sc = 0; sc < D->nSpacecraft; ++sc)
-			{
-				if(strcmp(D->spacecraft[sc].name, D->source[s].name) == 0)
-				{
-					D->source[s].spacecraftId = sc;
-					
-					break;
-				}
-			}
-		}
+		populateSpacecraftTable(D, V, spacecraftSet, verbose);
 	}
 
 	// Make frequency table
@@ -2550,7 +2459,8 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 			tops = J.calcOps(V, 2*corrSetup->maxInputChans(), corrSetup->doPolar) * 1.0e-12;
 
 			*of << fileBase << " " << J.mjdStart << " " << J.mjdStop << " " << D->nAntenna << " ";
-			*of << maxPulsarBins << " " << maxScanPhaseCentres << " ";
+			*of << maxPulsarBins << " " << maxPulsarBins << " ";
+			*of << maxScanPhaseCentres << " " << maxScanPhaseCentres << " ";
 			p = of->precision();
 			of->precision(4);
 			*of << tops << " ";
