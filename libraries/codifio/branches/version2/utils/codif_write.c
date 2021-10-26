@@ -101,7 +101,7 @@
 #define DEFAULT_FILESIZE    60
 #define DEFAULT_UPDATETIME  1.0
 #define UPDATE              20
-
+#define MAXTHREAD           20
 
 #define DEBUG(x) 
 
@@ -109,6 +109,7 @@ double tim(void);
 void alarm_signal (int sig);
 
 int setup_net(unsigned short port, const char *ip, int *sock);
+int openfile(char *fileprefix, char *timestr, int threadid);
 
 volatile int time_to_quit = 0;
 volatile int sig_received = 0;
@@ -133,7 +134,8 @@ int lines = 0;
 
 int main (int argc, char * const argv[]) {
   char *buf, timestr[MAXSTR], filename[MAXSTR];
-  int tmp, opt, status, sock, ofile=0, skip, i;
+  int tmp, opt, status, sock, ofile[MAXTHREAD], skip, i, nthread=0, threads[MAXTHREAD];
+  int ithread, thisthread = -1;
   ssize_t nread, nwrote, nwrite;
   char msg[MAXSTR];
   float updatetime, ftmp;
@@ -154,6 +156,7 @@ int main (int argc, char * const argv[]) {
   int threadid = -1;
   int scale = 0;
   int invert = 0;
+  int splitthread = 0;
   
   struct option options[] = {
     {"port", 1, 0, 'p'},
@@ -166,10 +169,13 @@ int main (int argc, char * const argv[]) {
     {"filesize", 1, 0, 'f'},
     {"scale", 1, 0, 's'},
     {"invert", 0, 0, 'I'},
+    {"split", 0, 0, 'S'},
     {"help", 0, 0, 'h'},
     {0, 0, 0, 0}
   };
 
+  for (i=0;i<MAXTHREAD;i++) ofile[i] = 0;
+  
   updatetime = DEFAULT_UPDATETIME;
 
   while (1) {
@@ -246,6 +252,10 @@ int main (int argc, char * const argv[]) {
       invert = 1;
       break;
 
+    case 'S':
+      splitthread = 1;
+      break;
+
     case 'h':
       printf("Usage: udp_write [options]\n");
       printf("  -p/-port <PORT>        Port to use\n");
@@ -256,6 +266,7 @@ int main (int argc, char * const argv[]) {
       printf("  -t/-time <N>           Record for N seconds\n");
       printf("  -f/-filesize <N>       Write files N seconds long\n");
       printf("  -s/-scale <S>          Reduce data to 8 bits, dividing by S\n");
+      printf("  -S/-split              Write threads to separate files\n"); 
       printf("  -h/-help               This list\n");
       return(1);
     break;
@@ -266,6 +277,11 @@ int main (int argc, char * const argv[]) {
     }
   }
 
+  if (threadid>0 && splitthread) {
+    fprintf(stderr, "Cannot split by thread and filter single thread. Quitting\n");
+    exit(1);
+  }
+  
   if (padding>0) printf("Warning: Discarding %d bytes per packet\n", padding);
   
   if (!fileprefix) fileprefix=strdup("test");
@@ -276,7 +292,6 @@ int main (int argc, char * const argv[]) {
     perror(msg);
     return(1);
   }
-
 
   cheader = (codif_header*)buf;
   h64 = (uint64_t*)cheader; // Header as 64bit worlds
@@ -326,6 +341,8 @@ int main (int argc, char * const argv[]) {
       exit(1);
     }
 
+    thisthread = cheader->threadid;
+
     npacket++;
     if (nread>maxpkt_size) maxpkt_size = nread;
     if (nread<minpkt_size) minpkt_size = nread;
@@ -373,24 +390,54 @@ int main (int argc, char * const argv[]) {
 	while (t2-filetime>filesize) {
 	  filetime += filesize;
 	}
-	close(ofile);
+	if (splitthread) {
+	  for (i=0;i<nthread;i++) {
+	    close(ofile[i]);
+	    ofile[i] = 0;
+	    nthread = 0;
+          }
+	} else {
+	  close(ofile[0]);
+	  ofile[0] = 0;
+	}
       }
-      
       time_t itime = (time_t)floor(filetime);
       struct tm *date = gmtime(&itime); 
 
       strftime(timestr, MAXSTR-1, "%j_%H%M%S", date);
-      snprintf(filename, MAXSTR-1, "%s_%s.cdf", fileprefix, timestr);
 
-      // File name contained in buffer
-      ofile = open(filename, OPENOPTIONS,S_IRWXU|S_IRWXG|S_IRWXO); 
-      if (ofile==-1) {
-	sprintf(msg, "Failed to open output file (%s)", filename);
-	perror(msg);
-	exit(1);
+      if (splitthread) 
+	ofile[0] = openfile(fileprefix, timestr, thisthread);
+      else {
+	ofile[0] = openfile(fileprefix, timestr, -1);
+	threads[0] = thisthread;
+      }
+      ithread = 0;
+      nthread = 1;
+      
+      if (ofile[0]==-1) exit(1);
+
+    } else if (splitthread) {
+      ithread = -1;
+      // Have we seen this thread this time
+      for (i=0;i<nthread;i++) {
+	if (threads[i] == thisthread) {
+	  ithread = i;
+	  break;
+	}
+      }
+      if (ithread==-1) { // Not found
+	if (nthread>=MAXTHREAD) {
+	  fprintf(stderr, "Too many threads = increase MAXTHREAD (%d). Quitting\n", MAXTHREAD);
+	  exit(1);
+	}
+	ofile[nthread] = openfile(fileprefix, timestr, thisthread);
+	if (ofile[nthread]==-1) exit(1);
+	ithread = nthread;
+	threads[nthread] = thisthread;
+	nthread++;
       }
     }
-
     if (scale>0) {
       s16 = cdata;
       s8 = (int8_t*)cdata;
@@ -410,10 +457,10 @@ int main (int argc, char * const argv[]) {
       nwrite = nread - padding;
     }
     
-    nwrote = write(ofile, buf, nwrite);
+    nwrote = write(ofile[ithread], buf, nwrite);
     if (nwrote==-1) {
       perror("Error writing outfile");
-      close(ofile);
+      for (i=0;i<nthread;i++) close(ofile[i]);
       exit(1);
     } else if (nwrote!=nwrite) {
       fprintf(stderr, "Warning: Did not write all bytes! (%zd/%zd)\n", nwrote, nwrite);
@@ -421,8 +468,8 @@ int main (int argc, char * const argv[]) {
   }
 
   free(buf);
-  
-  close(ofile);
+
+  for (i=0;i<nthread;i++) close(ofile[i]);
 
   return(0);
 }
@@ -512,3 +559,19 @@ void alarm_signal (int sig) {
   return;
 }  
 
+int openfile(char *fileprefix, char *timestr, int threadid) {
+  char filename[MAXSTR], msg[MAXSTR];
+
+  if (threadid>=0) 
+    snprintf(filename, MAXSTR-1, "%s_%s-%d.cdf", fileprefix, timestr, threadid);
+  else
+    snprintf(filename, MAXSTR-1, "%s_%s.cdf", fileprefix, timestr);
+
+  // File name contained in buffer
+  int ofile = open(filename, OPENOPTIONS,S_IRWXU|S_IRWXG|S_IRWXO); 
+  if (ofile==-1) {
+    sprintf(msg, "Failed to open output file (%s)", filename);
+    perror(msg);
+  }
+  return ofile;
+}
