@@ -157,6 +157,35 @@ void VexData::setSourceCalCode(const std::string &name, char calCode)
 	}
 }
 
+void VexData::setSourceEphemerisFile(const std::string &name, const std::string &ephemFile, int ephemObject)
+{
+	for(std::vector<VexSource>::iterator it = sources.begin(); it != sources.end(); ++it)
+	{
+
+	}
+}
+
+// (X, Y, Z in meters)
+void VexData::setSourceITRFCoordinates(const std::string &name, double X, double Y, double Z)
+{
+	for(std::vector<VexSource>::iterator it = sources.begin(); it != sources.end(); ++it)
+	{
+		it->setFixed(X, Y, Z);
+	}
+}
+
+// (ra, dec in radians)
+void VexData::setSourceCoordinates(const std::string &name, double ra, double dec)
+{
+	for(std::vector<VexSource>::iterator it = sources.begin(); it != sources.end(); ++it)
+	{
+		it->type = VexSource::Star;
+		it->ra = ra;
+		it->dec = dec;
+	}
+}
+
+
 
 VexScan *VexData::newScan()
 {

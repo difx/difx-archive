@@ -34,7 +34,7 @@
 #include <string>
 #include <vector>
 
-#define DEFAULT_EPHEMERIS_DELTAT	60	// [sec]
+#define DEFAULT_EPHEMERIS_DELTAT	24	// [sec]
 
 class VexSource
 {
@@ -59,7 +59,7 @@ public:
 	std::string tle[3];				// corresponds to rows 0 (20 chars), 1 (69 chars) and 2 (69 chars) of an embedded TLE
 	std::string bspFile;
 	int bspObject;
-	double ephemDeltaT;				// tabulated ephem. interval (seconds, default 60)
+	double ephemDeltaT;				// tabulated ephem. interval (seconds, default 24)
 	double ephemStellarAber;			// 0 = don't apply (default), 1 = apply, other: scale correction accordingly
 	double ephemClockError;				// (sec) 0.0 is no error
 	double X, Y, Z;					// For source fixed to ITRF coordinates (meters)
