@@ -97,7 +97,7 @@ int getCODIFEpochMJD(const codif_header *header)
 
 int setCODIFNumChannels(codif_header *header, int numchannels)
 {
-  header->nchan = numchannels-1;
+  header->nchan = numchannels;
   return(CODIF_NOERROR);
 }
 
@@ -172,7 +172,7 @@ int setCODIFFrameSecond(codif_header *header, int seconds)
 int setCODIFEpochMJD(codif_header *header, int mjd) {
   int year, month, day;
   mjd2ymd(mjd, &year, &month, &day);
-  header->epoch = (year-2000)*2;
+  header->epoch = (year-2020)*2;
   if (month>6) header->epoch++;
   return(CODIF_NOERROR);
 }
@@ -224,8 +224,8 @@ int setCODIFEpochTime(codif_header *header, time_t time) {
   struct tm t;
 
   gmtime_r(&time, &t);
-  epoch = (t.tm_year-100)*2;
-  if (epoch<0)     // Year is year since 2000
+  epoch = (t.tm_year-120)*2;
+  if (epoch<0)     // Year is year since 2020
     return(CODIF_ERROR);
   if (t.tm_mon>=6) {
     epoch++;
