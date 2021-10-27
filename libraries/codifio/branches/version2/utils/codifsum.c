@@ -171,6 +171,7 @@ int main (int argc, char **argv) {
 	printf("CALON:       %d\n", getCODIFCalEnabled(header));
 	printf("REPRESENT:   %d\n", getCODIFRepresentation(header));
 	printf("VERSION:     %d\n", getCODIFVersion(header));
+	printf("PROTOCOL:    %d\n", getCODIFProtocol(header));
 	printf("PERIOD:      %d\n", period);
 
 	printf("\n");

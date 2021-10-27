@@ -38,6 +38,8 @@ extern "C" {
 #include <stdio.h>
 #include <time.h>
 
+#define CODIFV2
+
 #define CODIF_HEADER_BYTES		64
 #define CODIF_MAX_THREAD_ID		65535
 
@@ -115,6 +117,7 @@ static inline int getCODIFStationID(const codif_header *header) { return (int)he
 static inline int getCODIFSecondaryID(const codif_header *header) { return (int)header->secondaryid; }
 static inline int getCODIFBitsPerSample(const codif_header *header) { return ((int)header->nbits); }
 static inline int getCODIFRepresentation(const codif_header *header) { return ((int)header->representation); }
+static inline int getCODIFProtocol(const codif_header *header) { return ((int)header->protocol); }
 static inline int getCODIFVersion(const codif_header *header) { return ((int)header->version); }
 static inline int getCODIFNumChannels(const codif_header *header) {return (int)header->nchan;} 
 static inline int getCODIFSampleblockLength(codif_header *header) { return (int)header->blocklength;}
