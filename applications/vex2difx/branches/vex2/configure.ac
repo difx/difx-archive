@@ -1,4 +1,4 @@
-AC_INIT([vex2difx], [2.7.0], [Walter Brisken <wbrisken@nrao.edu>])
+AC_INIT([vex2difx], [2.99.1], [Walter Brisken <wbrisken@nrao.edu>])
 AC_CONFIG_HEADERS([config.h])
 
 AC_C_BIGENDIAN
@@ -14,7 +14,6 @@ AC_PROG_F77
 AC_PROG_CPP
 AC_PROG_YACC
 AC_PROG_LEX([yywrap])
-AM_SANITY_CHECK
 AC_PROG_CXX
 
 AM_SANITY_CHECK
