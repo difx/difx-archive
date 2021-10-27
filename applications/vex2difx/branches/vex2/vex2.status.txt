@@ -19,18 +19,18 @@ TODO: high priority
   - capture and use pointing offset
 * SOURCE:
   X non-sidereal 
-  . non-sidereal in vex2difx/src (partial)
+  X non-sidereal in vex2difx/src (partial)
   - non-sidereal in vex2script
 * EXPER:
-  - vexpeek to print segment code
-  - vex2difx to capture possible separate segment code
+  X vexpeek to print segment code
+  X vex2difx to capture possible separate segment code
   - vex2script to capture possible separate segment code
 
 -------------------------------------------
 
 To do to support sched:
 * High Priority
-  - Multi-source support ($SCHED)
+  X Multi-source support ($SCHED)
   - Intents: for existing purposes ($SCHED)
   - Intents: calcode and qualifier ($SCHED)
   - LO chain: setting the unused LO (with $EXTENSION)
@@ -47,7 +47,7 @@ To do to support sched:
 
 * Very Low Priority / as needed
   - pointing_offset ($SCHED)
-  _ $TAPELOG_OBS: stream selection
+  - $TAPELOG_OBS: stream selection
 
 -------------------------------------------
 

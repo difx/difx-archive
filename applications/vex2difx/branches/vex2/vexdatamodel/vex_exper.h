@@ -40,6 +40,8 @@ public:
 
 	std::string name;
 	std::string segment;	// If empty, then name may have the segment code attached
+
+	std::string getFullName() const { return name + segment; }
 };
 
 std::ostream& operator << (std::ostream &os, const VexExper &x);

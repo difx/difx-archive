@@ -1,5 +1,5 @@
 AC_INIT([vex2difx], [2.7.0], [Walter Brisken <wbrisken@nrao.edu>])
-AM_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 
 AC_C_BIGENDIAN
  
@@ -7,19 +7,19 @@ AM_INIT_AUTOMAKE([foreign])
 
 AC_CONFIG_MACRO_DIR([m4])
 
+LT_INIT
+
 AC_PROG_CC
 AC_PROG_F77
 AC_PROG_CPP
-AC_PROG_LIBTOOL
 AC_PROG_YACC
-AM_PROG_LEX
+AC_PROG_LEX([yywrap])
 AM_SANITY_CHECK
 AC_PROG_CXX
 
 AM_SANITY_CHECK
 
 AC_SEARCH_LIBS([sqrt], [m])
-
 PKG_CHECK_MODULES(DIFXIO, [difxio >= 3.7.0])
 PKG_CHECK_MODULES(DIFXMESSAGE, [difxmessage >= 2.7.0])
 PKG_CHECK_MODULES(DIRLIST, [dirlist >= 0.2])

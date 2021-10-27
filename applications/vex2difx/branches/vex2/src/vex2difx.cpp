@@ -1841,9 +1841,34 @@ static void populateSpacecraftTable(DifxInput *D, const VexData *V, const std::s
 		}
 		else if(vexSource->type == VexSource::TLE)
 		{
-			cerr << "Error: TLE not yet supported." << endl;
+			if(verbose > 0)
+			{
+				cout << "Computing ephemeris for source: " << *vexSource << endl;
+				cout << "  start mjd = " << intMJD << "  sec = " << secStart << endl;
+				cout << "  nPoint = " << nPoint << endl;
+			}
 
-			exit(EXIT_FAILURE);
+			v = populateSpiceLeapSecondsFromEOP(D->eop, D->nEOP);
+			if(v != 0)
+			{
+				cerr << "Error: populateSpiceLeapSecondsFromEOP returned " << v << endl;
+
+				exit(EXIT_FAILURE);
+			}
+
+			v = computeDifxSpacecraftTwoLineElement(ds, mjd0, deltaT/86400.0, nPoint, 
+				vexSource->defName.c_str(),
+				0,
+				vexSource->tle[1].c_str(), 
+				vexSource->tle[2].c_str(), 
+				vexSource->ephemStellarAber,
+				vexSource->ephemClockError);
+			if(v != 0)
+			{
+				cerr << "Error: TLE ephemeris calculation failed.  Must stop." << endl;
+				
+				exit(EXIT_FAILURE);
+			}
 		}
 		else if(vexSource->type == VexSource::Fixed)
 		{
@@ -1853,7 +1878,7 @@ static void populateSpacecraftTable(DifxInput *D, const VexData *V, const std::s
 				vexSource->ephemClockError);
 			if(v != 0)
 			{
-				cerr << "Error: ephemeris calculation failed.  Must stop." << endl;
+				cerr << "Error: XYZ ephemeris calculation failed.  Must stop." << endl;
 				
 				exit(EXIT_FAILURE);
 			}
@@ -1959,7 +1984,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 	D->nDataSegments = P->nDataSegments;
 
 	D->antenna = makeDifxAntennas(J, V, &(D->nAntenna));
-	D->job = makeDifxJob(V->getDirectory(), J, D->nAntenna, V->getExper()->name, &(D->nJob), nDigit, ext, P);
+	D->job = makeDifxJob(V->getDirectory(), J, D->nAntenna, V->getExper()->getFullName(), &(D->nJob), nDigit, ext, P);
 	
 	D->nConfig = configSet.size();
 	D->config = newDifxConfigArray(D->nConfig);
@@ -3094,7 +3119,7 @@ int main(int argc, char **argv)
 	difxLabel = getenv("DIFX_LABEL");
 	of.open(jobListFile.c_str());
 	of.precision(12);
-	of << "exper=" << V->getExper()->name << "  v2d=" << v2dFile <<"  pass=" << P->jobSeries << "  mjd=" << current_mjd() << "  DiFX=" << difxVersion << "  vex2difx=" << version << "  vex=" << P->vexFile;
+	of << "exper=" << V->getExper()->getFullName() << "  v2d=" << v2dFile <<"  pass=" << P->jobSeries << "  mjd=" << current_mjd() << "  DiFX=" << difxVersion << "  vex2difx=" << version << "  vex=" << P->vexFile;
 	if(difxLabel)
 	{
 		of << "  label=" << difxLabel;

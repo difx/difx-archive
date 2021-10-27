@@ -141,7 +141,7 @@ int write_v2d(const VexData *V, const char *vexFile, const char *outFile, bool f
 	unsigned int nAntenna = V->nAntenna();
 	unsigned int nSource = V->nSource();
 	bool doDatastreams = false;
-	std::string lexper = V->getExper()->name;
+	std::string lexper = V->getExper()->getFullName();
 	Lower(lexper);
 
 	if(vdifFrameSize > 0 || nDatastream > 1 || oneBitAntennas != 0)
