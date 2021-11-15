@@ -65,7 +65,7 @@ int sanityCheckConsistency(const VexData *V, const CorrParams *P)
 	{
 		if(polarizations != V->getPolarizations())
 		{
-			std::cerr << "Warning: after performing requested polarization conversions, both linear and circular polarizations are due to be correlated.  Use at your own risk!" << std::endl;
+			std::cerr << "Warning: after performing requested polarization conversions, both linear and circular polarizations are due to be correlated.  Use at your own risk!  polarizations=" << polarizations << std::endl;
 		}
 		else
 		{

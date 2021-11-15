@@ -45,7 +45,7 @@ bool isVLBA(const std::string &antName);
 class VexAntenna
 {
 public:
-	VexAntenna() : x(0.0), y(0.0), z(0.0), dx(0.0), dy(0.0), dz(0.0), posEpoch(0.0), axisOffset(0.0), tcalFrequency(0) {}
+	VexAntenna() : x(0.0), y(0.0), z(0.0), dx(0.0), dy(0.0), dz(0.0), posEpoch(0.0), axisOffset(0.0), tcalFrequency(0), polConvert(false) {}
 
 	double getVexClocks(double mjd, double *coeffs) const;		// This version of the function is deprecated
 	double getVexClocks(double mjd, double *coeffs, int *clockorder, int maxorder) const;

@@ -75,6 +75,8 @@ public:
 
 	int sanityCheck();
 
+	VexData() : version(0.0) {}
+
 	VexSource *newSource();
 	VexSource *newSource(const std::string &name, double ra, double dec);
 	VexScan *newScan();

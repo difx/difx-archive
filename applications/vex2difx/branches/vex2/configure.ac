@@ -1,4 +1,4 @@
-AC_INIT([vex2difx], [2.99.1], [Walter Brisken <wbrisken@nrao.edu>])
+AC_INIT([vex2difx], [2.99.2], [Walter Brisken <wbrisken@nrao.edu>])
 AC_CONFIG_HEADERS([config.h])
 
 AC_C_BIGENDIAN
