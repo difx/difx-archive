@@ -30,7 +30,7 @@
 #============================================================================
 
 PROGRAM = 'startdifx'
-VERSION = '2.6.1'
+VERSION = '2.6.3'
 VERDATE = '20190821'
 AUTHOR  = 'Walter Brisken and Helge Rottmann'
 
