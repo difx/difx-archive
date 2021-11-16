@@ -2439,12 +2439,6 @@ static int getExper(VexData *V, Vex *v)
 				
 				p = (((Lowl *)lowls->ptr)->item);
 				start = vexDate((char *)p);
-				strncpy(V->vexStartTime, ((char *)p), 50);
-				V->vexStartTime[4] = '\0';
-				V->vexStartTime[8] = '\0';
-				V->vexStartTime[11] = '\0';
-				V->vexStartTime[14] = '\0';
-				V->vexStartTime[17] = '\0';
 			}
 			else
 			{
@@ -2458,12 +2452,6 @@ static int getExper(VexData *V, Vex *v)
 
 				p = (((Lowl *)lowls->ptr)->item);
 				stop = vexDate((char *)p);
-				strncpy(V->vexStopTime, ((char *)p), 50);
-				V->vexStopTime[4] = '\0';
-				V->vexStopTime[8] = '\0';
-				V->vexStopTime[11] = '\0';
-				V->vexStopTime[14] = '\0';
-				V->vexStopTime[17] = '\0';
 			}
 			else
 			{

@@ -70,9 +70,6 @@ private:
 	double version;			// version of vex file
 
 public:
-	char vexStartTime[50];		// FIXME: figure out why these are needed and are not in VexExper
-	char vexStopTime[50];
-
 	int sanityCheck();
 
 	VexData() : version(0.0) {}
