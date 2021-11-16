@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009-2018 by Walter Brisken                             *
+ *   Copyright (C) 2009-2021 by Walter Brisken                             *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -1477,12 +1477,6 @@ static int getExper(VexData *V, Vex *v)
 			p = (((Lowl *)lowls->ptr)->item);
 			cerr << "start date: " << ((char *)p) << endl;
 			start = vexDate((char *)p);
-			strncpy(V->vexStartTime, ((char *)p), 50);
-			V->vexStartTime[4] = '\0';
-			V->vexStartTime[8] = '\0';
-			V->vexStartTime[11] = '\0';
-			V->vexStartTime[14] = '\0';
-			V->vexStartTime[17] = '\0';
 		}
 		else
 		{
@@ -1497,12 +1491,6 @@ static int getExper(VexData *V, Vex *v)
 			p = (((Lowl *)lowls->ptr)->item);
 			cerr << "stop date: " << ((char *)p) << endl;
 			stop = vexDate((char *)p);
-			strncpy(V->vexStopTime, ((char *)p), 50);
-			V->vexStopTime[4] = '\0';
-			V->vexStopTime[8] = '\0';
-			V->vexStopTime[11] = '\0';
-			V->vexStopTime[14] = '\0';
-			V->vexStopTime[17] = '\0';
 		}
 		else
 		{

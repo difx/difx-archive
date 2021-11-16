@@ -59,7 +59,7 @@ public:
 
 	static char DataFormatNames[NumDataFormats+1][16];
 
-	VexStream() : sampRate(0.0), nBit(0), nRecordChan(0), VDIFFrameSize(0), singleThread(false), format(FormatNone), dataSampling(SamplingReal), dataSource(DataSourceUnspecified), difxTsys(0.0) {}
+	VexStream() : sampRate(0.0), nBit(0), nRecordChan(0), nThread(0), fanout(0), VDIFFrameSize(0), singleThread(false), format(FormatNone), dataSampling(SamplingReal), dataSource(DataSourceUnspecified), difxTsys(0.0) {}
 	double dataRateMbps() const { return sampRate*nBit*nRecordChan/1000000.0; }
 	static enum DataFormat stringToDataFormat(const std::string &str);
 	static bool isSingleThreadVDIF(const std::string &str);
