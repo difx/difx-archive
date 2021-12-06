@@ -106,7 +106,7 @@ static inline int getCODIFHeaderBytes(const codif_header *header) { return CODIF
 static inline int getCODIFFrameBytes(const codif_header *header) { return (int)(header->framelength8)*8; }
 static inline int getCODIFPeriod(const codif_header *header) { return (int)header->period; }
 static inline int getCODIFSync(const codif_header *header) { return (int)header->sync; }
-static inline uint64_t getCODIFTotalSamples(const codif_header *header) { return header->totalsamples*256; }
+static inline uint64_t getCODIFTotalSamples(const codif_header *header) { return header->totalsamples; }
 
 uint64_t getCODIFFrameMJDSec(codif_header *header);
 int getCODIFFrameMJD(const codif_header *header);
