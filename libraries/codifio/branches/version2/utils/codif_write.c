@@ -365,7 +365,7 @@ int main (int argc, char * const argv[]) {
 
     if (skip) continue;
 
-    // Convert header then data to little endian
+    // Convert header then data to little endian - Note this is disabled above with #def
     for (i=0; i<8; i++) {
       h64[i] = byteswap_64(h64[i]);
     }
@@ -406,11 +406,11 @@ int main (int argc, char * const argv[]) {
 
       strftime(timestr, MAXSTR-1, "%j_%H%M%S", date);
 
-      if (splitthread) 
+      if (splitthread) {
 	ofile[0] = openfile(fileprefix, timestr, thisthread);
-      else {
-	ofile[0] = openfile(fileprefix, timestr, -1);
 	threads[0] = thisthread;
+      } else {
+	ofile[0] = openfile(fileprefix, timestr, -1);
       }
       ithread = 0;
       nthread = 1;
