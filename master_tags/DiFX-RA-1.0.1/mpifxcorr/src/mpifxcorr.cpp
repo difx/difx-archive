@@ -415,9 +415,9 @@ int main(int argc, char *argv[])
 		}
 		MPI_Barrier(world);
 	}
-	catch (MPI::Exception e)
+	catch (...)
 	{
-		cerror << startl << "Caught an exception!!! " << e.Get_error_string() << endl;
+		cerror << startl << "Caught an exception!!! " << endl;
 		return EXIT_FAILURE;
 	}
 	MPI_Finalize();
