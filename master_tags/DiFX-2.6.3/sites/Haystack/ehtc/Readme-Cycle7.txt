@@ -213,7 +213,7 @@ grep Average dpfu-scanner.log | sed 's/^/### /'
 
 # pull in the experiment codes: note J is single-pol 2018 and previous
 cp -p $ehtc/ehtc-template.codes $exp.codes
-cp -p $dout/*vex.obs .
+cp -p $dout/*vex.obs $dout/*.v2d .
 [ `ls -l *vex.obs | wc -l` -eq 1 ] || echo Too many/too few vex.obs files
 
 # haxp is generated in $dout so preserve $expn if found:
@@ -303,11 +303,10 @@ cd $expn ; cp ../$ers.conf . ; cp -p ../$ers.bare .
 # identify roots:
 roots=`ls */$target*` ; echo $roots
 
-# if you are not sure about which scans to calibrate
-# with which stations with...try this:
-for r in $roots; do fourfit -pt -c $ers.bare -b A? $expn/$r ; done
-# if these are insufficient, and you add more scans, make sure (after polconversion)
-# that the jobs variable reflects ALL scans (to be deleted at the end).
+# if you are not sure about which scans to calibrate with which stations...
+for r in $roots; do fourfit -pt -c $ers.bare -b A? $r ; done
+# if you need to add more scans, make sure (after polconversion) that the
+# jobs variable reflects ALL scans (to be deleted at the end).
 
 # For each root run est_manual_phases.py, but set -s argument
 # with a different comma-sep list of single letter station codes
@@ -328,8 +327,12 @@ grep ^if.station $ers.conf | sort | uniq -c
 ### are all manual phases set up plausibly?  tell us what you think.
 for r in $roots ; do fourfit -bA? -c $ers.conf $r & done ; wait
 fplot */A[^A].B*
-# check phases and delays with this if needed
-fourfit -pt -c $ers.bare -b A? $roots
+### first-root
+### SNR LL  RR  LR  RL
+### ...
+### second-root
+### SNR LL  RR  LR  RL
+### ...
 
 # be sure to clean up afterwards, especially to move $expn aside
 cd ..
@@ -465,6 +468,9 @@ du -sBG tb-*
 # and finally after everything is released count the products
 $ehtc/ehtc-release-check.sh | sed 's/^/### /'
 
+# after tarballs are delivered you can remove the polconvert swin dirs:
+rm -rf $exp-$vers-${subv}_????.{save,difx}
+
 # one last time
 logfile=$exp-$subv-v${vers}${ctry}${stry}p${iter}r${relv}.logfile
 comment=$exp-$subv-v${vers}${ctry}${stry}p${iter}r${relv}.comment
@@ -473,9 +479,10 @@ cp -p $logfile $comment $release/logs
 ls -l $release/logs
 
 # Cleanup list ======================
-# after tarballs are delivered and if you want to recover disk space
-rm -rf $exp-$vers-${subv}_*.save
-rm -rf $exp-$relv-${subv}_*.save
+# the product dirs should probably be saved until the archive is final...
+ls -ld $exp-*-${subv}*.save
+# ...but you can remove them too:
+rm -rf $exp-*-${subv}*.save
 }
 # avoid worrisome error return values
 true
