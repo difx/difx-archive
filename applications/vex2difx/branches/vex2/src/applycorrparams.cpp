@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2015-2021 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2015-2022 by Walter Brisken & Adam Deller               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -51,7 +51,7 @@ static void applyCorrParams_EOP(VexData *V, const CorrParams &params, unsigned i
 static void applyCorrParams_RemoveUnusedAntennas(VexData *V, const CorrParams &params, unsigned int &nWarn, unsigned int &nError)
 {
 	// remove unwanted antennas
-	for(unsigned int a = 0; a < V->nAntenna(); ++a)
+	for(unsigned int a = 0; a < V->nAntenna(); )
 	{
 		const VexAntenna *A = V->getAntenna(a);
 		if(!A)
