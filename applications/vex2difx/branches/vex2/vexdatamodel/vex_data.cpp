@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009-2021 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2009-2022 by Walter Brisken & Adam Deller               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -47,37 +47,6 @@ int VexData::sanityCheck()
 	{
 		std::cerr << "Warning: Fewer than 5 EOPs specified" << std::endl;
 		++nWarn;
-	}
-
-	for(std::vector<VexAntenna>::const_iterator it = antennas.begin(); it != antennas.end(); ++it)
-	{
-		if(it->clocks.empty())
-		{
-			std::cerr << "Warning: no clock values for antenna " << it->name << " ." << std::endl;
-			++nWarn;
-		}
-	}
-
-	for(std::vector<VexAntenna>::const_iterator it = antennas.begin(); it != antennas.end(); ++it)
-	{
-#if 0
-FIXME: this functionality needs to be put somewhere else
-		if(it->dataSource == DataSourceFile && it->basebandFiles.empty())
-		{
-			std::cerr << "Warning: file based correlation desired but no files provided for antenna " << it->name << " ." << std::endl;
-			++nWarn;
-		}
-		if(it->dataSource == DataSourceModule && it->basebandFiles.empty())
-		{
-			std::cerr << "Warning: module based correlation desired but no media specified for antenna " << it->name << " ." << std::endl;
-			++nWarn;
-		}
-		if(it->dataSource == DataSourceNone)
-		{
-			std::cerr << "Warning: data source is NONE for antenna " << it->name << " ." << std::endl;
-			++nWarn;
-		}
-#endif
 	}
 
 	return nWarn;

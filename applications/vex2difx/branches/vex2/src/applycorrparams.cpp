@@ -77,7 +77,7 @@ static void applyCorrParams_Clock(VexData *V, const CorrParams &params, unsigned
 	for(unsigned int a = 0; a < V->nAntenna(); ++a)
 	{
 		const VexAntenna *A = V->getAntenna(a);
-		const AntennaSetup *antSetup = params.getAntennaSetup(A->defName);
+		const AntennaSetup *antSetup = params.getAntennaSetup(A->name);
 
 		if(antSetup)
 		{

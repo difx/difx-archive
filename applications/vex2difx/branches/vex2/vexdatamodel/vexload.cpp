@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009-2021 by Walter Brisken                             *
+ *   Copyright (C) 2009-2022 by Walter Brisken                             *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -1533,7 +1533,6 @@ static int getS2Setup(VexSetup &setup, Vex *v, const char *antDefName, const cha
 	void *p, *q;
 	std::map<std::string,BitAssignments> ch2tracks;		// indexed by channel link
 	int nBit = 1;
-	int nTrack = 0;
 
 	std::cout << "S2 or bust!" << std::endl;
 
@@ -1611,13 +1610,11 @@ static int getS2Setup(VexSetup &setup, Vex *v, const char *antDefName, const cha
 		if(sign)
 		{
 			ch2tracks[chanLink].sign.push_back(chanNum);
-std::cout << "S: " << chanLink << " " << chanNum << std::endl;
 		}
 		else
 		{
 			nBit = 2;
 			ch2tracks[chanLink].mag.push_back(chanNum);
-std::cout << "M: " << chanLink << " " << chanNum << std::endl;
 		}
 	}
 	stream.nRecordChan = ch2tracks.size();
@@ -1634,7 +1631,6 @@ std::cout << "M: " << chanLink << " " << chanNum << std::endl;
 		VexChannel &channel = setup.channels.back();
 
 		recChanId = getRecordChannelFromTracks(antDefName, it->chanLink, ch2tracks, stream, nRecordChan);
-std::cout << "RC: " << recChanId << " " << it->chanLink << std::endl;
 		if(recChanId >= 0)
 		{
 			if(channel.bbcBandwidth - stream.sampRate/2 > 1e-6)
