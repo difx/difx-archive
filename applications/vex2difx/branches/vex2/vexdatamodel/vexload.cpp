@@ -1519,6 +1519,157 @@ VexChannel *getVexChannelByLink(std::vector<VexChannel> &freqChannels, const std
 	return 0;
 }
 
+bool cmpRecChan(const VexChannel &a, const VexChannel &b)
+{
+	return (a.recordChan < b.recordChan);
+}
+
+static int getS2Setup(VexSetup &setup, Vex *v, const char *antDefName, const char *modeDefName, std::map<std::string,std::vector<unsigned int> > &pcalMap, std::vector<VexChannel> &freqChannels)
+{
+	VexStream &stream = setup.streams[0];	// the first stream is created by default
+	int nWarn = 0;
+	int link, name;
+	char *value, *units;
+	void *p, *q;
+	std::map<std::string,BitAssignments> ch2tracks;		// indexed by channel link
+	int nBit = 1;
+	int nTrack = 0;
+
+	std::cout << "S2 or bust!" << std::endl;
+
+	p = get_all_lowl(antDefName, modeDefName, T_SAMPLE_RATE, B_FREQ, v);
+	if(p)
+	{
+		vex_field(T_SAMPLE_RATE, p, 1, &link, &name, &value, &units);
+		fvex_double(&value, &units, &stream.sampRate);
+	}
+
+	q = get_all_lowl(antDefName, modeDefName, T_S2_RECORDING_MODE, B_TRACKS, v);
+
+	vex_field(T_S2_RECORDING_MODE, q, 1, &link, &name, &value, &units);
+	std::string s2mode(value);
+	if(s2mode == "none")
+	{
+		// Note: current practice (via Cormac Reynolds, 15 Aug 2016) suggests two LBA modes
+		// that set S2_recording_mode = none :
+		//   S2_data_source = VLBA or S2_data_source = LBAVSOP  --> format = VexStream::FormatLBAVSOP
+		//   S2_data_source = LBASTD                            --> format = VexStream::FormatLBASTD
+
+		q = get_all_lowl(antDefName, modeDefName, T_S2_DATA_SOURCE, B_TRACKS, v);
+		if(!q)
+		{
+			std::cerr << "Error: S2 mode is 'none' but no S2 Data Source is provided" << std::endl;
+
+			exit(EXIT_FAILURE);
+		}
+		vex_field(T_S2_DATA_SOURCE, q, 1, &link, &name, &value, &units);
+		std::string s2datasource(value);
+
+		if(s2datasource == "VLBA" || s2datasource == "LBAVSOP")
+		{
+			stream.format = VexStream::FormatLBAVSOP;
+		}
+		else if(s2datasource == "LBASTD")
+		{
+			stream.format = VexStream::FormatLBASTD;
+		}
+		else
+		{
+			std::cerr << "Error: unknown data mode: s2_recording_mode = none and s2_data_source = " << s2datasource << " for antenna " << antDefName << ".  S2_data_source should be one of VLBA, LBAVSOP or LBASTD in this case." << std::endl;
+
+			exit(EXIT_FAILURE);
+		}
+	}
+	else
+	{
+		std::cerr << "Error: S2 track formats are no longer supported." << std::endl;
+
+		exit(EXIT_FAILURE);
+	}
+
+	for(p = get_all_lowl(antDefName, modeDefName, T_FANOUT_DEF, B_TRACKS, v); p; p = get_all_lowl_next())
+	{
+		std::string chanLink;
+		bool sign;
+		int dasNum;
+
+		vex_field(T_FANOUT_DEF, p, 2, &link, &name, &value, &units);
+		chanLink = value;
+		vex_field(T_FANOUT_DEF, p, 3, &link, &name, &value, &units);
+		sign = (value[0] == 's');
+		vex_field(T_FANOUT_DEF, p, 4, &link, &name, &value, &units);
+		sscanf(value, "%d", &dasNum);
+
+		int chanNum;
+
+		if(vex_field(T_FANOUT_DEF, p, 5, &link, &name, &value, &units) < 0)
+		{
+			break;
+		}
+		sscanf(value, "%d", &chanNum);
+		chanNum += 32*(dasNum-1);
+		if(sign)
+		{
+			ch2tracks[chanLink].sign.push_back(chanNum);
+std::cout << "S: " << chanLink << " " << chanNum << std::endl;
+		}
+		else
+		{
+			nBit = 2;
+			ch2tracks[chanLink].mag.push_back(chanNum);
+std::cout << "M: " << chanLink << " " << chanNum << std::endl;
+		}
+	}
+	stream.nRecordChan = ch2tracks.size();
+	stream.nBit = nBit;
+
+	// Generate channels
+	unsigned int nRecordChan = 0;
+	
+	for(std::vector<VexChannel>::const_iterator it = freqChannels.begin(); it != freqChannels.end(); ++it)
+	{
+		int recChanId;
+
+		setup.channels.push_back(*it);
+		VexChannel &channel = setup.channels.back();
+
+		recChanId = getRecordChannelFromTracks(antDefName, it->chanLink, ch2tracks, stream, nRecordChan);
+std::cout << "RC: " << recChanId << " " << it->chanLink << std::endl;
+		if(recChanId >= 0)
+		{
+			if(channel.bbcBandwidth - stream.sampRate/2 > 1e-6)
+			{
+				std::cerr << "Error: " << modeDefName << " antenna " << antDefName << " has sample rate = " << stream.sampRate << " bandwidth = " << channel.bbcBandwidth << std::endl;
+				std::cerr << "Sample rate must be no less than twice the bandwidth in all cases." << std::endl;
+
+				exit(EXIT_FAILURE);
+			}
+
+			if(channel.bbcBandwidth - stream.sampRate/2 < -1e-6)
+			{
+				// Note: this is tested in a sanity check later.  This behavior is not always desirable.
+				channel.bbcBandwidth = stream.sampRate/2;
+			}
+
+			channel.recordChan = recChanId;
+			if(!channel.phaseCalName.empty())
+			{
+				channel.tones = pcalMap[channel.phaseCalName];
+			}
+
+			++nRecordChan;
+		}
+	}
+
+	std::sort(setup.channels.begin(), setup.channels.end(), cmpRecChan);
+
+	if(stream.nRecordChan == 0)	// then use the number of that we just counted out
+	{
+		stream.nRecordChan = nRecordChan;
+	}
+
+	return nWarn;
+}
 
 static int getTracksSetup(VexSetup &setup, Vex *v, const char *antDefName, const char *modeDefName, std::map<std::string,std::vector<unsigned int> > &pcalMap, std::vector<VexChannel> &freqChannels)
 {
@@ -1546,6 +1697,8 @@ static int getTracksSetup(VexSetup &setup, Vex *v, const char *antDefName, const
 
 	if(stream.isLBAFormat())
 	{
+		// FIXME: This if() block may not be needed.  Perhaps watermark this and delete section if nobody reports its use by year 2025
+
 		for(p = get_all_lowl(antDefName, modeDefName, T_FANOUT_DEF, B_TRACKS, v); p; p = get_all_lowl_next())
 		{
 			std::string chanLink;
@@ -1706,6 +1859,10 @@ static int getTracksSetup(VexSetup &setup, Vex *v, const char *antDefName, const
 			setup.channels[recChan].threadId = recChan;
 			setup.channels[recChan].recordChan = recChan;
 		}
+	}
+	else
+	{
+		std::sort(setup.channels.begin(), setup.channels.end(), cmpRecChan);
 	}
 
 	return nWarn;
@@ -2184,6 +2341,9 @@ static int getModes(VexData *V, Vex *v)
 				break;
 			case VexSetup::SetupDatastreams:
 				nWarn += getDatastreamsSetup(setup, v, antDefName, modeDefName, pcalMap, freqChannels);
+				break;
+			case VexSetup::SetupS2:
+				nWarn += getS2Setup(setup, v, antDefName, modeDefName, pcalMap, freqChannels);
 				break;
 			default:
 				std::cerr << "Setup type " << VexSetup::setupTypeName[type] << " is not (yet) supported." << std::endl;
