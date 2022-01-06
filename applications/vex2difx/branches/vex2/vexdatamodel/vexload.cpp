@@ -1534,8 +1534,6 @@ static int getS2Setup(VexSetup &setup, Vex *v, const char *antDefName, const cha
 	std::map<std::string,BitAssignments> ch2tracks;		// indexed by channel link
 	int nBit = 1;
 
-	std::cout << "S2 or bust!" << std::endl;
-
 	p = get_all_lowl(antDefName, modeDefName, T_SAMPLE_RATE, B_FREQ, v);
 	if(p)
 	{
