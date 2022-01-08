@@ -55,6 +55,7 @@ public:
 
 	VexScan(): size(0), mjdVex(0.0) {};
 	const Interval *getAntennaInterval(const std::string &antName) const;
+	bool hasAntenna(const std::string &antName) const;
 	bool getRecordEnable(const std::string &antName) const;
 	void addToSourceSet(std::set<std::string> &sourceSet, bool incPointingCenter) const;
 };

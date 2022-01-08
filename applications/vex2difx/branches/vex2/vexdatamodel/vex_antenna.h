@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2015-2021 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2015-2022 by Walter Brisken & Adam Deller               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -33,6 +33,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <map>
 #include <difxio.h>
 #include "interval.h"
 #include "vex_clock.h"
@@ -45,6 +46,17 @@ bool isVLBA(const std::string &antName);
 class VexAntenna
 {
 public:
+	// Note: keep the enum and nasmythName in vex_antenna.cpp in sync
+	enum NasmythType
+	{
+		NasmythNone = 0, 
+		NasmythRight, 
+		NasmythLeft,
+
+		NasmythError		// list terminator / error
+	};
+	static const char nasmythName[][8];
+
 	VexAntenna() : x(0.0), y(0.0), z(0.0), dx(0.0), dy(0.0), dz(0.0), posEpoch(0.0), axisOffset(0.0), tcalFrequency(0), polConvert(false) {}
 
 	double getVexClocks(double mjd, double *coeffs) const;		// This version of the function is deprecated
@@ -55,6 +67,7 @@ public:
 	bool hasVSNs() const { return !vsns.empty(); }
 	bool isVLBA() const { return ::isVLBA(defName); }
 	void setAntennaPolConvert(bool doConvert) { polConvert = doConvert; }
+	NasmythType getNasmyth(const std::string &bandLink) const;
 
 	std::string name;		// Deprecated
 	std::string defName;		// if name != defName, things may be very confused...
@@ -77,9 +90,13 @@ public:
 	std::vector<VexNetworkData> ports;	// indexed by stream number
 	std::vector<VexExtension> extensions;	// extensions linked from $STATION block
 
+	std::map<std::string, NasmythType> nasmyth;	// maps band link to nasmyth type; default to NasmythNone if not found
+
 	// Some antenna/site things that are not based on vex parameters (but could be carried as an extension)
 
 };
+
+VexAntenna::NasmythType stringToNasmyth(const std::string &platform);
 
 bool usesCanonicalVDIF(const std::string &antName);
 

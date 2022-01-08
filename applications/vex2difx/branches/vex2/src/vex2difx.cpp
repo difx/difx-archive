@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009-2021 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2009-2022 by Walter Brisken & Adam Deller               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -237,6 +237,28 @@ static DifxAntenna *makeDifxAntennas(const Job &J, const VexData *V, int *n)
 		A[i].Y = ant->y + ant->dy*(mjd-ant->posEpoch)*86400.0;
 		A[i].Z = ant->z + ant->dz*(mjd-ant->posEpoch)*86400.0;
 		A[i].mount = stringToMountType(ant->axisType.c_str());
+		if(!ant->nasmyth.empty())
+		{
+			VexAntenna::NasmythType t;
+
+			t = J.getJobNasmythType(V, *a);
+
+			if(t == VexAntenna::NasmythRight)
+			{
+				A[i].mount = AntennaMountNasmythR;
+			}
+			else if(t == VexAntenna::NasmythLeft)
+			{
+				A[i].mount = AntennaMountNasmythL;
+			}
+			else if(t == VexAntenna::NasmythError)
+			{
+				cerr << "An inconsistency was found in the Nasmyth mount configurations for antenna " << ant->name << "." << endl;
+				cerr << "Currently a single job cannot handle multiple Nasmyth types for one antenna -- it is possible that condition has been encountered." << endl;
+
+				exit(EXIT_FAILURE);
+			}
+		}
 		A[i].clockrefmjd = ant->getVexClocks(J.mjdStart, A[i].clockcoeff, &A[i].clockorder, MAX_MODEL_ORDER);
 		for(int j = 0; j <= A[i].clockorder; ++j)
 		{
@@ -1692,7 +1714,7 @@ static void populateScanTable(DifxInput *D, const Job& J, const VexData *V, cons
 		const VexScan *vexScan = V->getScanByDefName(*si);
 		if(!vexScan)
 		{
-			cerr << "Developer error: source[" << *si << "] not found!  This cannot be!" << endl;
+			cerr << "Developer error: scan[" << *si << "] not found!  This cannot be!" << endl;
 			
 			exit(EXIT_FAILURE);
 		}

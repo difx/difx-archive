@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2015-2021 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2015-2022 by Walter Brisken & Adam Deller               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -51,6 +51,7 @@ public:
 	double bbcFreq;				// sky frequency tuning of the BBC (Hz)
 	double bbcBandwidth;			// bandwidth (Hz)
 	char bbcSideBand;			// sideband of the BBC
+	std::string bandLink;			// column 1 of the $FREQ chan_def line; may be unset as this parameter is optional
 	std::string chanName;			// column 8 of the $FREQ chan_def line, but fill in with column 5 if not present
 	std::string ifLink;			// name of the IF this channel came from
 	std::string chanLink;			// column 5 of the $FREQ chan_def line

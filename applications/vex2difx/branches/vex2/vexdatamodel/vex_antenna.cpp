@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2015-2021 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2015-2022 by Walter Brisken & Adam Deller               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -32,6 +32,16 @@
 #include <set>
 #include "vex_antenna.h"
 #include "vex_utility.h"
+
+// Note: keep this up to date with enum in vex_antenna.h
+const char VexAntenna::nasmythName[][8] =
+{
+	"none",
+	"right",
+	"left",
+
+	"error"		// not a legal value; list terminator
+};
 
 // get the clock epoch as a MJD value (with fractional component), negative 
 // means not found.  Also fills in the first two coeffs, returned in seconds
@@ -124,6 +134,40 @@ void VexAntenna::removeBasebandData(int streamId)
 	removeBasebandDataByStreamId(files, streamId);
 }
 
+VexAntenna::NasmythType VexAntenna::getNasmyth(const std::string &bandLink) const
+{
+	if(!nasmyth.empty())
+	{
+		for(std::map<std::string, NasmythType>::const_iterator it = nasmyth.begin(); it != nasmyth.end(); ++it)
+		{
+			if(bandLink == it->first || it->first == "ALL")
+			{
+				return it->second;
+			}
+		}
+	}
+	
+	return VexAntenna::NasmythNone;
+}
+
+VexAntenna::NasmythType stringToNasmyth(const std::string &platform)
+{
+	if(strcasecmp(platform.c_str(), VexAntenna::nasmythName[VexAntenna::NasmythNone]) == 0)
+	{
+		return VexAntenna::NasmythNone;
+	}
+	else if(strcasecmp(platform.c_str(), VexAntenna::nasmythName[VexAntenna::NasmythRight]) == 0)
+	{
+		return VexAntenna::NasmythRight;
+	}
+	else if(strcasecmp(platform.c_str(), VexAntenna::nasmythName[VexAntenna::NasmythLeft]) == 0)
+	{
+		return VexAntenna::NasmythLeft;
+	}
+
+	return VexAntenna::NasmythError;
+}
+
 bool isVLBA(const std::string &antName)
 {
 	const std::string VLBAantennas[] = {"BR", "FD", "HN", "KP", "LA", "MK", "NL", "OV", "PT", "SC", ""};       // terminate list with "" !
@@ -209,6 +253,15 @@ std::ostream& operator << (std::ostream &os, const VexAntenna &x)
 	for(std::vector<VexExtension>::const_iterator it = x.extensions.begin(); it != x.extensions.end(); ++it)
 	{
 		os << "  " << *it << std::endl;
+	}
+	if(!x.nasmyth.empty())
+	{
+		os << "  Nasmyth receivers=";
+		for(std::map<std::string, VexAntenna::NasmythType>::const_iterator it = x.nasmyth.begin(); it != x.nasmyth.end(); ++it)
+		{
+			os << " " << it->first << ":" << VexAntenna::nasmythName[it->second];
+		}
+		os << std::endl;
 	}
 	// FIXME: print files, vsns, ports here ADDENDUM: really these structures should move to VexStream
 

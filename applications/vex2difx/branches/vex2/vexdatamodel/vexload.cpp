@@ -422,7 +422,8 @@ static int getAntennas(VexData *V, Vex *v)
 	{
 		struct site_position *p;
 		struct axis_type *q;
-		struct site_id* s;
+		struct site_id *s;
+		struct nasmyth *n;
 		VexAntenna *A;
 
 		std::string antName(stn);
@@ -484,6 +485,25 @@ static int getAntennas(VexData *V, Vex *v)
 			if(A->axisType.compare("hadec") == 0)
 			{
 				A->axisType = "equa";
+			}
+		}
+
+		for(n = (struct nasmyth *)get_station_lowl(stn, T_NASMYTH, B_ANTENNA, v); n != 0; n = (struct nasmyth *)get_station_lowl_next())
+		{
+			if(n)
+			{
+				VexAntenna::NasmythType t;
+			
+				t = stringToNasmyth(n->platform);
+				if(t == VexAntenna::NasmythError)
+				{
+					std::cerr << "Warning: unsupported Nasmyth platform type: " << n->platform << std::endl;
+					++nWarn;
+				}
+				else
+				{
+					A->nasmyth[n->band] = t;
+				}
 			}
 		}
 
@@ -1417,7 +1437,18 @@ int collectFreqChannels(std::vector<VexChannel> &freqChannels, VexSetup &setup, 
 		double bandwidth;
 		std::string chanName;
 		std::string chanLink;
+		std::string bandLink;
 		std::string phaseCalName;
+
+		vex_field(T_CHAN_DEF, p, 1, &link, &name, &value, &units);
+		if(value && value[0])
+		{
+			bandLink = value;
+		}
+		else
+		{
+			bandLink = "";
+		}
 
 		vex_field(T_CHAN_DEF, p, 2, &link, &name, &value, &units);
 		fvex_double(&value, &units, &freq);
@@ -1462,6 +1493,7 @@ int collectFreqChannels(std::vector<VexChannel> &freqChannels, VexSetup &setup, 
 		freqChannels.back().bbcName = bbcName;
 		freqChannels.back().chanName = chanName;
 		freqChannels.back().chanLink = chanLink;
+		freqChannels.back().bandLink = bandLink;
 		freqChannels.back().recordChan = -1;
 		freqChannels.back().phaseCalName = phaseCalName;
 	}

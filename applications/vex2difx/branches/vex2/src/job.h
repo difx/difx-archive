@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2015-2021 by Walter Brisken & Adam Deller               *
+ *   Copyright (C) 2015-2022 by Walter Brisken & Adam Deller               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -52,6 +52,8 @@ public:
 	double calcSize(const VexData *V) const;
 
 	unsigned int getCorrelationSourceSet(const VexData *V, std::set<std::string> &sourceSet) const;
+
+	VexAntenna::NasmythType getJobNasmythType(const VexData *V, const std::string &ant) const;
 
 	std::string jobSeries;
 	int jobId;
