@@ -1055,8 +1055,12 @@ static int getScans(VexData *V, Vex *v)
 	return nWarn;
 }
 
-static VexSetup::SetupType getSetupType(Vex *v, const char *antDefName, const char *modeDefName)
+static VexSetup::SetupType getSetupType(Vex *v, std::string &format, const char *antDefName, const char *modeDefName)
 {
+	void *trackFormat;
+
+	format = "";
+
 	// Look for things needed for all kinds of modes
 	if(get_all_lowl(antDefName, modeDefName, T_IF_DEF, B_IF, v) == 0 ||
 	   get_all_lowl(antDefName, modeDefName, T_BBC_ASSIGN, B_BBC, v) == 0 ||
@@ -1079,8 +1083,16 @@ static VexSetup::SetupType getSetupType(Vex *v, const char *antDefName, const ch
 	{
 		return VexSetup::SetupDatastreams;
 	}
-	else if(get_all_lowl(antDefName, modeDefName, T_TRACK_FRAME_FORMAT, B_TRACKS, v))
+	else if((trackFormat = get_all_lowl(antDefName, modeDefName, T_TRACK_FRAME_FORMAT, B_TRACKS, v)) != 0)
 	{
+		int link, name;
+		char *value, *units;
+		
+		vex_field(T_TRACK_FRAME_FORMAT, trackFormat, 1, &link, &name, &value, &units);
+		if(value)
+		{
+			format = value;
+		}
 		if(get_all_lowl(antDefName, modeDefName, T_S2_RECORDING_MODE, B_TRACKS, v))
 		{
 			std::cerr << "Note: Both track frame format and s2 recording mode were specified.  S2 information will be ignored." << std::endl;
@@ -1556,7 +1568,7 @@ bool cmpRecChan(const VexChannel &a, const VexChannel &b)
 	return (a.recordChan < b.recordChan);
 }
 
-static int getS2Setup(VexSetup &setup, Vex *v, const char *antDefName, const char *modeDefName, std::map<std::string,std::vector<unsigned int> > &pcalMap, std::vector<VexChannel> &freqChannels)
+static int getS2Setup(VexSetup &setup, Vex *v, const char *antDefName, const char *modeDefName, std::map<std::string,std::vector<unsigned int> > &pcalMap, std::vector<VexChannel> &freqChannels, const std::string &format)
 {
 	VexStream &stream = setup.streams[0];	// the first stream is created by default
 	int nWarn = 0;
@@ -1697,14 +1709,13 @@ static int getS2Setup(VexSetup &setup, Vex *v, const char *antDefName, const cha
 	return nWarn;
 }
 
-static int getTracksSetup(VexSetup &setup, Vex *v, const char *antDefName, const char *modeDefName, std::map<std::string,std::vector<unsigned int> > &pcalMap, std::vector<VexChannel> &freqChannels)
+static int getTracksSetup(VexSetup &setup, Vex *v, const char *antDefName, const char *modeDefName, std::map<std::string,std::vector<unsigned int> > &pcalMap, std::vector<VexChannel> &freqChannels, const std::string &format)
 {
 	VexStream &stream = setup.streams[0];	// the first stream is created by default
 	int nWarn = 0;
 	int link, name;
 	char *value, *units;
 	void *p;
-	void *trackFormat;
 	std::map<std::string,BitAssignments> ch2tracks;		// indexed by channel link
 	int nBit = 1;
 	int nTrack = 0;
@@ -1716,10 +1727,7 @@ static int getTracksSetup(VexSetup &setup, Vex *v, const char *antDefName, const
 		fvex_double(&value, &units, &stream.sampRate);
 	}
 
-	trackFormat = get_all_lowl(antDefName, modeDefName, T_TRACK_FRAME_FORMAT, B_TRACKS, v);
-
-	vex_field(T_TRACK_FRAME_FORMAT, trackFormat, 1, &link, &name, &value, &units);
-	stream.parseFormatString(value);
+	stream.parseFormatString(format);
 
 	if(stream.isLBAFormat())
 	{
@@ -1815,7 +1823,15 @@ static int getTracksSetup(VexSetup &setup, Vex *v, const char *antDefName, const
 
 	// FIXME: what to do if nBit and nRecordChan already set but they disagree?
 	stream.nRecordChan = ch2tracks.size();
-	stream.nBit = nBit;
+	if(ch2tracks.empty())
+	{
+		/* here use contents of the format name, if any, to fill in what we can. */
+		/* FIXME */
+	}
+	else
+	{
+		stream.nBit = nBit;
+	}
 
 	if(stream.format == VexStream::FormatMark5B || stream.format == VexStream::FormatKVN5B)
 	{
@@ -1894,7 +1910,7 @@ static int getTracksSetup(VexSetup &setup, Vex *v, const char *antDefName, const
 	return nWarn;
 }
 
-static int getBitstreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, const char *modeDefName, std::map<std::string,std::vector<unsigned int> > &pcalMap, std::vector<VexChannel> &freqChannels)
+static int getBitstreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, const char *modeDefName, std::map<std::string,std::vector<unsigned int> > &pcalMap, std::vector<VexChannel> &freqChannels, const std::string &format)
 {
 	const int MaxBitstreams = 64;
 	VexStream &stream = setup.streams[0];	// the first stream is created by default
@@ -1913,8 +1929,14 @@ static int getBitstreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, c
 		fvex_double(&value, &units, &stream.sampRate);
 	}
 
+	stream.parseFormatString(format);
+
 	// Only Mark5B format is supported when using BITSTREAMS
-	stream.parseFormatString("MARK5B");
+	if(stream.format != VexStream::FormatMark5B)
+	{
+		std::cerr << "Error: bitstream setup found, but format was " << format << " , but only Mark5B formats are supported." << std::endl;
+		exit(0);
+	}
 
 	for(p = get_all_lowl(antDefName, modeDefName, T_STREAM_DEF, B_BITSTREAMS, v); p; p = get_all_lowl_next())
 	{
@@ -2033,7 +2055,7 @@ static int getBitstreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, c
 	return nWarn;
 }
 
-static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, const char *modeDefName, std::map<std::string,std::vector<unsigned int> > &pcalMap, std::vector<VexChannel> &freqChannels)
+static int getDatastreamsSetup(VexSetup &setup, Vex *v, const char *antDefName, const char *modeDefName, std::map<std::string,std::vector<unsigned int> > &pcalMap, std::vector<VexChannel> &freqChannels, const std::string &format)
 {
 	int nWarn = 0;
 	int link, name;
@@ -2334,12 +2356,13 @@ static int getModes(VexData *V, Vex *v)
 
 		for(unsigned int a = 0; a < V->nAntenna(); ++a)
 		{
+			std::string format;
 			const char *antDefName = V->getAntenna(a)->defName.c_str();
 			VexSetup::SetupType type;
 			std::map<std::string,std::vector<unsigned int> > pcalMap;
 			std::vector<VexChannel> freqChannels;		// list of channels from relevant $FREQ section
 
-			type = getSetupType(v, antDefName, modeDefName);
+			type = getSetupType(v, format, antDefName, modeDefName);
 
 			if(type == VexSetup::SetupIncomplete)
 			{
@@ -2360,16 +2383,16 @@ static int getModes(VexData *V, Vex *v)
 			switch(type)
 			{
 			case VexSetup::SetupTracks:
-				nWarn += getTracksSetup(setup, v, antDefName, modeDefName, pcalMap, freqChannels);
+				nWarn += getTracksSetup(setup, v, antDefName, modeDefName, pcalMap, freqChannels, format);
 				break;
 			case VexSetup::SetupBitstreams:
-				nWarn += getBitstreamsSetup(setup, v, antDefName, modeDefName, pcalMap, freqChannels);
+				nWarn += getBitstreamsSetup(setup, v, antDefName, modeDefName, pcalMap, freqChannels, format);
 				break;
 			case VexSetup::SetupDatastreams:
-				nWarn += getDatastreamsSetup(setup, v, antDefName, modeDefName, pcalMap, freqChannels);
+				nWarn += getDatastreamsSetup(setup, v, antDefName, modeDefName, pcalMap, freqChannels, format);
 				break;
 			case VexSetup::SetupS2:
-				nWarn += getS2Setup(setup, v, antDefName, modeDefName, pcalMap, freqChannels);
+				nWarn += getS2Setup(setup, v, antDefName, modeDefName, pcalMap, freqChannels, format);
 				break;
 			default:
 				std::cerr << "Setup type " << VexSetup::setupTypeName[type] << " is not (yet) supported." << std::endl;

@@ -146,7 +146,7 @@ int VexMode::getBits() const
 		{
 			if(nBit != 0 && nb != 0 && firstTime)
 			{
-				std::cerr << "Note: getBits: differing number of bits: " << nBit << "," << nb << std::endl;
+				std::cerr << "Note: getBits: Mode=" << defName << " differing number of bits: " << nBit << "," << nb << std::endl;
 				std::cerr << "  Will proceed, but note that some metadata may be incorrect." << std::endl;
 
 				firstTime = 0;
