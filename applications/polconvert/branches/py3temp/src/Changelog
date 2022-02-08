@@ -1,3 +1,21 @@
+v2.0b
+- Improved the GCPFF algorithm. Implemented the interface for CASA 6.
+
+v1.9.0
+- Added new standalone interface (i.e., free of CASA!!!).
+
+v1.8.3
+- interim successor to v1.8.1 for the DiFX branch of PolConvert
+- (1.8.2 was developed on launchpad present with the git repo creation)
+
+v1.8.2
+- Improved GFF for rate estimates (now, it is done on all corr. products).
+- Parallactic angle can now be corrected in converted antennas.
+- Adapted the pulse-cal code for multi-file correlations.
+- Cleaned up the code.
+- Fixed problem in ChiSq code when the scans weren't in time order.
+- Added sample EU-VGOS scripts.
+
 v1.8.1
 - improved support for FITS-IDI
 - fixed some buggy parallactic angle code relevant to single dish
