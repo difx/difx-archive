@@ -89,6 +89,7 @@ void deleteDifxInput(DifxInput *D)
 		deleteDifxJobArray(D->job, D->nJob);
 		deleteDifxRuleArray(D->rule);
 		DifxInputAllocThreads(D, 0);
+		free(D->freqIdRemap);
 		free(D);
 	}
 }
@@ -154,6 +155,14 @@ void fprintDifxInput(FILE *fp, const DifxInput *D)
 	{
 		fprintDifxConfig(fp, D->config + i);
 	}
+
+	fprintf(fp, "  nFreqUnsimplified = %d\n", D->nFreqUnsimplified);
+	fprintf(fp, "  freqIdRemap origId:simplifiedId = ");
+	for(i = 0; i < D->nFreqUnsimplified; ++i)
+	{
+		fprintf(fp, " %d:%d", i, D->freqIdRemap[i]);
+	}
+	fprintf(fp, "\n");
 
 	fprintf(fp, "  nFreq = %d\n", D->nFreq);
 	for(i = 0; i < D->nFreq; ++i)
@@ -1106,6 +1115,8 @@ static DifxInput *parseDifxInputFreqTable(DifxInput *D, const DifxParameters *ip
 	}
 	D->nFreq    = atoi(DifxParametersvalue(ip, r));
 	D->freq     = newDifxFreqArray(D->nFreq);
+	D->nFreqUnsimplified = D->nFreq;
+	D->freqIdRemap = (int *)calloc(D->nFreqUnsimplified+1, sizeof(int));
 	rows[N_FREQ_ROWS-1] = 0;	/* initialize start */
 	for(b = 0; b < D->nFreq; ++b)
 	{
@@ -1125,6 +1136,7 @@ static DifxInput *parseDifxInputFreqTable(DifxInput *D, const DifxParameters *ip
 		D->freq[b].specAvg  = atoi(DifxParametersvalue(ip, rows[4]));
 		D->freq[b].overSamp = atoi(DifxParametersvalue(ip, rows[5]));
 		D->freq[b].decimation = atoi(DifxParametersvalue(ip, rows[6]));
+		D->freqIdRemap[b] = b;
 
 		r = DifxParametersfind1(ip, rows[2]+1, "RX NAME %d", b);
 		if(r > 0 && r < rows[2]+5)

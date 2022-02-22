@@ -706,12 +706,13 @@ typedef struct
 	int nCore;		/* from the .threads file, or zero if no file */
 	int *nThread;		/* [coreId]: how many threads to use on each core */
 
-	int nAntenna, nConfig, nRule, nFreq, nFreqSet, nScan, nSource, nEOP, nFlag;
+	int nAntenna, nConfig, nRule, nFreq, nFreqUnsimplified, nFreqSet, nScan, nSource, nEOP, nFlag;
 	int nDatastream, nBaseline, nSpacecraft, nPulsar, nPhasedArray, nJob;
 	DifxJob		*job;
 	DifxConfig	*config;
-	DifxRule        *rule;
+	DifxRule	*rule;
 	DifxFreq	*freq;
+	int	*freqIdRemap; /* freq id remap determined and applied by simplifyDifxFreqs(), required only pre-correlation, not at FITS-IDI stage */
 	DifxFreqSet	*freqSet;
 	DifxAntenna	*antenna;
 	DifxScan	*scan;		/* assumed in time order */
