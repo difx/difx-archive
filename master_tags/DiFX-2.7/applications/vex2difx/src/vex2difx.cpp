@@ -661,6 +661,8 @@ static void populateFreqTable(DifxInput *D, const vector<freq>& freqs, const vec
 {
 	D->nFreq = freqs.size();
 	D->freq = newDifxFreqArray(D->nFreq);
+	D->nFreqUnsimplified = D->nFreq;
+	D->freqIdRemap = (int *)calloc(D->nFreqUnsimplified+1, sizeof(int));
 
 	for(int f = 0; f < D->nFreq; ++f)
 	{
@@ -675,6 +677,7 @@ static void populateFreqTable(DifxInput *D, const vector<freq>& freqs, const vec
 		df->specAvg = freqs[f].specAvg();
 		df->decimation = freqs[f].decimation;
 		df->overSamp = 1;	// FIXME: eventually provide this again.
+		D->freqIdRemap[f] = f; // 1:1 mapping which simplifyDifxFreqs() will alter later
 
 		chanBW = freqs[f].outputSpecRes*1e-6;
 		if(chanBW > 0.51 && firstChanBWWarning)
