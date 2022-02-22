@@ -418,7 +418,7 @@ void AutoBands::analyze(int Nant_min)
 		else if(verbosity > 2)
 		{
 			std::cout << "    discard " << span_lo*1e-6 << "--" << span_hi*1e-6 << " MHz bw " << (span_hi-span_lo)*1e-6 << " with " << bandcount << " rec bands, "
-				<< antcount << " antennas < " << Nant_min << "antennas\n";
+				<< antcount << " antennas < " << Nant_min << " antennas\n";
 		}
 	}
 
