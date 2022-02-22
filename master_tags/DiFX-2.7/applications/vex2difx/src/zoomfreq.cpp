@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009-2017 by Walter Brisken                             *
+ *   Copyright (C) 2015 by Walter Brisken                                  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,35 +19,34 @@
 /*===========================================================================
  * SVN properties (DO NOT CHANGE)
  *
- * $Id$
- * $HeadURL: $
- * $LastChangedRevision$
- * $Author$
- * $LastChangedDate$
+ * $Id: freq.cpp 10159 2021-09-15 08:37:19Z JanWagner $
+ * $HeadURL: https://svn.atnf.csiro.au/difx/applications/vex2difx/trunk/src/util.h $
+ * $LastChangedRevision: 10159 $
+ * $Author: JanWagner $
+ * $LastChangedDate: 2021-09-15 10:37:19 +0200 (Wed, 15 Sep 2021) $
  *
  *==========================================================================*/
 
-#ifndef __ZOOMFREQ_H__
-#define __ZOOMFREQ_H__
+#include "zoomfreq.h"
+#include <iomanip>
 
-#include <ostream>
-
-class ZoomFreq
+ZoomFreq::ZoomFreq()
 {
-public: 
-	//constructor
-	ZoomFreq();
+	initialise(-999e6, -999e6, false, -1);
+}
 
-	//method
-	void initialise(double freq, double bw, bool corrparent, int specavg); // Hz
+// freq and bw supplied in Hz
+void ZoomFreq::initialise(double freq, double bw, bool corrparent, int specavg)
+{
+	frequency = freq;
+	bandwidth = bw;
+	correlateparent = corrparent;
+	spectralaverage = specavg;
+}
 
-	//variables
-	double frequency, bandwidth; // Hz
-	int spectralaverage;
-	bool correlateparent;
-};
-
-//zoomfreq.cpp
-std::ostream& operator << (std::ostream& os, const ZoomFreq& f);
-
-#endif
+std::ostream& operator << (std::ostream& os, const ZoomFreq& f)
+{
+    os << std::setw(15) << std::setprecision(8)
+        << f.frequency*1e-6 << " MHz "<< f.bandwidth*1e-6 << " MHz avg=" << f.spectralaverage << " parent=" << f.correlateparent;
+    return os;
+}

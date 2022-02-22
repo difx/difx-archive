@@ -17,6 +17,8 @@ vex2difx_SOURCES = \
 	corrparams.h \
 	freq.cpp \
 	freq.h \
+	zoomfreq.cpp \
+	zoomfreq.h \
 	job.cpp \
 	job.h \
 	jobflag.cpp \

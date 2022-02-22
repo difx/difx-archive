@@ -853,19 +853,6 @@ int SourceSetup::setkv(const std::string &key, const std::string &value, PhaseCe
 	return nWarn;
 }
 
-ZoomFreq::ZoomFreq()
-{
-	initialise(-999e6, -999e6, false, -1);
-}
-
-// freq and bw supplied in Hz
-void ZoomFreq::initialise(double freq, double bw, bool corrparent, int specavg)
-{
-	frequency = freq;
-	bandwidth = bw;
-	correlateparent = corrparent;
-	spectralaverage = specavg;
-}
 
 DatastreamSetup::DatastreamSetup(const std::string &name) : difxName(name)
 {
