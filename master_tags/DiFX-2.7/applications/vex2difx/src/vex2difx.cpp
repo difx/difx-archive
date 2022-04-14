@@ -1586,6 +1586,31 @@ static int getConfigIndex(vector<pair<string,string> >& configs, DifxInput *D, c
 	return nConfig;
 }
 
+static bool exactMatchingFreq(const ZoomFreq &zoomfreq, const freq& f)
+{
+	//exactMatchingFreq: True only when freq is USB, and top+bottom edges match the zoomfreq
+	const double epsilon = 0.000001;
+	double parent_bottom,
+	parent_top;
+
+	if(f.sideBand == 'L')
+	{
+		return false;
+	}
+
+	if(fabs(zoomfreq.frequency - f.fq) > epsilon)
+	{
+		return false;
+	}
+
+	if(fabs(zoomfreq.bandwidth - f.bw) > epsilon)
+	{
+		return false;
+	}
+
+	return true;
+}
+
 static bool matchingFreq(const ZoomFreq &zoomfreq, const DifxDatastream *dd, int dfreqIndex, const vector<freq> &freqs)
 {
 	const double epsilon = 0.000001;
@@ -2199,33 +2224,35 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 			}
 		}
 
-		// collect freqs specific to each antenna (not global), and register those into the AutoBands logic
-		corrSetup->autobands.setVerbosity(verbose);
-		for(std::map<std::string,VexSetup>::const_iterator it = mode->setups.begin(); it != mode->setups.end(); ++it)
-		{
-			const std::string &antName = it->first;
-			const VexSetup &setup = it->second;
-			std::vector<freq> antfreqs; // starts from a blank list for every antenna!
-			int startBand = 0;
-
-			if(find(J.jobAntennas.begin(), J.jobAntennas.end(), antName) == J.jobAntennas.end())
-			{
-				continue;
-			}
-
-			for(unsigned int ds = 0; ds < setup.nStream(); ++ds)
-			{
-				const VexStream &stream = setup.streams[ds];
-				setFormat(D, 0, antfreqs, toneSets, mode, antName, startBand, setup, stream, corrSetup, P->v2dMode);
-				startBand += stream.nRecordChan;
-			}
-
-			corrSetup->autobands.addRecbands(antfreqs); // NB: adds all VEX freqs, not just freqs explicitly selected by v2d freqId=... list
-		}
-
 		// invoke AutoBand logic to generate additional '1:1 / N:1 / 1:N zooms that assemble into outputbands
 		if(corrSetup->outputBandwidthMode != OutputBandwidthOff)
 		{
+			// collect freqs specific to each antenna (not global), and register those into the AutoBands logic
+			corrSetup->autobands.setVerbosity(verbose);
+			std::map<std::string,std::vector<freq> > antfreqs;
+			for(std::map<std::string,VexSetup>::const_iterator it = mode->setups.begin(); it != mode->setups.end(); ++it)
+			{
+				const std::string &antName = it->first;
+				const VexSetup &setup = it->second;
+				std::vector<freq> currantfreqs;
+				int startBand = 0;
+
+				if(find(J.jobAntennas.begin(), J.jobAntennas.end(), antName) == J.jobAntennas.end())
+				{
+					continue;
+				}
+
+				for(unsigned int ds = 0; ds < setup.nStream(); ++ds)
+				{
+					const VexStream &stream = setup.streams[ds];
+					setFormat(D, 0, currantfreqs, toneSets, mode, antName, startBand, setup, stream, corrSetup, P->v2dMode);
+					startBand += stream.nRecordChan;
+				}
+				antfreqs[antName] = currantfreqs;
+				corrSetup->autobands.addRecbands(antfreqs[antName]); // NB: adds all VEX freqs, not just freqs explicitly selected by v2d freqId=... list
+			}
+
+			// determine the common bandwidth of all outputbands
 			double bw = 0;
 			if(corrSetup->outputBandwidthMode == OutputBandwidthAuto)
 			{
@@ -2244,7 +2271,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 				exit(EXIT_FAILURE);
 			}
 
-			// produce the necessary bands
+			// auto-determine default bands if no explicit bands from corrparams.cpp SETUP autobands.addUserOutputband() present yet
 			corrSetup->autobands.setBandwidth(bw);
 			corrSetup->autobands.generateOutputbands(P->minSubarraySize);
 			if(verbose > 2)
@@ -2252,7 +2279,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 				std::cout << corrSetup->autobands;
 			}
 
-			// register explicit v2d user-specified Zooms into the autoband logic as output bands, if not yet present
+			// register v2d user-specified explicit Zooms into the autoband logic as output bands, if not yet present
 			for(std::map<std::string,VexSetup>::const_iterator it = mode->setups.begin(); it != mode->setups.end(); ++it)
 			{
 				const std::string &antName = it->first;
@@ -2282,8 +2309,8 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 				}
 			}
 
-			// grab list of zoom bands needed for this antenna to cover the outputbands
-			GlobalZoom constituentzooms("temp");
+			// grab list of zoom bands needed at every antenna, every outputband
+			GlobalZoom autozooms("globaltemp");
 			for(itOb = corrSetup->autobands.outputbands.begin(); itOb != corrSetup->autobands.outputbands.end(); ++itOb)
 			{
 				if (!itOb->isComplete())
@@ -2297,11 +2324,11 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 				{
 					ZoomFreq zoom;
 					zoom.initialise(itZm->flow, itZm->bandwidth(), false, 0); // specAvg:0 means default to parent
-					constituentzooms.zoomFreqs.push_back(zoom);
+					autozooms.zoomFreqs.push_back(zoom);
 				}
 			}
 
-			// update antenna's zooms to include the additional new zooms needed to construct outputbands
+			// for every antenna, update its zooms so they include the additional new zooms needed to construct outputbands
 			for(std::map<std::string,VexSetup>::const_iterator it = mode->setups.begin(); it != mode->setups.end(); ++it)
 			{
 				const std::string &antName = it->first;
@@ -2313,13 +2340,38 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 				const VexAntenna *antenna = V->getAntenna(antName);
 #warning "FIXME: get rid of the const -> nonconst cast in writeJob"
 				AntennaSetup* antSetup = ((CorrParams*)P)->getNonConstAntennaSetup(antName);
-				if(antSetup)
+				if(!antSetup)
 				{
-					// start from blank antenna zooms, re-add the explicit v2d zooms, then add automatic zooms related to outputbands
-					antSetup->zoomFreqs.clear();
-					std::copy(antSetup->v2dZoomFreqs.begin(), antSetup->v2dZoomFreqs.end(), std::back_inserter(antSetup->zoomFreqs));
-					antSetup->copyGlobalZoom(constituentzooms); // "copy()" but actually appends
+					continue;
 				}
+
+				// start from blank antenna zooms, re-add the explicit v2d zooms
+				antSetup->zoomFreqs.clear();
+				std::copy(antSetup->v2dZoomFreqs.begin(), antSetup->v2dZoomFreqs.end(), std::back_inserter(antSetup->zoomFreqs));
+
+				// determine which automatic zooms are required for *this* antenna, while
+				// filtering out a corner case: any zoom that is identical to a USB freq
+				// recorded by this antenna is redundant (and detrimental)
+				GlobalZoom antautozooms("localtemp");
+				std::vector<freq> const& currantfreqs = antfreqs[antName];
+				for(std::vector<ZoomFreq>::const_iterator zfit = autozooms.zoomFreqs.begin(); zfit != autozooms.zoomFreqs.end(); ++zfit)
+				{
+					bool redundant = false;
+					for(std::vector<freq>::const_iterator fqit = currantfreqs.begin(); fqit != currantfreqs.end(); ++fqit)
+					{
+						if(exactMatchingFreq(*zfit, *fqit))
+						{
+							cout << "Info: Ignoring auto-zoom at antenna " << antName << " of " << *zfit << " since identical to recband " << *fqit << "\n";
+							redundant = true;
+							break;
+						}
+					}
+					if(!redundant)
+					{
+						antautozooms.zoomFreqs.push_back(*zfit);
+					}
+				}
+				antSetup->copyGlobalZoom(antautozooms); // "copy()" but actually appends
 			}
 
 			// block all recorded frequencies that do not contribute to either a zoom band or to an outputband, otherwise
@@ -2335,6 +2387,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 					if (dstFqId < 0)
 					{
 						blockedfreqids[antid].insert(fqId);
+						// cout << "ant " << antid << " blocking recFq " << fq << " freqId " << fqId << " because of no dstFqId\n";
 					}
 					else
 					{
@@ -2440,10 +2493,13 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 								{
 									blockedfreqids[dd->antennaId].insert(dd->recFreqId[parentFreqIndices[nZoom]]);
 								}
-								if(dd->zoomFreqId[nZoom] != dd->zoomFreqDestId[nZoom])
-								{
-									blockedfreqids[dd->antennaId].insert(dd->zoomFreqId[nZoom]);
-								}
+//Corner case BUG: if an LSB-flipping-only zoom *actually* is output, i.e. zoom equal to output,
+//_but_ output fqId differs due to bookkeeping from zoom fqId index, we incorrectly block the LSB-flip...
+//Commenting out for now, for testing:
+//								if(dd->zoomFreqId[nZoom] != dd->zoomFreqDestId[nZoom])
+//								{
+//									blockedfreqids[dd->antennaId].insert(dd->zoomFreqId[nZoom]);
+//								}
 								++nZoom;
 							}
 							if(nZoomSkip > 0)
