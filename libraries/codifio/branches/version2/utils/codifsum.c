@@ -151,7 +151,8 @@ int main (int argc, char **argv) {
 	if (first) {
 	  char complextype[2] = "";
 	  if (iscomplex) complextype[0] = 'C';
-	  printf("CODIF%s/%d/%d/%d\n", complextype, period, framesize, bits);
+	  printf("CODIF%s/%d/%d/%d", complextype, period, framesize, bits);
+	  printf("    CODIF%s_%d-%dm%d-%d-%d\n", complextype, framesize-CODIF_HEADER_BYTES, getCODIFFrameperperiod(header), period, nchan, bits);
 	  printf(" %02d/%02d/%d  %s\n", day, month, year, timestr);       	
 	} else {
 	  printf(" %02d/%02d/%d  %s\n", day, month, year, timestr);       	
