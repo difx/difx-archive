@@ -62,13 +62,11 @@ int createCODIFHeader(codif_header *header, uint32_t dataarraylength, uint16_t t
   else
     header->iscomplex = 0;
   setCODIFBitsPerSample(header, bits);
-  setCODIFVersion(header, 1);
+  setCODIFVersion(header, 2);
   setCODIFRepresentation(header, 1);
   setCODIFThreadID(header, threadid);
   setCODIFGroupID(header, groupid);
-  header->groupid = groupid;
   header->stationid = stationid[0]<<8 | stationid[1];
-  header->groupid = groupid;
   header->secondaryid = secondaryid;
   setCODIFPeriod(header, period);
   header->totalsamples = totalsamples;
