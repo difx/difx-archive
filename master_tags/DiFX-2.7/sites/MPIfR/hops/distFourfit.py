@@ -42,7 +42,7 @@ from typing import List, Set
 
 ################################################################################################################
 
-DEFAULT_FOURFIT = '/cluster/hops/fourfit_d270'
+DEFAULT_FOURFIT = '/cluster/hops/fourfit_d271'
 DEFAULT_FOURFIT_OPTS = ['-m0', '-u']
 DEFAULT_CF = 'cf_1234'
 DEFAULT_FREQ_GROUP = ''
@@ -333,7 +333,7 @@ if __name__ == "__main__":
 	handler = JobDispatch()
 
 	if args.difxmachinesfile:
-		nodepool.loadMachines(difxmachinesfile)
+		nodepool.loadMachines(args.difxmachinesfile)
 
 	expt_path = args.expt_root[0]
 	antennaSubset = [ant for ant in args.antennas.split(',') if len(ant)==1]
