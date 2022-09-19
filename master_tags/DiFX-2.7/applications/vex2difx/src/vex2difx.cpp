@@ -2408,8 +2408,9 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 		{
 			const std::string &antName = it->first;
 			const VexSetup &setup = it->second;
-			unsigned int startBand;
+			unsigned int startBand, startFreq;
 			startBand = 0;
+			startFreq = 0;
 
 			if(find(J.jobAntennas.begin(), J.jobAntennas.end(), antName) == J.jobAntennas.end())
 			{
@@ -2550,14 +2551,14 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 						unsigned int nFreqPhaseDelta = antennaSetup->freqPhaseDelta.size();
 						if(nFreqClockOffsets > 0)
 						{
-							if((startBand + D->datastream[currDatastream].nRecFreq) > nFreqClockOffsets ||
-							   (startBand + D->datastream[currDatastream].nRecFreq) > nFreqClockOffsetsDelta ||
-							   (startBand + D->datastream[currDatastream].nRecFreq) > nFreqPhaseDelta)
+							if((startFreq + D->datastream[currDatastream].nRecFreq) > nFreqClockOffsets ||
+							   (startFreq + D->datastream[currDatastream].nRecFreq) > nFreqClockOffsetsDelta ||
+							   (startFreq + D->datastream[currDatastream].nRecFreq) > nFreqPhaseDelta)
 							{
 								cerr << endl;
-								cerr << "Error: AntennaSetup for " << antName << " has only " << nFreqClockOffsets << " freqClockOffsets specified but " << (startBand + dd->nRecFreq) << " recorded frequencies needed, or" << endl;
-								cerr << "Error: AntennaSetup for " << antName << " has only " << nFreqClockOffsetsDelta << " freqClockOffsetsDelta specified but " << (startBand + dd->nRecFreq) << " recorded frequencies needed, or" << endl;
-								cerr << "Error: AntennaSetup for " << antName << " has only " << nFreqPhaseDelta << " freqPhaseDelta specified but " << (startBand + dd->nRecFreq) << " recorded frequencies needed." << endl;
+								cerr << "Error: AntennaSetup for " << antName << " has only " << nFreqClockOffsets << " freqClockOffsets specified but " << (startFreq + dd->nRecFreq) << " recorded frequencies needed, or" << endl;
+								cerr << "Error: AntennaSetup for " << antName << " has only " << nFreqClockOffsetsDelta << " freqClockOffsetsDelta specified but " << (startFreq + dd->nRecFreq) << " recorded frequencies needed, or" << endl;
+								cerr << "Error: AntennaSetup for " << antName << " has only " << nFreqPhaseDelta << " freqPhaseDelta specified but " << (startFreq + dd->nRecFreq) << " recorded frequencies needed." << endl;
 
 								exit(EXIT_FAILURE);
 							}
@@ -2572,13 +2573,13 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 							{
 								double freqClockOffs, freqClockOffsDelta, freqPhaseDelta;
 
-								freqClockOffs = (startBand + i < nFreqClockOffsets) ? antennaSetup->freqClockOffs.at(startBand + i) : 0.0;
+								freqClockOffs = (startFreq + i < nFreqClockOffsets) ? antennaSetup->freqClockOffs.at(startFreq + i) : 0.0;
 								D->datastream[currDatastream].clockOffset[i] = freqClockOffs;
 
-								freqClockOffsDelta = (startBand + i < nFreqClockOffsetsDelta) ? antennaSetup->freqClockOffsDelta.at(startBand + i) : 0.0;
+								freqClockOffsDelta = (startFreq + i < nFreqClockOffsetsDelta) ? antennaSetup->freqClockOffsDelta.at(startFreq + i) : 0.0;
 								D->datastream[currDatastream].clockOffsetDelta[i] = freqClockOffsDelta;
 
-								freqPhaseDelta = (startBand + i < nFreqPhaseDelta) ? antennaSetup->freqPhaseDelta.at(startBand + i) : 0.0;
+								freqPhaseDelta = (startFreq + i < nFreqPhaseDelta) ? antennaSetup->freqPhaseDelta.at(startFreq + i) : 0.0;
 								D->datastream[currDatastream].phaseOffset[i] = freqPhaseDelta;
 							}
 						}
@@ -2587,10 +2588,10 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 						unsigned int nLoOffsets = antennaSetup->loOffsets.size();
 						if(nLoOffsets > 0)
 						{
-							if((startBand + D->datastream[currDatastream].nRecFreq) > nLoOffsets)
+							if((startFreq + D->datastream[currDatastream].nRecFreq) > nLoOffsets)
 							{
 								cerr << endl;
-								cerr << "Error: AntennaSetup for " << antName << " has only " << nLoOffsets << " loOffsets specified but " << (startBand + dd->nRecFreq) << " recorded frequencies needed." << endl;
+								cerr << "Error: AntennaSetup for " << antName << " has only " << nLoOffsets << " loOffsets specified but " << (startFreq + dd->nRecFreq) << " recorded frequencies needed." << endl;
 
 								exit(EXIT_FAILURE);
 							}
@@ -2598,7 +2599,7 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 							{
 								double loOffset;
 
-								loOffset = (startBand + i < nLoOffsets) ? antennaSetup->loOffsets.at(startBand + i) : 0.0;
+								loOffset = (startFreq + i < nLoOffsets) ? antennaSetup->loOffsets.at(startFreq + i) : 0.0;
 								D->datastream[currDatastream].freqOffset[i] = loOffset;
 							}
 						}
@@ -2608,21 +2609,22 @@ static int writeJob(const Job& J, const VexData *V, const CorrParams *P, const s
 						int nGainOffsets = antennaSetup->gainOffsets.size();
 						if(nGainOffsets > 0)
 						{
-							if((startBand + D->datastream[currDatastream].nRecFreq) > nGainOffsets)
+							if((startFreq + D->datastream[currDatastream].nRecFreq) > nGainOffsets)
 							{
 								cerr << endl;
-								cerr << "Error: AntennaSetup for " << antName << " has only " << nGainOffsets << " gainOffsets specified but " << (startBand + dd->nRecFreq) << " recorded frequencies needed." << endl;
+								cerr << "Error: AntennaSetup for " << antName << " has only " << nGainOffsets << " gainOffsets specified but " << (startFreq + dd->nRecFreq) << " recorded frequencies needed." << endl;
 								exit(EXIT_FAILURE);
 							}
 							for(int i = 0; i < D->datastream[currDatastream].nRecFreq; ++i)
 							{
 								double freqGain;
 
-								freqGain = (startBand + i < nLoOffsets) ? antennaSetup->gainOffsets.at(startBand + i) : 0.0;
+								freqGain = (startFreq + i < nLoOffsets) ? antennaSetup->gainOffsets.at(startFreq + i) : 0.0;
 								D->datastream[currDatastream].gainOffset[i] = freqGain;
 							}
 						}
 					} // if antennaSetup
+					startFreq += D->datastream[currDatastream].nRecFreq;
 					++currDatastream;
 				} // if valid format
 				startBand += stream.nRecordChan;
