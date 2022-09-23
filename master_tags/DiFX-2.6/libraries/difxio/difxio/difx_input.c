@@ -1339,6 +1339,13 @@ static DifxInput *parseDifxInputDatastreamTable(DifxInput *D, const DifxParamete
 		}
 		D->datastream[e].phaseCalIntervalMHz = atof(DifxParametersvalue(ip, r));
 
+		/* note use of r1 again: the PHASE CAL BASE parameter is optional */
+		r1 = DifxParametersfind_limited(ip, r+1, 5, "PHASE CAL BASE(MHZ)");
+		if(r1 > 0)
+		{
+			D->datastream[e].phaseCalBaseMHz = atoi(DifxParametersvalue(ip, r1));
+		}
+
 		r = DifxParametersfind(ip, r+1, "NUM RECORDED FREQS");
 		if(r < 0)
 		{
