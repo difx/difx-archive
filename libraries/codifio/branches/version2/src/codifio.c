@@ -37,7 +37,7 @@
 #include "codifio.h"
 
 
-#define CODIF_VERSION 2
+#define CODIF_VERSION 3
 
 
 int createCODIFHeader(codif_header *header, uint32_t dataarraylength, uint16_t threadid, uint16_t groupid, uint8_t bits,
