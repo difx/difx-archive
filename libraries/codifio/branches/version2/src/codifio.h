@@ -58,13 +58,13 @@ typedef struct codif_header {
   // Word 1
   uint64_t epoch : 8;
   uint64_t nbits : 8;
-  uint64_t representation : 4;
-  uint64_t calEnabled : 1;
-  uint64_t iscomplex : 1;
-  uint64_t invalid : 1;
   uint64_t power : 1;
-  uint64_t protocol : 3;
+  uint64_t invalid : 1;
+  uint64_t iscomplex : 1;
+  uint64_t calEnabled : 1;
+  uint64_t representation : 4;
   uint64_t version : 5;
+  uint64_t protocol : 3;
   uint64_t reserved : 16;
   uint64_t period : 16;
   // Word 2
