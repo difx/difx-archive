@@ -146,7 +146,7 @@ datastats allstats[MAXTHREAD];
 int lines = 0;
 
 int main (int argc, char * const argv[]) {
-  char *buf, timestr[MAXSTR], filename[MAXSTR];
+  char *buf, timestr[MAXSTR];
   int threadIndex, tmp, opt, status, sock, ofile[MAXTHREAD], skip, i;
   int groupID, valid, period, thisthread = -1;
   ssize_t nread, nwrote, nwrite;
@@ -589,7 +589,7 @@ void alarm_signal (int sig) {
     sumstats.sum_pkts += allstats[i].sum_pkts;
     if (allstats[i].minpkt_size < sumstats.minpkt_size)
       sumstats.minpkt_size = allstats[i].minpkt_size;
-    if (allstats[i].maxpkt_size < sumstats.maxpkt_size)
+    if (allstats[i].maxpkt_size > sumstats.maxpkt_size)
       sumstats.maxpkt_size = allstats[i].maxpkt_size;
   }
 
@@ -608,17 +608,19 @@ void alarm_signal (int sig) {
   if (sumstats.npacket==0)
     percent = 0; 
   else 
-    percent = (double)sumstats.pkt_drop/(sumstats.npacket+sumstats.pkt_drop)*100;
+    percent = (double)sumstats.pkt_drop/(unsigned long long)(sumstats.npacket+sumstats.pkt_drop)*100;
 
+  /*  
   if (1 || sumstats.pkt_drop<10000) {
     snprintf(dropStr, 5, "%" PRIu64, sumstats.pkt_drop);
   } else {
     strcpy(dropStr, "XXXX");
   }
-
-  printf("%6llu  %4d %4d %4ld %3.1f %8.3f %4s %6.2f %3" PRIu64 "\n", 
+  */
+  
+  printf("%6llu  %4d %4d %4ld %3.1f %8.3f %4" PRIu64 " %6.2f %3" PRIu64 "\n", 
 	 (unsigned long long)sumstats.npacket, sumstats.minpkt_size, sumstats.maxpkt_size, avgpkt,
-	 delta, rate,  dropStr, percent, sumstats.pkt_oo);	
+	 delta, rate,  sumstats.pkt_drop, percent, sumstats.pkt_oo);	
 
   for (i=0; i<nthread; i++) 
     initstats(&allstats[i]);
