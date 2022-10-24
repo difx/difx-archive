@@ -35,6 +35,8 @@ Version 2.5
 * Fix complex data PCal extractor to support other than 16 tones per band
 * Remove try/catch pair that fails with new openmpi (developed for 2.5.3)
 * Fix segfault on 'exiting gracefully' when a recording is not present
+* Fix genmachines lack of handling December doy's
+* Update genmachines to support Mark6 with multiple expansion chassis
 
 Version 2.4
 ~~~~~~~~~~~
