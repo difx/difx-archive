@@ -1,3 +1,8 @@
+Version 2.5.5
+~~~~~~~~~~~~~
+* Fix parameters 'freqClockOffs' and 'loOffsets' to not expect more values
+  than recorded freqs present
+
 Version 2.5.4
 ~~~~~~~~~~~~~
 * Add parameter 'exahustiveAutocorrs' from DiFX 2.6 and Trunk (r8039)
