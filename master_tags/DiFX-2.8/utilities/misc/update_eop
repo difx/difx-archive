@@ -1,0 +1,32 @@
+#!/bin/sh
+
+EMAIL=difx@difx.com
+
+URL=ftp://gdc.cddis.eosdis.nasa.gov/vlbi/gsfc/ancillary/solve_apriori/
+COMMAND=''
+
+EOP=usno500_finals.erp
+UT1=ut1ls.dat
+
+LOG=.update_eop.log
+\rm -f $LOG
+touch $LOG
+
+\rm -f $EOP
+curl -u anonymous:$EMAIL --ftp-ssl -o $EOP $URL/$EOP > $LOG 2>&1 && \mv -f $EOP .eops 
+if [ $? -ne 0 ]; then
+    cat $LOG
+fi
+
+LOG=.update_ut1.log
+\rm -f $LOG
+touch $LOG
+\rm -f $UT1
+curl -u anonymous:$EMAIL --ftp-ssl -o $UT1 $URL/$UT1 > $LOG 2>&1 && \mv -f $UT1 .ut1ls
+
+if [ $? -ne 0 ]; then
+    cat $LOG
+fi
+
+
+
