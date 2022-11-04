@@ -172,6 +172,7 @@ int main (int argc, char * const argv[]) {
   //int invert = 0;
   int splitthread = 0;
   int verbose = 0;
+  int wait = 0; // Don't start timing till first packet arrives
   
   struct option options[] = {
     {"port", 1, 0, 'p'},
@@ -186,6 +187,7 @@ int main (int argc, char * const argv[]) {
     //{"invert", 0, 0, 'I'},
     {"split", 0, 0, 'S'},
     {"verbose", 0, 0, 'V'},
+    {"wait", 0, 0, 'w'},
     {"help", 0, 0, 'h'},
     {0, 0, 0, 0}
   };
@@ -195,7 +197,7 @@ int main (int argc, char * const argv[]) {
   updatetime = DEFAULT_UPDATETIME;
 
   while (1) {
-    opt = getopt_long_only(argc, argv, "i:T:P:p:t:h", options, NULL);
+    opt = getopt_long_only(argc, argv, "i:T:P:p:t:hw", options, NULL);
     if (opt==EOF) break;
 
     switch (opt) {
@@ -272,6 +274,10 @@ int main (int argc, char * const argv[]) {
       splitthread = 1;
       break;
 
+    case 'w':
+      wait = 1;
+      break;
+      
     case 'V':
       verbose = 1;
       break;
@@ -287,6 +293,7 @@ int main (int argc, char * const argv[]) {
       printf("  -f/-filesize <N>       Write files N seconds long\n");
       printf("  -s/-scale <S>          Reduce data to 8 bits, dividing by S\n");
       printf("  -S/-split              Write threads to separate files\n");
+      printf("  -w/-wait               Wait for first packet before starting recording timer/n");
       printf("  -V/-verbose            Verbose output/n");
       printf("  -h/-help               This list\n");
       return(1);
@@ -353,6 +360,11 @@ int main (int argc, char * const argv[]) {
       fprintf(stderr, "Error: Needs to read multiple of 4 bytes\n");
       exit(1);
     }
+
+    if (wait && first) {
+      t0 = tim();
+    }
+    
     // Block alarm signal while we are updating these values
     status = sigprocmask(SIG_BLOCK, &set, NULL);
     if (status) {
