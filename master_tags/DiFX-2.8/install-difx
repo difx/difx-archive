@@ -7,8 +7,8 @@ import getopt
 import re
 
 # Set this to true if compiling within a master_tags checkout
-#master_tag = True
-master_tag = False
+master_tag = True
+#master_tag = False
 
 ###############################################################################
 # this function was once called main() but really it was only for help.
