@@ -169,6 +169,7 @@ int main (int argc, char * const argv[]) {
   int padding = 0;
   int threadid = -1;
   int scale = 0;
+  int forcebits = 0;
   //int invert = 0;
   int splitthread = 0;
   int verbose = 0;
@@ -184,6 +185,7 @@ int main (int argc, char * const argv[]) {
     {"updatetime", 1, 0, 'u'},
     {"filesize", 1, 0, 'f'},
     {"scale", 1, 0, 's'},
+    {"bits", 1, 0, 'b'},
     //{"invert", 0, 0, 'I'},
     {"split", 0, 0, 'S'},
     {"verbose", 0, 0, 'V'},
@@ -226,13 +228,21 @@ int main (int argc, char * const argv[]) {
 	threadid = tmp;
      break;
 
-         case 's':
-           status = sscanf(optarg, "%d", &tmp);
-           if (status!=1 || tmp<=0 || tmp>15)
-	     fprintf(stderr, "Bad scale option %s\n", optarg);
-           else 
-	     scale = tmp;
-	   break;
+    case 's':
+      status = sscanf(optarg, "%d", &tmp);
+      if (status!=1 || tmp<=0 || tmp>15)
+	fprintf(stderr, "Bad scale option %s\n", optarg);
+      else 
+	scale = tmp;
+      break;
+
+    case 'b':
+      status = sscanf(optarg, "%d", &tmp);
+      if (status!=1 || tmp<=0)
+	fprintf(stderr, "Bad bits option %s\n", optarg);
+      else 
+	forcebits = tmp;
+      break;
 
     case 't':
       status = sscanf(optarg, "%d", &tmp);
@@ -322,7 +332,6 @@ int main (int argc, char * const argv[]) {
   }
 
   cheader = (codif_header*)buf;
-  //h64 = (uint64_t*)cheader; // Header as 64bit worlds
   cdata = (int16_t*) &buf[CODIF_HEADER_BYTES];
 
   status = setup_net(port, ip, &sock);
@@ -371,6 +380,8 @@ int main (int argc, char * const argv[]) {
       perror(": Trying to block SIGALRM\n");
       exit(1);
     }
+
+    if (forcebits) setCODIFBitsPerSample(cheader, forcebits);
 
     thisframe = getCODIFFrameNumber(cheader);
     thisseconds = getCODIFFrameSecond(cheader);
