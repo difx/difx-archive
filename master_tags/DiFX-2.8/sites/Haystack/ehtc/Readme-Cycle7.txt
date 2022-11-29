@@ -470,6 +470,16 @@ do  $ehtc/ehtc-antab.sh $subv $pc $ers true
 # if you need to diagnose bad behavior, do it with verbose commentary:
 # verb=true $ehtc/ehtc-antab.sh ...
 
+# generate a single antab for the track, and plot it as above.
+antab=$ers-AA.antab
+$ehtc/ehtc-track-antab.py -a $antab
+for pc in $plst
+do  $ehtc/ehtc-antab.sh $subv $pc $ers true $antab ; done
+# review $antab*pdf and if acceptable, post it to $release/meta
+# this file may be slightly shorter as it eliminates the no-data ANTABS.
+[ -d $release/meta ] || mkdir $release/meta
+cp -p $antab $antab*pdf $release/meta
+
 # check on progress/missing scans (incrementally or when done):
 $ehtc/ehtc-joblist.py -i $dout/$evs -o *.obs -c $exp.codes -K |\
   sort -k 1n > $ers-manifest.txt
@@ -509,5 +519,5 @@ rm -rf $exp-*-${subv}*.save
 true
 
 #
-# eof
+# eof vim: nospell noai
 #
