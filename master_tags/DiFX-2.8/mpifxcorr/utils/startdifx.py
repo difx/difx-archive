@@ -31,7 +31,7 @@
 
 PROGRAM = 'startdifx'
 VERSION = '3.0.7'
-VERDATE = '20221216'
+VERDATE = '20221219'
 AUTHOR  = 'Walter Brisken and Helge Rottmann'
 
 defaultgroup = "224.2.2.1"
@@ -876,7 +876,7 @@ for fileBase in fileBaseList:
                 nBad += 1
 
 if args.logFile != None:
-        print('All command line output is being redirected to log file %s' % args.logFile)
+        print('All command line output is being redirected to log file(s) %s' % args.logFile.replace('%b', '<filebase>'))
 
 if nBad > 0:
         exit(1)
