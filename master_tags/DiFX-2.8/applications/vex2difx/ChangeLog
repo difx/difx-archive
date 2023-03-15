@@ -1,5 +1,6 @@
 Version 3.0.0
 -------------
+* Fix for non-sorted antennas (back-ported from trunk)
 * Version bump prior to DiFX 2.8 branching
 
 Version 2.99.3
