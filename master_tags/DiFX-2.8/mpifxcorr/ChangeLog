@@ -1,6 +1,7 @@
 Version 2.8
 ~~~~~~~~~~~
 * Backport from trunk: fix for missing/bad autocorrelations
+* Backport from trunk: fix for cross-polar autocorrelation weights
 * Version for DiFX-2.8
 
 Version 2.7
