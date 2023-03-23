@@ -2,10 +2,10 @@
 export DIFX_VERSION=DiFX-2.8.1
 
 ####### ROOT PATHS ##########################
-export DIFXROOT=/home/ubuntu/DiFX/${DIFX_VERSION}
+export DIFXROOT=/usr/local/difx
 export DIFX_PREFIX=$DIFXROOT
 export PGPLOTDIR=
-export IPPROOT=/home/ubuntu/intel/
+export IPPROOT=/opt/intel
 
 ####### COMPILER ############################
 export DIFXMPIDIR=/usr
