@@ -1187,6 +1187,7 @@ const DifxInput *DifxInput2FitsPH(const DifxInput *D,
 	if(nTone == 0)
 	{
 		free(pcalSourceFile);
+		free(jobxref);
 
 		return D;
 	}
