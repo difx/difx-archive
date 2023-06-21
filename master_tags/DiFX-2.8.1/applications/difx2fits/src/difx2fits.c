@@ -980,7 +980,7 @@ static void relabelCircular(DifxInput *D)
 			}
 			if(D->datastream[i].recBandPolName[j] == 'Y' || D->datastream[i].recBandPolName[j] == 'V')
 			{
-				D->datastream[i].recBandPolName[j] = 'L';
+				D->datastream[i].recBandPolName[j] = 'Y';
 			}
 		}
 
@@ -992,7 +992,7 @@ static void relabelCircular(DifxInput *D)
 			}
 			if(D->datastream[i].zoomBandPolName[j] == 'Y' || D->datastream[i].zoomBandPolName[j] == 'V')
 			{
-				D->datastream[i].zoomBandPolName[j] = 'L';
+				D->datastream[i].zoomBandPolName[j] = 'Y';
 			}
 		}
 	}
