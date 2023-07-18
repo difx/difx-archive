@@ -1,6 +1,7 @@
 Version 3.7.1
 * Post DiFX-2.8.1
 * Fix possible memory leak if no pulse cal tones to be processed
+* Fixed the --relabelCircular option
 
 Version 3.7.0
 * Post DiFX-2.6
