@@ -1,3 +1,7 @@
+Version 3.0.1
+-------------
+* Fix pointer issue caused by source reordering when multi-phase-center is used
+
 Version 3.0.0
 -------------
 * Fix for non-sorted antennas (back-ported from trunk)
