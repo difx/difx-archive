@@ -1,3 +1,8 @@
+11.0.4
+------
+* Post DiFX-1.8.1
+* Add Y3 (and Y4 for future option) to ocean tables
+
 11.0.3
 ------
 * Allow to build outside the DiFX environment
